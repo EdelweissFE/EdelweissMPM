@@ -55,3 +55,8 @@ def getCellClass(provider: str) -> type:
         from mpm.cells.test.cell import Cell
 
         return Cell
+
+    if provider.lower() == "marmot":
+        from mpm.cells.marmotcell.cell import MarmotCellWrapper
+
+        return MarmotCellWrapper

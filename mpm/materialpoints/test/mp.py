@@ -32,7 +32,7 @@ import numpy as np
 class MaterialPoint(BaseMaterialPoint):
     shape = "point"
 
-    def __init__(self, label: int, coordinates: np.ndarray, volume: float):
+    def __init__(self, formulation: str, label: int, coordinates: np.ndarray, volume: float):
         self._label = label
         self._coordinates = coordinates
         self._volume = volume
@@ -47,7 +47,7 @@ class MaterialPoint(BaseMaterialPoint):
     def ensightType(self) -> str:
         return self.shape
 
-    def getVerticesCoordinates(
+    def getVertexCoordinates(
         self,
     ) -> np.ndarray:
         return np.reshape(self._coordinates + self._displacement, (1, 2))
@@ -62,8 +62,8 @@ class MaterialPoint(BaseMaterialPoint):
     ) -> float:
         return self._volume
 
-    def computeMaterialResponse(self, timeStep: float, timeTotal: float, dT: float):
-        pass
+    # def computeMaterialResponse(self, timeStep: float, timeTotal: float, dT: float):
+    #     pass
 
     def acceptLastState(
         self,
@@ -95,3 +95,6 @@ class MaterialPoint(BaseMaterialPoint):
 
     def addDisplacement(self, dU: np.ndarray):
         self._displacement += dU
+
+    def computeMaterialResponse(self, timeStep, timeTotal, dT):
+        pass

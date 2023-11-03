@@ -53,7 +53,7 @@ class SimpleMaterialPointManager:
             The truth value if this MaterialPoint is located in the cell.
         """
 
-        for vCoord in mp.getVerticesCoordinates():
+        for vCoord in mp.getVertexCoordinates():
             if cell.isCoordinateInCell(vCoord):
                 return True
 

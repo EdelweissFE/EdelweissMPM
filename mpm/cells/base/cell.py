@@ -38,7 +38,7 @@ from mpm.materialpoints.base.mp import BaseMaterialPoint
 
 class BaseCell(ABC):
     @abstractmethod
-    def __init__(self, cellType: str, cellNumber: int):
+    def __init__(self, cellType: str, cellNumber: int, nodes: list[Node]):
         """MPM cells in EdelweissFE should be derived from this
         base class in order to follow the general interface.
 
@@ -61,6 +61,8 @@ class BaseCell(ABC):
             A string identifying the requested element formulation.
         cellNumber
             A unique integer label used for all kinds of purposes.
+        nodes
+            The list of Nodes assigned to this cell.
         """
 
         pass
@@ -108,17 +110,6 @@ class BaseCell(ABC):
         pass
 
     @abstractmethod
-    def setNodes(self, nodes: list[Node]):
-        """Assign the nodes to the cell.
-
-        Parameters
-        ----------
-        nodes
-            A list of nodes.
-        """
-        pass
-
-    @abstractmethod
     def interpolateSolutionContributionToMaterialPoints(
         self,
         materialPoints: list[BaseMaterialPoint],
@@ -143,7 +134,6 @@ class BaseCell(ABC):
         materialPoints: list[BaseMaterialPoint],
         P: np.ndarray,
         K: np.ndarray,
-        timeStep: float,
         timeTotal: float,
         dTime: float,
     ):

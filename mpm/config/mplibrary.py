@@ -55,3 +55,8 @@ def getMaterialPointClass(provider: str) -> type:
         from mpm.materialpoints.test.mp import MaterialPoint
 
         return MaterialPoint
+
+    if provider.lower() == "marmot":
+        from mpm.materialpoints.marmotmaterialpoint.mp import MarmotMaterialPointWrapper
+
+        return MarmotMaterialPointWrapper

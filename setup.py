@@ -57,6 +57,36 @@ print("Eigen directory (overwrite via environment var. EIGEN_INCLUDE_DIR):")
 print(eigen_include)
 print("*" * 80)
 
+extensions = list()
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "mpm/cells/marmotcell/cell.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "mpm/materialpoints/marmotmaterialpoint/mp.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
 setup(
     name="EdelweissMPM",
     version="v23.10",

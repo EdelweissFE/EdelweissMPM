@@ -86,20 +86,20 @@ def generateModelData(model, journal, **kwargs):
     firstNodeLabel = int(kwargs.get("cellLabelStart", 1))
     cellClass = kwargs["cellProvider"]
     cellType = kwargs["cellType"]
+    nodesPerCell = int(kwargs.get("nodesPerCell", 4))
 
     CellFactory = getCellClass(cellClass)
 
-    testCell = CellFactory(
-        cellType,
-        0,
-    )
-    if testCell.nNodes == 4:
+    if nodesPerCell == 4:
         nNodesX = nX + 1
         nNodesY = nY + 1
 
-    if testCell.nNodes == 8:
+    elif nodesPerCell == 8:
         nNodesX = 2 * nX + 1
         nNodesY = 2 * nY + 1
+
+    else:
+        raise Exception("Invalid number of nodes per grid cell specified")
 
     grid = np.mgrid[
         x0 : x0 + l : nNodesX * 1j,
@@ -123,50 +123,25 @@ def generateModelData(model, journal, **kwargs):
     cells = []
     for x in range(nX):
         for y in range(nY):
-            if testCell.nNodes == 4:
-                newCell = CellFactory(cellType, currentCellLabel)
-                newCell.setNodes([nG[x, y], nG[x + 1, y], nG[x + 1, y + 1], nG[x, y + 1]])
+            if nodesPerCell == 4:
+                cellNodes = [nG[x, y], nG[x + 1, y], nG[x + 1, y + 1], nG[x, y + 1]]
+                newCell = CellFactory(cellType, currentCellLabel, cellNodes)
 
-            elif testCell.nNodes == 8:
-                newCell = CellFactory(
-                    cellType,
-                    currentCellLabel,
-                )
-                newCell.setNodes(
-                    [
-                        nG[2 * x, 2 * y],
-                        nG[2 * x + 2, 2 * y],
-                        nG[2 * x + 2, 2 * y + 2],
-                        nG[2 * x, 2 * y + 2],
-                        nG[2 * x + 1, 2 * y],
-                        nG[2 * x + 2, 2 * y + 1],
-                        nG[2 * x + 1, 2 * y + 2],
-                        nG[2 * x, 2 * y + 1],
-                    ]
-                )
+            elif nodesPerCell == 8:
+                cellNodes = [
+                    nG[2 * x, 2 * y],
+                    nG[2 * x + 2, 2 * y],
+                    nG[2 * x + 2, 2 * y + 2],
+                    nG[2 * x, 2 * y + 2],
+                    nG[2 * x + 1, 2 * y],
+                    nG[2 * x + 2, 2 * y + 1],
+                    nG[2 * x + 1, 2 * y + 2],
+                    nG[2 * x, 2 * y + 1],
+                ]
+                newCell = CellFactory(cellType, currentCellLabel, cellNodes)
             cells.append(newCell)
             model.cells[currentCellLabel] = newCell
 
             currentCellLabel += 1
-
-    # model._populateNodeFieldVariablesFromElements()
-
-    # nodesets:
-    # model.nodeSets["{:}_all".format(name)] = NodeSet("{:}_all".format(name), list())
-    # for n in np.ravel(nG):
-    #     if len(n.fields):
-    #         model.nodeSets["{:}_all".format(name)].add([n])
-
-    # model.nodeSets["{:}_left".format(name)] = NodeSet("{:}_left".format(name), [n for n in nG[0, :]])
-    # model.nodeSets["{:}_right".format(name)] = NodeSet("{:}_right".format(name), [n for n in nG[-1, :]])
-    # model.nodeSets["{:}_top".format(name)] = NodeSet("{:}_top".format(name), [n for n in nG[:, -1]])
-    # model.nodeSets["{:}_bottom".format(name)] = NodeSet("{:}_bottom".format(name), [n for n in nG[:, 0]])
-
-    # model.nodeSets["{:}_leftBottom".format(name)] = NodeSet("{:}_leftBottom".format(name), [nG[0, 0]])
-    # model.nodeSets["{:}_leftTop".format(name)] = NodeSet("{:}_leftTop".format(name), [nG[0, -1]])
-    # model.nodeSets["{:}_rightBottom".format(name)] = NodeSet("{:}_rightBottom".format(name), [nG[-1, 0]])
-    # model.nodeSets["{:}_rightTop".format(name)] = NodeSet("{:}_rightTop".format(name), [nG[-1, -1]])
-
-    # cellGrid = np.asarray(elements).reshape(nX, nY)
 
     return model

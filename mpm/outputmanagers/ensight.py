@@ -104,7 +104,7 @@ def createUnstructuredPartFromMaterialPointSet(mpPartName, mps: list, partID: in
             mpDict[mpShape] = dict()
         mpNodeIndices = []
 
-        for vertexCoord in mp.getVerticesCoordinates():
+        for vertexCoord in mp.getVertexCoordinates():
             partNodes.append(Node(nodeCounter, vertexCoord))
             mpNodeIndices.append(nodeCounter)
             nodeCounter += 1

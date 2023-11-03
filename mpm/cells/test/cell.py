@@ -37,9 +37,17 @@ from mpm.materialpoints.base.mp import BaseMaterialPoint
 
 
 class Cell(BaseCell):
-    def __init__(self, cellType: str, cellNumber: int):
+    def __init__(self, cellType: str, cellNumber: int, nodes: list[Node]):
         self._cellType = cellType
         self._cellNumber = cellNumber
+
+        self.nodes = nodes
+        self.coordinates = np.array([n.coordinates for n in nodes])
+
+        self.x_min = np.min(self.coordinates[:, 0])
+        self.x_max = np.max(self.coordinates[:, 0])
+        self.y_min = np.min(self.coordinates[:, 1])
+        self.y_max = np.max(self.coordinates[:, 1])
 
     @property
     def cellNumber(self) -> int:
@@ -68,15 +76,6 @@ class Cell(BaseCell):
     @property
     def ensightType(self) -> str:
         return "quad4"
-
-    def setNodes(self, nodes: list[Node]):
-        self.nodes = nodes
-        self.coordinates = np.array([n.coordinates for n in nodes])
-
-        self.x_min = np.min(self.coordinates[:, 0])
-        self.x_max = np.max(self.coordinates[:, 0])
-        self.y_min = np.min(self.coordinates[:, 1])
-        self.y_max = np.max(self.coordinates[:, 1])
 
     def interpolateSolutionContributionToMaterialPoints(
         self,

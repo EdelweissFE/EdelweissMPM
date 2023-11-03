@@ -46,7 +46,7 @@ class BaseMaterialPoint(ABC):
         pass
 
     @abstractmethod
-    def getVerticesCoordinates(
+    def getVertexCoordinates(
         self,
     ) -> np.ndarray:
         """A material point's shape is defined by an arbitrary number of vertices.
@@ -69,20 +69,6 @@ class BaseMaterialPoint(ABC):
             The coordinates of the material point's center of mass."""
         pass
 
-    # @abstractmethod
-    # def assignShapeInformation(self, shapeInformation:np.ndarray):
-    #     """The shape of a MaterialPoint may be defined
-    #     through a number of addi,
-    #     e.g., a simple volume for spherical points,
-    #     or vertex coordinates for more involved geometries.
-
-    #     Parameters
-    #     -------
-    #     shapeInformation
-    #         The vector containing the data for defining the shape.
-    #     """
-    #     pass
-
     @abstractmethod
     def getVolume(
         self,
@@ -96,7 +82,7 @@ class BaseMaterialPoint(ABC):
         pass
 
     @abstractmethod
-    def computeMaterialResponse(self, timeStep: float, timeTotal: float, dT: float):
+    def computeMaterialResponse(self, timeTotal: float, dT: float):
         """Compute the current material response."""
 
         pass

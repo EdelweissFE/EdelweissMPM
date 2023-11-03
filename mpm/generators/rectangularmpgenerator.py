@@ -84,8 +84,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     firstMaterialPointLabel = int(kwargs.get("mpLabelStart", 1))
     mpClass = kwargs["mpProvider"]
     mpType = kwargs["mpType"]
-
-    mpVol = float(kwargs.get("vol", 1.0))
+    mpVolume = float(kwargs.get("vol", 1.0))
 
     MPFactory = getMaterialPointClass(mpClass)
 
@@ -99,8 +98,8 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
 
     for x in range(nX):
         for y in range(nY):
-            mpCoordinates = grid[:, x, y]
-            mp = MPFactory(currentMPLabel, mpCoordinates, mpVol)
+            mpCoordinates = grid[:, x, y].reshape(-1, 2)
+            mp = MPFactory(mpType, currentMPLabel, mpCoordinates, mpVolume)
             model.materialPoints[currentMPLabel] = mp
             mps.append(mp)
             currentMPLabel += 1
