@@ -221,7 +221,7 @@ class KDTree:
         activeCells = []
 
         if self._hasChildren:
-            for vCoord in mp.getVerticesCoordinates():
+            for vCoord in mp.getVertexCoordinates():
                 for child in self._children:
                     if child._domain.isInside(vCoord):
                         activeCells.append(child.getCellForCoordinates(vCoord))
