@@ -86,7 +86,6 @@ class Domain:
         return vertices
 
     def createFromTwoPoints(self, A: list, B: list):
-
         self.x_min = min(A[0], B[0])
         self.x_max = max(A[0], B[0])
 
@@ -99,7 +98,6 @@ class Domain:
                 self.z_max = max(A[2], B[2])
 
     def isInside(self, point: list):
-
         x = point[0]
 
         if x > self.x_max or x < self.x_min:
@@ -124,7 +122,6 @@ class Domain:
 
 
 def buildEnclosingDomain(materialPointCells: list[BaseCell], dimension: int = 2):
-
     d = Domain(dimension)
     firstCell = materialPointCells[1]
 
@@ -141,7 +138,6 @@ def buildEnclosingDomain(materialPointCells: list[BaseCell], dimension: int = 2)
             d.z_max = firstCell.z_max
 
     for cell in materialPointCells[1:]:
-
         d.x_min = cell.x_min if cell.x_min < d.x_min else d.x_min
         d.x_max = cell.x_max if cell.x_max > d.x_max else d.x_max
         if dimension > 1:
@@ -169,24 +165,20 @@ class KDTree:
         self._cellsInDomain = self.assignCellsToDomain()
 
     def buildTree(self):
-
         if self._level > 0:
             self._hasChildren = True
             centerCoordinates = self._domain.getCenterCoordinates()
 
             for vertice in self._domain.getVertices():
-
                 newDomain = Domain(self._dimension)
                 newDomain.createFromTwoPoints(vertice, centerCoordinates)
 
                 self._children.append(KDTree(newDomain, self._level - 1, self._cells))
 
     def assignCellsToDomain(self):
-
         cellsInDomain = []
 
         for cell in self._cells:
-
             if cell.x_max < self._domain.x_min or cell.x_min > self._domain.x_max:
                 continue
 
@@ -195,10 +187,7 @@ class KDTree:
                     continue
 
                     if self._dimension > 2:
-                        if (
-                            cell.z_max < self._domain.z_min
-                            or cell.z_min > self._domain.z_max
-                        ):
+                        if cell.z_max < self._domain.z_min or cell.z_min > self._domain.z_max:
                             continue
 
             cellsInDomain.append(cell)
@@ -206,7 +195,6 @@ class KDTree:
         return cellsInDomain
 
     def getCellForCoordinates(self, coordinates):
-
         if self._hasChildren:
             for child in self._children:
                 if child._domain.isInside(coordinates):
@@ -217,7 +205,6 @@ class KDTree:
                     return cell
 
     def getCellsForMaterialPoint(self, mp: BaseMaterialPoint):
-
         activeCells = []
 
         if self._hasChildren:

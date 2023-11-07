@@ -84,7 +84,6 @@ class SmartMaterialPointManager:
         self._attachedMaterialPoints = dict()
 
         for mp in self._mps:
-
             currCells = self._KDTree.getCellsForMaterialPoint(mp)
             for cell in currCells:
                 if not cell in self._activeCells.keys():

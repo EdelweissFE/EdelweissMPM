@@ -75,7 +75,7 @@ def generateModelData(model, journal, **kwargs):
     # options = generatorDefinition["data"]
     # options = convertLinesToStringDictionary(options)
 
-    name = kwargs.get("name", "planeRect")
+    name = kwargs.get("name", "rectangular_grid")
 
     x0 = float(kwargs.get("x0", 0.0))
     y0 = float(kwargs.get("y0", 0.0))
@@ -143,5 +143,15 @@ def generateModelData(model, journal, **kwargs):
             model.cells[currentCellLabel] = newCell
 
             currentCellLabel += 1
+
+    model.nodeSets["{:}_left".format(name)] = NodeSet("{:}_left".format(name), [n for n in nG[0, :]])
+    model.nodeSets["{:}_right".format(name)] = NodeSet("{:}_right".format(name), [n for n in nG[-1, :]])
+    model.nodeSets["{:}_top".format(name)] = NodeSet("{:}_top".format(name), [n for n in nG[:, -1]])
+    model.nodeSets["{:}_bottom".format(name)] = NodeSet("{:}_bottom".format(name), [n for n in nG[:, 0]])
+
+    model.nodeSets["{:}_leftBottom".format(name)] = NodeSet("{:}_leftBottom".format(name), [nG[0, 0]])
+    model.nodeSets["{:}_leftTop".format(name)] = NodeSet("{:}_leftTop".format(name), [nG[0, -1]])
+    model.nodeSets["{:}_rightBottom".format(name)] = NodeSet("{:}_rightBottom".format(name), [nG[-1, 0]])
+    model.nodeSets["{:}_rightTop".format(name)] = NodeSet("{:}_rightTop".format(name), [nG[-1, -1]])
 
     return model

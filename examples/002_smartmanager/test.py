@@ -54,7 +54,7 @@ if __name__ == "__main__":
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options= {"KDTreeLevels": 3})
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
 
     activeCells = None
     activeNodes = None
