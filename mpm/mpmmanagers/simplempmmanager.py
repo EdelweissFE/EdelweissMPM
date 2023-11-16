@@ -63,7 +63,6 @@ class SimpleMaterialPointManager:
         self,
     ):
         self._activeCells = dict()
-        self._attachedMaterialPoints = dict()
 
         for cell in self._cells:
             mpsInCell = [mp for mp in self._mps if self._checkIfMPPartiallyInCell(mp, cell)]
@@ -86,7 +85,14 @@ class SimpleMaterialPointManager:
     ):
         attachedMPs = set([mp for mps in self._activeCells.values() for mp in mps])
 
-        return len(attachedMPs) != len(self._mps)
+        lost = len(attachedMPs) != len(self._mps)
+
+        if lost:
+            lost_mps = attachedMPs.symmetric_difference(self._mps)
+            for mp in lost_mps:
+                print(mp.getVertexCoordinates())
+
+        return lost
 
     def hasChanged(
         self,

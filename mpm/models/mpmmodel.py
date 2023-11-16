@@ -96,6 +96,9 @@ class MPMModel(FEModel):
         for section in self.sections.values():
             section.assignSectionPropertiesToModel(self)
 
+        for mp in self.materialPoints.values():
+            mp.initializeYourself()
+
     def prepareYourself(self, journal: Journal):
         """Prepare the model for a simulation.
         Creates the variables, bundles the fields,

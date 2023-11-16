@@ -83,7 +83,6 @@ cdef class MarmotMaterialPointWrapper:
         materialPointNumber
             The unique number of the MaterialPoint."""
 
-        print(vertexCoordinates)
         self._vertexCoordinates = np.copy(vertexCoordinates)
         self._vertexCoordinatesView = self._vertexCoordinates
 
@@ -111,14 +110,16 @@ cdef class MarmotMaterialPointWrapper:
         return self._ensightType
 
     def acceptLastState(self,):
-        """Accept the computed state (in nonlinear iteration schemes)."""
-
         self._stateVars[:] = self._stateVarsTemp
-        
-    def resetToLastValidState(self,):
-        """Reset to the last valid state."""
 
-        pass
+    def initializeYourself(self):
+        self._stateVarsTemp[:] = self._stateVars
+        self._marmotMaterialPoint.initializeYourself()
+        self.acceptLastState()
+        
+    def prepareYourself(self, timeTotal: float, dTime: float):
+        self._stateVarsTemp[:] = self._stateVars
+        self._marmotMaterialPoint.prepareYourself(timeTotal, dTime)
 
     cpdef void _initializeStateVarsTemp(self, ) nogil:
         self._stateVarsTemp[:] = self._stateVars
@@ -127,8 +128,8 @@ cdef class MarmotMaterialPointWrapper:
         """Get the array of a result, possibly as a persistent view which is continiously
         updated by the underlying MarmotMaterialPoint."""
 
-        # if not self._hasMaterial:
-        #     raise Exception("MaterialPoint {:} has no material assigned!".format(self._materialPointNumber))
+        if not self._hasMaterial:
+            raise Exception("MaterialPoint {:} has no material assigned!".format(self._materialPointNumber))
 
         cdef string result_ =  result.encode('UTF-8')
         return np.array(  self.getStateView(result_ ), copy= not getPersistentView)
@@ -139,13 +140,6 @@ cdef class MarmotMaterialPointWrapper:
         cdef StateView res = self._marmotMaterialPoint.getStateView(result)
 
         return <double[:res.stateSize]> ( res.stateLocation )
-
-    # def getCoordinatesAtCenter(self):
-    #     """Compute the underlying MarmotMaterialPoint center of mass coordinates."""
-
-    #     self._marmotMaterialPoint.getCoordinatesAtCenter(&self._centerCoordinatesView[0]) 
-
-    #     return self._centerCoordinates
 
     def getVertexCoordinates(self):
         """Compute the underlying MarmotMaterialPoint center of mass coordinates."""

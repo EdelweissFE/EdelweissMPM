@@ -72,6 +72,8 @@ cdef extern from "Marmot/MarmotMaterialPoint.h":
 
         void initializeYourself() 
 
+        void prepareYourself(double timeNew, double dT) 
+
         void computeYourself(double timeNew, double dT) except +RuntimeError
 
         StateView getStateView( const string& stateName ) 

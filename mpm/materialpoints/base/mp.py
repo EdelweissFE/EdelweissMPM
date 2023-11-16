@@ -82,7 +82,7 @@ class BaseMaterialPoint(ABC):
         pass
 
     @abstractmethod
-    def computeMaterialResponse(self, timeTotal: float, dT: float):
+    def computeYourself(self, timeTotal: float, dT: float):
         """Compute the current material response."""
 
         pass
@@ -96,10 +96,8 @@ class BaseMaterialPoint(ABC):
         pass
 
     @abstractmethod
-    def resetToLastValidState(
-        self,
-    ):
-        """Rest to the last valid state."""
+    def prepareTimestep(self, timeTotal: float, dT: float):
+        """Prepare a new time step, i.e., before interpolation from the grid takes place."""
 
         pass
 
@@ -138,7 +136,7 @@ class BaseMaterialPoint(ABC):
         pass
 
     @abstractmethod
-    def initializeMaterialPoint(
+    def initializeYourself(
         self,
     ):
         """Initalize the mateiral point to be ready for computing."""

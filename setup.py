@@ -98,7 +98,7 @@ setup(
     author_email="matthias.neuner@uibk.ac.at",
     url="https://github.com/EdelweissFE/EdelweissFE",
     cmdclass={"build_ext": build_ext},
-    # ext_modules=cythonize(extensions, compiler_directives=directives, annotate=True, language_level=3),
+    ext_modules=cythonize(extensions, compiler_directives=directives, annotate=True, language_level=3),
 ),
 
 

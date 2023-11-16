@@ -24,7 +24,7 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import fe
+from fe.fields.nodefield import NodeField, NodeFieldSubset
 from fe.points.node import Node
 from mpm.sets.cellset import CellSet
 import numpy as np
@@ -34,7 +34,7 @@ class MPMNodeFieldSubset:
     pass
 
 
-class MPMNodeField(fe.fields.nodefield.NodeField):
+class MPMNodeField(NodeField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -42,7 +42,7 @@ class MPMNodeField(fe.fields.nodefield.NodeField):
         return MPMNodeFieldSubset
 
 
-class MPMNodeFieldSubset(fe.fields.nodefield.NodeFieldSubset):
+class MPMNodeFieldSubset(NodeFieldSubset):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
