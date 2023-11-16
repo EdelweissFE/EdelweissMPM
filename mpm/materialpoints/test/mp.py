@@ -96,5 +96,14 @@ class MaterialPoint(BaseMaterialPoint):
     def addDisplacement(self, dU: np.ndarray):
         self._displacement += dU
 
-    def computeMaterialResponse(self, timeStep, timeTotal, dT):
+    def initializeYourself(
+        self,
+    ):
         pass
+
+    def prepareTimestep(self, timeTotal: float, dT: float):
+        pass
+
+    def computeYourself(self, timeTotal: float, dT: float):
+        pass
+

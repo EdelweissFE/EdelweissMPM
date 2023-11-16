@@ -77,6 +77,8 @@ if __name__ == "__main__":
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
 
+    ensightOutput.initializeJob()
+
     for i in range(100):
         print("time step {:}".format(i))
 

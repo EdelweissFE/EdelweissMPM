@@ -353,7 +353,7 @@ class NonlinearQuasistaticSolver:
                     break
 
                 if self._checkDivergingSolution(incrementResidualHistory, nAllowedResidualGrowths):
-                    self._printResidualOutlierNodes({field: node for field, node in incrementResidualHistory})
+                    self._printResidualOutlierNodes(incrementResidualHistory)
                     raise DivergingSolution("Residual grew {:} times, cutting back".format(nAllowedResidualGrowths))
 
                 if iterationCounter == iterationOptions["nMaximumIterations"]:

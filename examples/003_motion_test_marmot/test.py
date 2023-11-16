@@ -122,6 +122,8 @@ if __name__ == "__main__":
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["stress"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["strain"], create="perNode")
 
+    ensightOutput.initializeJob()
+
     for i in range(100):
         print("time step {:}".format(i))
 
