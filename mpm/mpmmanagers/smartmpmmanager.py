@@ -28,7 +28,7 @@
 
 from mpm.cells.base.cell import BaseCell
 from mpm.materialpoints.base.mp import BaseMaterialPoint
-from mpm.mpmmanagers.utils import KDTree, Domain, buildEnclosingDomain
+from mpm.mpmmanagers.utils import KDTree, BoundingBox, buildModelBoundingBox
 
 import numpy as np
 
@@ -57,7 +57,7 @@ class SmartMaterialPointManager:
         self._options = options
 
         self._KDTree = KDTree(
-            buildEnclosingDomain(materialPointCells),
+            buildModelBoundingBox(materialPointCells),
             self._options.get("KDTreeLevels"),
             materialPointCells,
         )

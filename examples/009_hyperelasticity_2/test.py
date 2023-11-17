@@ -34,6 +34,7 @@ from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
 from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
+from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
@@ -48,9 +49,11 @@ from mpm.stepactions.bodyload import BodyLoad
 from fe.utils.exceptions import StepFailed
 
 import numpy as np
-
+from datetime import datetime
 
 if __name__ == "__main__":
+    tic = datetime.now()
+
     dimension = 2
 
     journal = Journal()
@@ -97,7 +100,9 @@ if __name__ == "__main__":
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SimpleMaterialPointManager(allCells, allMPs)
+    # mpmManager = SimpleMaterialPointManager(allCells, allMPs)
+
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
 
     journal.printSeperationLine()
 
@@ -206,3 +211,7 @@ if __name__ == "__main__":
     ensightOutput.finalizeJob()
 
     np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
+
+    toc = datetime.now()
+
+    print("total elapsed time = ", (toc - tic).total_seconds())
