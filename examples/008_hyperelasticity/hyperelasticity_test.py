@@ -24,15 +24,15 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-
-import meshio
+import pytest
+import argparse
 
 from fe.journal.journal import Journal
 from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
+from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
@@ -49,7 +49,7 @@ from fe.utils.exceptions import StepFailed
 import numpy as np
 
 
-if __name__ == "__main__":
+def run_sim():
     dimension = 2
 
     journal = Journal()
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SimpleMaterialPointManager(allCells, allMPs)
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
 
     journal.printSeperationLine()
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
         np.array([0.0, -1000.0]),
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-3, 1e-3, 1e-4, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-2, 100, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 
@@ -207,3 +207,36 @@ if __name__ == "__main__":
 
     fieldOutputController.finalizeJob()
     ensightOutput.finalizeJob()
+
+    return mpmModel
+
+
+@pytest.fixture(autouse=True)
+def change_test_dir(request, monkeypatch):
+    """No matter where pytest is ran, we set the working dir
+    to this testscript's parent directory"""
+
+    monkeypatch.chdir(request.fspath.dirname)
+
+
+def test_sim():
+    mpmModel = run_sim()
+
+    res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+    gold = np.loadtxt("gold.csv")
+
+    print(res - gold)
+
+    assert np.isclose(res, gold).all()
+
+
+if __name__ == "__main__":
+    mpmModel = run_sim()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
+    args = parser.parse_args()
+
+    if args.create_gold:
+        gold = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+        np.savetxt("gold.csv", gold)

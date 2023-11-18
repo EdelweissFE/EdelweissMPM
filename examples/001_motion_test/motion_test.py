@@ -25,7 +25,9 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-import meshio
+import argparse
+import os
+import pytest
 
 from fe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
 from fe.journal.journal import Journal
@@ -42,7 +44,7 @@ from mpm.sets.cellset import CellSet
 import numpy as np
 
 
-if __name__ == "__main__":
+def run_sim():
     dimension = 2
 
     journal = Journal()
@@ -156,3 +158,34 @@ if __name__ == "__main__":
         journal.printSeperationLine()
 
     ensightOutput.finalizeJob()
+
+    return mpmModel
+
+
+@pytest.fixture(autouse=True)
+def change_test_dir(request, monkeypatch):
+    """No matter where pytest is ran, we set the working dir
+    to this testscript's parent directory"""
+
+    monkeypatch.chdir(request.fspath.dirname)
+
+
+def test_sim():
+    mpmModel = run_sim()
+
+    res = mpmModel.nodeFields["displacement"]["dU"]
+
+    gold = np.loadtxt("gold.csv")
+
+    assert np.isclose(res, gold).all()
+
+
+if __name__ == "__main__":
+    mpmModel = run_sim()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
+    args = parser.parse_args()
+
+    if args.create_gold:
+        np.savetxt("gold.csv", mpmModel.nodeFields["displacement"]["dU"])

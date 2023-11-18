@@ -25,30 +25,16 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissFE.
 #  ---------------------------------------------------------------------
-# Created on Mon Jan 23 13:03:09 2017
-
-# @author: Matthias Neuner
-"""
-Standard Dirichlet boundary condition.
-If not modified in subsequent steps, the BC is held constant.
-"""
-documentation = {
-    "nSet": "The node set for application of the BC",
-    "1,2,3,...": "Prescribed values for components of the physical field",
-    "components": "Prescribed values using a np.ndarray for representation; use 'x' for ignored values",
-    "field": "Field for which the boundary condition is active",
-    "analyticalField": "(Optional) scales the defined boundary condition",
-    "f(t)": "(Optional) define an amplitude in the step progress interval [0...1]",
-}
 
 
-from fe.stepactions.base.stepactionbase import StepActionBase
+from fe.stepactions.base.dirichletbase import DirichletBase
 from fe.config.phenomena import getFieldSize
+from fe.timesteppers.timestep import TimeStep
 import numpy as np
 import sympy as sp
 
 
-class Dirichlet(StepActionBase):
+class Dirichlet(DirichletBase):
     """Dirichlet boundary condition, based on a node set"""
 
     def __init__(self, name, nSet, field, values, model, journal, **kwargs):
@@ -63,28 +49,30 @@ class Dirichlet(StepActionBase):
 
         self.updateStepAction(values, **kwargs)
 
+    @property
+    def components(self) -> np.ndarray:
+        return self._components
+
     def applyAtStepEnd(self, model):
         self.active = False
 
     def updateStepAction(self, values, **kwargs):
         self.active = True
 
-        self.components = np.array([i for i in values.keys()])
-        # idcsPrescribed = np.array([i for i in values.keys()])
-        # self.components = np.array([False] * self.fieldSize )
-        # self.components[idcsPrescribed] = True
+        self._components = np.array([i for i in values.keys()])
 
         self._delta = np.array([values for values in values.values()])
 
         self._amplitude = self._getAmplitude(**kwargs)
 
-    def getPrescribedNodalIncrement(self, increment, nodes):
+    def getDelta(self, timeStep: TimeStep, nodes):
         if self.active:
-            incNumber, incrementSize, stepProgress, dT, stepTime, totalTime = increment
-
             delta = np.tile(self._delta, len(nodes))
 
-            return delta * (self._amplitude(stepProgress) - (self._amplitude(stepProgress - incrementSize)))
+            return delta * (
+                self._amplitude(timeStep.stepProgress)
+                - (self._amplitude(timeStep.stepProgress - timeStep.stepProgressIncrement))
+            )
         else:
             return 0.0
 

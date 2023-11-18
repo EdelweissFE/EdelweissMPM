@@ -24,25 +24,32 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-
-import meshio
+import pytest
+import argparse
 
 from fe.journal.journal import Journal
 from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
+from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from mpm.sets.cellset import CellSet
 from fe.sets.nodeset import NodeSet
 
+from fe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+from mpm.solvers.nqs import NonlinearQuasistaticSolver
+from fe.linsolve.pardiso.pardiso import pardisoSolve
+from mpm.stepactions.dirichlet import Dirichlet
+from mpm.stepactions.bodyload import BodyLoad
+from fe.utils.exceptions import StepFailed
+
 import numpy as np
 
 
-if __name__ == "__main__":
+def run_sim():
     dimension = 2
 
     journal = Journal()
@@ -55,23 +62,23 @@ if __name__ == "__main__":
         mpmModel,
         journal,
         x0=0.0,
-        l=200.0,
+        l=50.0,
         y0=0.0,
         h=100.0,
-        nX=20,
-        nY=10,
+        nX=15,
+        nY=30,
         cellProvider="marmot",
         cellType="Displacement/SmallStrain/Quad4",
     )
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
-        x0=5.0,
+        x0=1e-3,
         l=20.0,
-        y0=40.0,
-        h=20.0,
-        nX=3,
-        nY=3,
+        y0=1e-3,
+        h=90.0,
+        nX=15,
+        nY=60,
         mpProvider="marmot",
         mpType="Displacement/SmallStrain/PlaneStrain",
     )
@@ -87,10 +94,7 @@ if __name__ == "__main__":
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SimpleMaterialPointManager(allCells, allMPs)
-
-    activeCells = None
-    activeNodes = None
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
 
     journal.printSeperationLine()
 
@@ -126,92 +130,100 @@ if __name__ == "__main__":
 
     ensightOutput.initializeJob()
 
-    for i in range(100):
-        time = float(i)
-        print("time step {:}".format(i))
+    outputManagers = [
+        ensightOutput,
+    ]
 
-        mpmManager.updateConnectivity()
+    dirichletBottom = Dirichlet(
+        "bottom",
+        mpmModel.nodeSets["rectangular_grid_bottom"],
+        "displacement",
+        {0: 0.0, 1: 0.0},
+        mpmModel,
+        journal,
+    )
 
-        if mpmManager.hasChanged():
-            print("material points in cells have changed since previous localization")
+    dirichletLeft = Dirichlet(
+        "left",
+        mpmModel.nodeSets["rectangular_grid_left"],
+        "displacement",
+        {
+            0: 0.0,
+        },
+        mpmModel,
+        journal,
+    )
 
-            if mpmManager.hasLostMaterialPoints():
-                print("we have lost material points outside the grid!")
-                break
+    gravityLoad = BodyLoad(
+        "theGravity",
+        mpmModel,
+        journal,
+        mpmModel.cells.values(),
+        "BodyForce",
+        # np.array([15.0, 00.0]),
+        np.array([0.0, -600.0]),
+    )
 
-            activeCells = mpmManager.getActiveCells()
-            activeNodes = set([n for cell in activeCells for n in cell.nodes])
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-2, 1000, journal)
 
-            print("active cells:")
-            print([c.cellNumber for c in activeCells])
+    nonlinearSolver = NonlinearQuasistaticSolver(journal)
 
-            print("active nodes:")
-            print([n.label for n in activeNodes])
+    iterationOptions = dict()
 
-            for c in activeCells:
-                print(
-                    "cell {:} hosts material points {:}".format(
-                        c.cellNumber, [mp.label for mp in mpmManager.getMaterialPointsInCell(c)]
-                    )
-                )
+    iterationOptions["nMaximumIterations"] = 5
+    iterationOptions["nCrititcalIterations"] = 3
+    iterationOptions["nAllowedResidualGrowths"] = 3
 
-            activeNodeFields = {
-                nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
-                for nodeField in mpmModel.nodeFields.values()
-            }
-            activeNodeFields["displacement"].createFieldValueEntry("dU")
+    linearSolver = pardisoSolve
 
-            scalarVariables = []
-            elements = []
-            constraints = []
+    try:
+        nonlinearSolver.solveStep(
+            adaptiveTimeStepper,
+            linearSolver,
+            mpmManager,
+            [dirichletBottom, dirichletLeft],
+            [gravityLoad],
+            mpmModel,
+            fieldOutputController,
+            outputManagers,
+            iterationOptions,
+        )
 
-            activeNodeSets = [
-                NodeSet(nodeSet.name, activeNodes.intersection(nodeSet)) for nodeSet in mpmModel.nodeSets.values()
-            ]
+    except StepFailed as e:
+        print(e)
 
-            dofManager = MPMDofManager(
-                activeNodeFields.values(), scalarVariables, elements, constraints, activeNodeSets, activeCells
-            )
-
-            dUActiveCells = dofManager.constructDofVector()
-
-        for c in activeCells:
-            c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
-
-        time = 10 * i
-        shift = np.asarray([2.0, 6.0 * np.cos(4 * np.pi * i / 100.0)])
-        activeNodeFields["displacement"]["dU"][:] = shift
-        dofManager.writeNodeFieldToDofVector(dUActiveCells, activeNodeFields["displacement"], "dU")
-
-        idcsTop = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_top"]
-        dUActiveCells[idcsTop[1::2]] = 0.0
-
-        idcsBottom = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_bottom"]
-        dUActiveCells[idcsBottom[1::2]] = 0.0
-
-        idcsRight = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_right"]
-        dUActiveCells[idcsRight] = 0.0
-
-        dofManager.writeDofVectorToNodeField(dUActiveCells, activeNodeFields["displacement"], "dU")
-
-        for c in activeCells:
-            dUCell = dUActiveCells[c]
-            c.interpolateFieldsToMaterialPoints(dUCell)
-
-        for mp in allMPs:
-            mp.computeYourself(time, i)
-
-        mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
-
-        mpmModel.advanceToTime(time)
-
-        fieldOutputController.finalizeIncrement()
-
-        print("material point stresses:")
-        print(fieldOutputController.fieldOutputs["stress"].getLastResult())
-
-        ensightOutput.finalizeIncrement()
-
-        journal.printSeperationLine()
-
+    fieldOutputController.finalizeJob()
     ensightOutput.finalizeJob()
+
+    return mpmModel
+
+
+@pytest.fixture(autouse=True)
+def change_test_dir(request, monkeypatch):
+    """No matter where pytest is ran, we set the working dir
+    to this testscript's parent directory"""
+
+    monkeypatch.chdir(request.fspath.dirname)
+
+
+def test_sim():
+    mpmModel = run_sim()
+
+    res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+    gold = np.loadtxt("gold.csv")
+
+    print(res - gold)
+
+    assert np.isclose(res, gold).all()
+
+
+if __name__ == "__main__":
+    mpmModel = run_sim()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
+    args = parser.parse_args()
+
+    if args.create_gold:
+        gold = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+        np.savetxt("gold.csv", gold)

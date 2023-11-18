@@ -24,10 +24,9 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
+import pytest
+import argparse
 
-import meshio
-
-from fe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
 from fe.journal.journal import Journal
 from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
@@ -38,14 +37,17 @@ from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from mpm.sets.cellset import CellSet
+from fe.sets.nodeset import NodeSet
 
 import numpy as np
 
 
-if __name__ == "__main__":
+def run_sim():
     dimension = 2
 
     journal = Journal()
+
+    np.set_printoptions(precision=3)
 
     mpmModel = MPMModel(dimension)
 
@@ -56,8 +58,8 @@ if __name__ == "__main__":
         l=200.0,
         y0=0.0,
         h=100.0,
-        nX=40,
-        nY=20,
+        nX=20,
+        nY=10,
         cellProvider="marmot",
         cellType="Displacement/SmallStrain/Quad4",
     )
@@ -125,6 +127,7 @@ if __name__ == "__main__":
     ensightOutput.initializeJob()
 
     for i in range(100):
+        time = float(i)
         print("time step {:}".format(i))
 
         mpmManager.updateConnectivity()
@@ -161,25 +164,38 @@ if __name__ == "__main__":
             scalarVariables = []
             elements = []
             constraints = []
-            nodeSets = []
+
+            activeNodeSets = [
+                NodeSet(nodeSet.name, activeNodes.intersection(nodeSet)) for nodeSet in mpmModel.nodeSets.values()
+            ]
 
             dofManager = MPMDofManager(
-                activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells
+                activeNodeFields.values(), scalarVariables, elements, constraints, activeNodeSets, activeCells
             )
 
-            dofVector = dofManager.constructDofVector()
+            dUActiveCells = dofManager.constructDofVector()
 
         for c in activeCells:
             c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
 
         time = 10 * i
-        shift = np.asarray([2.0, 2.0 * np.cos(4 * np.pi * i / 100.0)])
-
+        shift = np.asarray([2.0, 6.0 * np.cos(4 * np.pi * i / 100.0)])
         activeNodeFields["displacement"]["dU"][:] = shift
-        dofManager.writeNodeFieldToDofVector(dofVector, activeNodeFields["displacement"], "dU")
+        dofManager.writeNodeFieldToDofVector(dUActiveCells, activeNodeFields["displacement"], "dU")
+
+        idcsTop = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_top"]
+        dUActiveCells[idcsTop[1::2]] = 0.0
+
+        idcsBottom = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_bottom"]
+        dUActiveCells[idcsBottom[1::2]] = 0.0
+
+        idcsRight = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_right"]
+        dUActiveCells[idcsRight] = 0.0
+
+        dofManager.writeDofVectorToNodeField(dUActiveCells, activeNodeFields["displacement"], "dU")
 
         for c in activeCells:
-            dUCell = dofVector[c]
+            dUCell = dUActiveCells[c]
             c.interpolateFieldsToMaterialPoints(dUCell)
 
         for mp in allMPs:
@@ -191,8 +207,42 @@ if __name__ == "__main__":
 
         fieldOutputController.finalizeIncrement()
 
+        print("material point stresses:")
+        print(fieldOutputController.fieldOutputs["stress"].getLastResult())
+
         ensightOutput.finalizeIncrement()
 
         journal.printSeperationLine()
 
     ensightOutput.finalizeJob()
+
+    return mpmModel
+
+
+@pytest.fixture(autouse=True)
+def change_test_dir(request, monkeypatch):
+    """No matter where pytest is ran, we set the working dir
+    to this testscript's parent directory"""
+
+    monkeypatch.chdir(request.fspath.dirname)
+
+
+def test_sim():
+    mpmModel = run_sim()
+
+    res = mpmModel.nodeFields["displacement"]["dU"]
+
+    gold = np.loadtxt("gold.csv")
+
+    assert np.isclose(res, gold).all()
+
+
+if __name__ == "__main__":
+    mpmModel = run_sim()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
+    args = parser.parse_args()
+
+    if args.create_gold:
+        np.savetxt("gold.csv", mpmModel.nodeFields["displacement"]["dU"])

@@ -106,4 +106,3 @@ class MaterialPoint(BaseMaterialPoint):
 
     def computeYourself(self, timeTotal: float, dT: float):
         pass
-

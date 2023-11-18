@@ -24,36 +24,35 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
+import pytest
+import argparse
 
-import meshio
-import numpy as np
-
+# from fe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
 from fe.journal.journal import Journal
 from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
 from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
-from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
+
+# from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from mpm.sets.cellset import CellSet
 from fe.sets.nodeset import NodeSet
 
+# from fe.steps.adaptivestep import AdaptiveStep
 from fe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from mpm.solvers.nqs import NonlinearQuasistaticSolver
 from fe.linsolve.pardiso.pardiso import pardisoSolve
 from mpm.stepactions.dirichlet import Dirichlet
 from mpm.stepactions.bodyload import BodyLoad
-from fe.utils.exceptions import StepFailed
 
 import numpy as np
-from datetime import datetime
 
-if __name__ == "__main__":
-    tic = datetime.now()
 
+def run_sim():
     dimension = 2
 
     journal = Journal()
@@ -66,31 +65,29 @@ if __name__ == "__main__":
         mpmModel,
         journal,
         x0=0.0,
-        l=100.0,
+        l=200.0,
         y0=0.0,
         h=100.0,
-        nX=12,
-        nY=12,
+        nX=4,
+        nY=2,
         cellProvider="marmot",
-        cellType="GradientEnhancedMicropolar/Quad4",
+        cellType="Displacement/SmallStrain/Quad4",
     )
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
-        x0=0.01,
-        l=99.98,
-        y0=60.0,
-        h=20.0,
-        nX=60,
-        nY=15,
+        x0=10.0,
+        l=180.0,
+        y0=5.0,
+        h=90.0,
+        nX=10,
+        nY=20,
         mpProvider="marmot",
-        mpType="GradientEnhancedMicropolar/PlaneStrain",
+        mpType="Displacement/SmallStrain/PlaneStrain",
     )
 
-    material = "GMDAMAGEDSHEARNEOHOOKE"
-    # material = "LINEARELASTIC"
-    materialProperties = np.array([30000.0, 0.3, 0, 1e-9, 2e-9, 1.4999])
-    # materialProperties = np.array([30000.0, 0.3, ])
+    material = "LINEARELASTIC"
+    materialProperties = np.array([30000.0, 0.3])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 
@@ -100,9 +97,10 @@ if __name__ == "__main__":
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    # mpmManager = SimpleMaterialPointManager(allCells, allMPs)
+    mpmManager = SimpleMaterialPointManager(allCells, allMPs)
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
+    activeCells = None
+    activeNodes = None
 
     journal.printSeperationLine()
 
@@ -116,16 +114,16 @@ if __name__ == "__main__":
         allMPs,
         "displacement",
     )
-    # fieldOutputController.addPerMaterialPointFieldOutput(
-    #     "stress",
-    #     allMPs,
-    #     "stress",
-    # )
-    # fieldOutputController.addPerMaterialPointFieldOutput(
-    #     "deformation gradient",
-    #     allMPs,
-    #     "deformation gradient",
-    # )
+    fieldOutputController.addPerMaterialPointFieldOutput(
+        "stress",
+        allMPs,
+        "stress",
+    )
+    fieldOutputController.addPerMaterialPointFieldOutput(
+        "strain",
+        allMPs,
+        "strain",
+    )
 
     fieldOutputController.initializeJob()
 
@@ -133,24 +131,14 @@ if __name__ == "__main__":
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["stress"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["strain"], create="perNode")
+    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["stress"], create="perNode")
+    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["strain"], create="perNode")
 
     ensightOutput.initializeJob()
 
     outputManagers = [
         ensightOutput,
     ]
-
-    dirichletBottom = Dirichlet(
-        "bottom",
-        mpmModel.nodeSets["rectangular_grid_bottom"],
-        "displacement",
-        {1: 0.0},
-        mpmModel,
-        journal,
-    )
 
     dirichletLeft = Dirichlet(
         "left",
@@ -165,21 +153,12 @@ if __name__ == "__main__":
         "right",
         mpmModel.nodeSets["rectangular_grid_right"],
         "displacement",
-        {0: 0.0, 1: 0.0},
+        {0: -20.0, 1: 0.0},
         mpmModel,
         journal,
     )
 
-    gravityLoad = BodyLoad(
-        "theGravity",
-        mpmModel,
-        journal,
-        mpmModel.cells.values(),
-        "BodyForce",
-        np.array([0.0, -200.0]),
-    )
-
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-2, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 
@@ -191,27 +170,50 @@ if __name__ == "__main__":
 
     linearSolver = pardisoSolve
 
-    try:
-        nonlinearSolver.solveStep(
-            adaptiveTimeStepper,
-            linearSolver,
-            mpmManager,
-            [dirichletBottom, dirichletLeft, dirichletRight],
-            [gravityLoad],
-            mpmModel,
-            fieldOutputController,
-            outputManagers,
-            iterationOptions,
-        )
-
-    except StepFailed as e:
-        print(e)
+    nonlinearSolver.solveStep(
+        adaptiveTimeStepper,
+        linearSolver,
+        mpmManager,
+        [dirichletLeft, dirichletRight],
+        [],
+        mpmModel,
+        fieldOutputController,
+        outputManagers,
+        iterationOptions,
+    )
 
     fieldOutputController.finalizeJob()
     ensightOutput.finalizeJob()
 
-    np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
+    return mpmModel
 
-    toc = datetime.now()
 
-    print("total elapsed time = ", (toc - tic).total_seconds())
+@pytest.fixture(autouse=True)
+def change_test_dir(request, monkeypatch):
+    """No matter where pytest is ran, we set the working dir
+    to this testscript's parent directory"""
+
+    monkeypatch.chdir(request.fspath.dirname)
+
+
+def test_sim():
+    mpmModel = run_sim()
+
+    res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+    gold = np.loadtxt("gold.csv")
+
+    print(res - gold)
+
+    assert np.isclose(res, gold).all()
+
+
+if __name__ == "__main__":
+    mpmModel = run_sim()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
+    args = parser.parse_args()
+
+    if args.create_gold:
+        gold = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+        np.savetxt("gold.csv", gold)

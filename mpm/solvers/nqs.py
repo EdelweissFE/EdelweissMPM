@@ -43,6 +43,7 @@ from fe.config.phenomena import getFieldSize
 from fe.numerics.csrgenerator import CSRGenerator
 from fe.models.femodel import FEModel
 from fe.stepactions.base.stepactionbase import StepActionBase
+from fe.timesteppers.timestep import TimeStep
 from fe.outputmanagers.base.outputmanagerbase import OutputManagerBase
 from fe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatrix
 from fe.utils.fieldoutput import FieldOutputController
@@ -138,15 +139,15 @@ class NonlinearQuasistaticSolver:
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads)
 
         try:
-            for increment in timeStepper.generateIncrement():
-                incNumber, incrementSize, stepProgress, dT, stepTime, tStart = increment
-
-                tEnd = tStart + dT
-
+            for timeStep in timeStepper.generateTimeStep():
                 self.journal.printSeperationLine()
                 self.journal.message(
                     "increment {:}: {:8f}, {:8f}; time {:10f} to {:10f}".format(
-                        incNumber, incrementSize, stepProgress, tStart, tEnd
+                        timeStep.number,
+                        timeStep.stepProgressIncrement,
+                        timeStep.stepProgress,
+                        timeStep.totalTime - timeStep.timeIncrement,
+                        timeStep.totalTime,
                     ),
                     self.identification,
                     level=1,
@@ -160,7 +161,7 @@ class NonlinearQuasistaticSolver:
 
                 mpmManager.updateConnectivity()
 
-                if incNumber == 0 or mpmManager.hasChanged():
+                if timeStep.number == 0 or mpmManager.hasChanged():
                     self.journal.message(
                         "material points in cells have changed since previous localization",
                         self.identification,
@@ -198,7 +199,7 @@ class NonlinearQuasistaticSolver:
                         theDofManager,
                         linearSolver,
                         iterationOptions,
-                        increment,
+                        timeStep,
                         model,
                     )
 
@@ -224,7 +225,7 @@ class NonlinearQuasistaticSolver:
                         theDofManager.writeDofVectorToNodeField(dU, field, "dU")
 
                     model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
-                    model.advanceToTime(tEnd)
+                    model.advanceToTime(timeStep.totalTime)
 
                     self.journal.message(
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
@@ -262,7 +263,7 @@ class NonlinearQuasistaticSolver:
         theDofManager,
         linearSolver,
         iterationOptions,
-        increment,
+        timeStep: TimeStep,
         model,
     ) -> tuple[DofVector, DofVector, DofVector, int, dict]:
         """Standard Newton-Raphson scheme to solve for an increment.
@@ -283,16 +284,8 @@ class NonlinearQuasistaticSolver:
             The list of active step actions.
         model
             The model tree.
-        increment
-            The increment.
-        lastIncrementSize
-            The size of the previous increment.
-        extrapolation
-            The type of extrapolation to be used.
-        maxIter
-            The maximum number of iterations to be used.
-        maxGrowingIter
-            The maximum number of growing residuals until the Newton-Raphson is terminated.
+        timeStep.
+            The current time increment.
 
         Returns
         -------
@@ -305,7 +298,6 @@ class NonlinearQuasistaticSolver:
                 - the history of residuals per field
         """
 
-        incNumber, incrementSize, stepProgress, dT, stepTime, time = increment
         iterationCounter = 0
         incrementResidualHistory = {field: list() for field in theDofManager.idcsOfFieldsInDofVector}
 
@@ -322,23 +314,23 @@ class NonlinearQuasistaticSolver:
         PExt = theDofManager.constructDofVector()
         ddU = None
 
-        self._applyStepActionsAtIncrementStart(model, increment, dirichlets + bodyLoads)
+        self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
 
         while True:
             P[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
 
-            self._prepareMaterialPoints(materialPoints, time, dT)
+            self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
-            self._computeMaterialPoints(materialPoints, time, dT)
-            self._computeCells(activeCells, P, F, K_VIJ, time, dT)
+            self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
+            self._computeCells(activeCells, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement)
 
-            PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, increment, theDofManager, activeCells)
+            PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
 
             R[:] = P
             R += PExt
 
             if iterationCounter == 0 and dirichlets:
-                R = self._applyDirichlet(increment, R, dirichlets, activeNodeSets, theDofManager)
+                R = self._applyDirichlet(timeStep, R, dirichlets, activeNodeSets, theDofManager)
             else:
                 for dirichlet in dirichlets:
                     R[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
@@ -377,7 +369,7 @@ class NonlinearQuasistaticSolver:
         bodyForces: list[StepActionBase],
         PExt: DofVector,
         K: VIJSystemMatrix,
-        increment: tuple,
+        timeStep: TimeStep,
         theDofManager,
         activeCells,
     ) -> tuple[DofVector, VIJSystemMatrix]:
@@ -394,8 +386,8 @@ class NonlinearQuasistaticSolver:
             The external load vector to be augmented.
         K
             The system matrix to be augmented.
-        increment
-            The increment.
+        timeStep
+            The current time increment.
 
         Returns
         -------
@@ -403,18 +395,16 @@ class NonlinearQuasistaticSolver:
             The augmented load vector and system matrix.
         """
 
-        incNumber, incrementSize, stepProgress, dT, stepTime, totalTime = increment
-        # time = np.array([stepTime, totalTime])
         for bForce in bodyForces:
-            loadVector = bForce.getCurrentBodyLoad(stepProgress)
+            loadVector = bForce.getCurrentLoad(timeStep)
             bLoadType = bForce.loadType
 
-            for cl in bForce.cells:
+            for cl in bForce.cellSet:
                 if cl in activeCells:
                     Pc = np.zeros(cl.nDof)
                     Kc = K[theDofManager.idcsOfCellsInDofVector[cl]]
 
-                    cl.computeBodyLoad(bLoadType, loadVector, Pc, Kc, totalTime, dT)
+                    cl.computeBodyLoad(bLoadType, loadVector, Pc, Kc, timeStep.totalTime, timeStep.timeIncrement)
 
                     PExt[cl] += Pc
 
@@ -453,20 +443,19 @@ class NonlinearQuasistaticSolver:
 
             K.eliminate_zeros()
 
-
         return K
 
     @decorator_timer("dirichlet on R")
     def _applyDirichlet(
-        self, increment: tuple, R: DofVector, dirichlets: list[StepActionBase], activeNodeSets, theDofManager
+        self, timeStep: TimeStep, R: DofVector, dirichlets: list[StepActionBase], activeNodeSets, theDofManager
     ):
         """Apply the dirichlet bcs on the residual vector
         Is called by solveStep() before solving the global equatuon system.
 
         Parameters
         ----------
-        increment
-            The increment.
+        timeStep
+            The time increment.
         R
             The residual vector of the global equation system to be modified.
         dirichlets
@@ -480,8 +469,8 @@ class NonlinearQuasistaticSolver:
 
         for dirichlet in dirichlets:
             dirichletNodes = activeNodeSets[dirichlet.nSet.name]
-            R[self._findDirichletIndices(theDofManager, dirichlet)] = dirichlet.getPrescribedNodalIncrement(
-                increment, dirichletNodes
+            R[self._findDirichletIndices(theDofManager, dirichlet)] = dirichlet.getDelta(
+                timeStep, dirichletNodes
             ).flatten()
 
         return R
@@ -541,7 +530,6 @@ class NonlinearQuasistaticSolver:
         return residualHistory
 
     def _checkConvergence(self, iterations: int, incrementResidualHistory: dict, iterationOptions: dict):
-
         iterationMessage = ""
         convergedAtAll = True
 
@@ -648,7 +636,7 @@ class NonlinearQuasistaticSolver:
         U_np: DofVector,
         PExt: DofVector,
         K: VIJSystemMatrix,
-        increment: tuple,
+        timeStep: TimeStep,
     ) -> tuple[DofVector, VIJSystemMatrix]:
         """Assemble all loads into a right hand side vector.
 
@@ -666,8 +654,8 @@ class NonlinearQuasistaticSolver:
             The external load vector.
         K
             The system matrix.
-        increment
-            The increment.
+        timeStep
+            The current time increment.
 
         Returns
         -------
@@ -683,7 +671,7 @@ class NonlinearQuasistaticSolver:
         # ).flatten()
         # # dloads
         # PExt, K = self.computeDistributedLoads(distributedLoads, U_np, PExt, K, increment)
-        PExt, K = self._computeBodyLoads(bodyForces, U_np, PExt, K, increment)
+        PExt, K = self._computeBodyLoads(bodyForces, U_np, PExt, K, timeStep)
 
         return PExt, K
 
@@ -766,7 +754,7 @@ class NonlinearQuasistaticSolver:
         )
         for field, hist in incrementResidualHistory.items():
             self.journal.message(
-                "|{:20}|node {:10}|".format(field, hist[-1]['nodeWithLargestResidual'].label),
+                "|{:20}|node {:10}|".format(field, hist[-1]["nodeWithLargestResidual"].label),
                 self.identification,
                 level=2,
             )
@@ -799,7 +787,7 @@ class NonlinearQuasistaticSolver:
         for action in actions:
             action.applyAtStepEnd(model)
 
-    def _applyStepActionsAtIncrementStart(self, model: FEModel, increment: tuple, actions):
+    def _applyStepActionsAtIncrementStart(self, model: FEModel, timeStep: TimeStep, actions):
         """Called when all step actions should be applied at the start of a step.
 
         Parameters
@@ -813,7 +801,7 @@ class NonlinearQuasistaticSolver:
         """
 
         for action in actions:
-            action.applyAtIncrementStart(model, increment)
+            action.applyAtIncrementStart(model, timeStep)
 
     def _findDirichletIndices(self, theDofManager, dirichlet):
         fieldIndices = theDofManager.idcsOfFieldsOnNodeSetsInDofVector[dirichlet.field][dirichlet.nSet.name]

@@ -25,33 +25,22 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissFE.
 #  ---------------------------------------------------------------------
-# Created on Thu Nov 15 13:15:14 2018
 
-# @author: Matthias Neuner
-"""
-Simple body force load.
-If not modified in subsequent steps, the load held constant.
-"""
-
-documentation = {
-    "forceVector": "The force vector",
-    "delta": "In subsequent steps only: define the updated force vector incrementally",
-    "f(t)": "(Optional) define an amplitude in the step progress interval [0...1]",
-}
-
-from fe.stepactions.base.stepactionbase import StepActionBase
+from mpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
+from fe.timesteppers.timestep import TimeStep
+from mpm.sets.cellset import CellSet
 import numpy as np
 import sympy as sp
 
 
-class BodyLoad(StepActionBase):
+class BodyLoad(MPMBodyLoadBase):
     def __init__(self, name, model, journal, cells, bodyLoadType: str, loadVector, **kwargs):
         self.name = name
 
         self._loadVector = loadVector
         self._loadAtStepStart = np.zeros_like(self._loadVector)
-        self.loadType = bodyLoadType
-        self.cells = cells
+        self._loadType = bodyLoadType
+        self._cells = cells
 
         if len(self._loadVector) < model.domainSize:
             raise Exception("BodyForce {:}: load vector has wrong dimension!".format(self.name))
@@ -64,6 +53,14 @@ class BodyLoad(StepActionBase):
             self._amplitude = lambda x: x
 
         self._idle = False
+
+    @property
+    def cellSet(self) -> CellSet:
+        return self._cells
+
+    @property
+    def loadType(self) -> str:
+        return self._loadType
 
     def applyAtStepEnd(self, model, stepMagnitude=None):
         if not self._idle:
@@ -91,11 +88,10 @@ class BodyLoad(StepActionBase):
 
     #     self.idle = False
 
-    def getCurrentBodyLoad(self, stepProgress):
+    def getCurrentLoad(self, timeStep: TimeStep):
         if self._idle == True:
             t = 1.0
         else:
-            # incNumber, incrementSize, stepProgress, dT, stepTime, totalTime = increment
-            t = stepProgress
+            t = timeStep.stepProgress
 
         return self._loadAtStepStart + self._delta * self._amplitude(t)
