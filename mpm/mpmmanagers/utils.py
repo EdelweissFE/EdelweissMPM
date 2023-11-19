@@ -29,10 +29,19 @@ from mpm.cells.base.cell import BaseCell
 from mpm.materialpoints.base.mp import BaseMaterialPoint
 
 import numpy as np
+from numba import float64, jit, int64
+from numba.experimental import jitclass
 
 
+boundingBoxSpec=[
+        ("dim", int64),
+        ("_minCoords", float64[:]),
+        ("_maxCoords", float64[:]),
+        ]
+
+# @jitclass(boundingBoxSpec)
 class BoundingBox:
-    def __init__(self, A: list, B: list):
+    def __init__(self, A: np.ndarray, B: np.ndarray):
         self.dim = len(A)
         self.initializeFromTwoPoints(A, B)
 
@@ -45,17 +54,7 @@ class BoundingBox:
         return self._maxCoords
 
     def getCenterCoordinates(self):
-        centercoords = []
-        for i in range(self.dim):
-            centercoords.append((self._minCoords[i] + self._maxCoords[i]) / 2.0)
-
-        return centercoords
-
-    def getMinCoordinates(self):
-        return self._minCoords
-
-    def getMaxCoordinates(self):
-        return self._maxCoords
+        return (self._maxCoords - self._minCoords)/2.0
 
     def getVertices(self):
         vertices = []
@@ -81,20 +80,13 @@ class BoundingBox:
 
         return vertices
 
-    def initializeFromTwoPoints(self, A: list, B: list):
-        self._minCoords = []
-        self._maxCoords = []
+    def initializeFromTwoPoints(self, A: np.ndarray, B: np.ndarray):
+        self._minCoords = np.minimum(A, B)
+        self._maxCoords = np.maximum(A, B)
 
-        for i in range(self.dim):
-            self._minCoords.append(min(A[i], B[i]))
-            self._maxCoords.append(max(A[i], B[i]))
-
-    def isInside(self, point: list):
-        for i in range(self.dim):
-            if point[i] > self._maxCoords[i] or point[i] < self._minCoords[i]:
-                return False
-
-        return True
+    # @jit
+    def isInside(self, point: np.ndarray):
+        return (point > self._minCoords).all() and (point < self._maxCoords).all()
 
     def __str__(self):
         string = "BoundingBox\n"
@@ -113,34 +105,33 @@ def getBoundingBoxForCell(cell):
         boundingBoxMin.append(min(coordinates[:, i]))
         boundingBoxMax.append(max(coordinates[:, i]))
 
-    return boundingBoxMin, boundingBoxMax
+    return np.array(boundingBoxMin), np.array(boundingBoxMax)
 
 
 def buildModelBoundingBox(materialPointCells: list[BaseCell], dimension: int = 2):
     # initialize with first cell
-    A, B = getBoundingBoxForCell(materialPointCells[0])
 
-    d = BoundingBox(A, B)
+    cellsVertices = np.array(
+            [ np.array([n.coordinates for n in cell.nodes]) for cell in materialPointCells]
+            ) 
 
-    for cell in materialPointCells[1:]:
-        boundingBoxCurrCellMin, boundingBoxCurrCellMax = getBoundingBoxForCell(cell)
+    minVertex = np.min(cellsVertices, axis=(0,1) )
+    maxVertex = np.max(cellsVertices, axis=(0,1) )
 
-        for i in range(d.dim):
-            d.minCoords[i] = min(d.minCoords[i], boundingBoxCurrCellMin[i])
-            d.maxCoords[i] = max(d.minCoords[i], boundingBoxCurrCellMax[i])
-
-    return d
+    return BoundingBox(minVertex, maxVertex)
 
 
 class KDTree:
-    def __init__(self, domain: BoundingBox, level: int, materialPointCells: list[BaseCell]):
+    def __init__(self, domain: BoundingBox, level: int, materialPointCells: set[BaseCell]):
         self._domain = domain
         self._dimension = domain.dim
+        self._centerCoordinates = domain.getCenterCoordinates()
         self._cells = materialPointCells
         self._level = level
 
         self._hasChildren = False
-        self._children = []
+        # self._children = []
+        self._children = dict()
 
         self.buildTree()
 
@@ -149,12 +140,15 @@ class KDTree:
     def buildTree(self):
         if self._level > 0:
             self._hasChildren = True
-            centerCoordinates = self._domain.getCenterCoordinates()
+            # centerCoordinates = self._domain.getCenterCoordinates()
 
             for vertice in self._domain.getVertices():
-                newDomain = BoundingBox(vertice, centerCoordinates)
+                newDomain = BoundingBox(vertice, self._centerCoordinates)
+                
+                b = vertice < self._centerCoordinates
+                num = b.dot(1 << np.arange(b.size)[::-1])
 
-                self._children.append(KDTree(newDomain, self._level - 1, self._cells))
+                self._children[num] = KDTree(newDomain, self._level - 1, self._cells)
 
     def assignCellsToDomain(self):
         cellsInDomain = []
@@ -176,29 +170,16 @@ class KDTree:
 
         return cellsInDomain
 
-    def getCellForCoordinates(self, coordinates):
+    def getCellForCoordinates(self, coordinates:np.ndarray):
         if self._hasChildren:
-            for child in self._children:
-                if child._domain.isInside(coordinates):
-                    return child.getCellForCoordinates(coordinates)
+            b = coordinates < self._centerCoordinates
+            num = b.dot(1 << np.arange(b.size)[::-1])
+            return self._children[num].getCellForCoordinates(coordinates)
+
         else:
             for cell in self._cellsInDomain:
                 if cell.isCoordinateInCell(coordinates):
                     return cell
-
-    def getCellsForMaterialPoint(self, mp: BaseMaterialPoint):
-        activeCells = []
-
-        if self._hasChildren:
-            for vCoord in mp.getVertexCoordinates():
-                for child in self._children:
-                    if child._domain.isInside(vCoord):
-                        activeCells.append(child.getCellForCoordinates(vCoord))
-
-        else:
-            for vCoord in mp.getVerticesCoordinates():
-                for cell in self._cellsInDomain:
-                    if cell.isCoordinateInCell(vCoord):
-                        activeCells.append(cell)
+                        
 
         return activeCells

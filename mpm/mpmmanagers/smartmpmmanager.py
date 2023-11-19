@@ -81,14 +81,15 @@ class SmartMaterialPointManager:
         self,
     ):
         self._activeCells = dict()
-        self._attachedMaterialPoints = dict()
+        # self._attachedMaterialPoints = dict()
+        print("start")
 
         for mp in self._mps:
-            currCells = self._KDTree.getCellsForMaterialPoint(mp)
+            currCells = set( self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates() ) 
+
             for cell in currCells:
-                if not cell in self._activeCells.keys():
-                    self._activeCells[cell] = []
-                self._activeCells[cell].append(mp)
+                self._activeCells.setdefault(cell, list()).append(mp)
+        print("end")
         return self._activeCells
 
     def getActiveCells(
