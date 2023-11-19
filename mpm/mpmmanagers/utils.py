@@ -29,21 +29,12 @@ from mpm.cells.base.cell import BaseCell
 from mpm.materialpoints.base.mp import BaseMaterialPoint
 
 import numpy as np
-from numba import float64, jit, int64
-from numba.experimental import jitclass
 
-
-boundingBoxSpec=[
-        ("dim", int64),
-        ("_minCoords", float64[:]),
-        ("_maxCoords", float64[:]),
-        ]
-
-# @jitclass(boundingBoxSpec)
 class BoundingBox:
     def __init__(self, A: np.ndarray, B: np.ndarray):
         self.dim = len(A)
-        self.initializeFromTwoPoints(A, B)
+        self._minCoords = np.minimum(A, B)
+        self._maxCoords = np.maximum(A, B)
 
     @property
     def minCoords(self):
@@ -54,7 +45,7 @@ class BoundingBox:
         return self._maxCoords
 
     def getCenterCoordinates(self):
-        return (self._maxCoords - self._minCoords)/2.0
+        return (self._maxCoords + self._minCoords) / 2.0
 
     def getVertices(self):
         vertices = []
@@ -80,106 +71,73 @@ class BoundingBox:
 
         return vertices
 
-    def initializeFromTwoPoints(self, A: np.ndarray, B: np.ndarray):
-        self._minCoords = np.minimum(A, B)
-        self._maxCoords = np.maximum(A, B)
-
-    # @jit
-    def isInside(self, point: np.ndarray):
-        return (point > self._minCoords).all() and (point < self._maxCoords).all()
-
     def __str__(self):
         string = "BoundingBox\n"
-        string = " min coords = " + str(self._minCoords) + "\n"
-        string = " max coords = " + str(self._maxCoords) + "\n"
+        string += " min coords = " + str(self._minCoords) + "\n"
+        string += " max coords = " + str(self._maxCoords) + "\n"
         return string
 
 
-def getBoundingBoxForCell(cell):
-    coordinates = np.array([n.coordinates for n in cell.nodes])
+def buildBoundingBoxFromCells(materialPointCells: list[BaseCell], dimension: int = 2):
+    cellsVertices = np.array([np.array([n.coordinates for n in cell.nodes]) for cell in materialPointCells])
 
-    boundingBoxMin = []
-    boundingBoxMax = []
+    # min/max over all cells and nodes
+    boundingBoxMin = np.min(cellsVertices, axis=(0, 1))
+    boundingBoxMax = np.max(cellsVertices, axis=(0, 1))
 
-    for i in range(len(coordinates[0, :])):
-        boundingBoxMin.append(min(coordinates[:, i]))
-        boundingBoxMax.append(max(coordinates[:, i]))
-
-    return np.array(boundingBoxMin), np.array(boundingBoxMax)
-
-
-def buildModelBoundingBox(materialPointCells: list[BaseCell], dimension: int = 2):
-    # initialize with first cell
-
-    cellsVertices = np.array(
-            [ np.array([n.coordinates for n in cell.nodes]) for cell in materialPointCells]
-            ) 
-
-    minVertex = np.min(cellsVertices, axis=(0,1) )
-    maxVertex = np.max(cellsVertices, axis=(0,1) )
-
-    return BoundingBox(minVertex, maxVertex)
+    return BoundingBox(boundingBoxMin, boundingBoxMax)
 
 
 class KDTree:
-    def __init__(self, domain: BoundingBox, level: int, materialPointCells: set[BaseCell]):
+    def __init__(self, domain: BoundingBox, level: int, potentialCells: set[BaseCell]):
         self._domain = domain
         self._dimension = domain.dim
         self._centerCoordinates = domain.getCenterCoordinates()
-        self._cells = materialPointCells
         self._level = level
 
-        self._hasChildren = False
-        # self._children = []
         self._children = dict()
+
+        self._cellsInDomain = self.filterCellsInDomain(potentialCells)
 
         self.buildTree()
 
-        self._cellsInDomain = self.assignCellsToDomain()
-
     def buildTree(self):
         if self._level > 0:
-            self._hasChildren = True
-            # centerCoordinates = self._domain.getCenterCoordinates()
 
             for vertice in self._domain.getVertices():
-                newDomain = BoundingBox(vertice, self._centerCoordinates)
-                
-                b = vertice < self._centerCoordinates
-                num = b.dot(1 << np.arange(b.size)[::-1])
+                childDomain = BoundingBox(vertice, self._centerCoordinates)
 
-                self._children[num] = KDTree(newDomain, self._level - 1, self._cells)
+                self._children[self.getChildIDForCoordinates(vertice)] = KDTree(childDomain, self._level - 1, self._cellsInDomain)
 
-    def assignCellsToDomain(self):
+    def filterCellsInDomain(self, cells):
         cellsInDomain = []
 
-        for cell in self._cells:
-            boundingBoxCurrCellMin, boundingBoxCurrCellMax = getBoundingBoxForCell(cell)
+        for cell in cells:
+            cellBoundingBox = buildBoundingBoxFromCells(
+                [
+                    cell,
+                ]
+            )
 
-            appendCell = True
-            for i in range(self._domain.dim):
-                if (
-                    boundingBoxCurrCellMax[i] < self._domain.minCoords[i]
-                    or boundingBoxCurrCellMin[i] > self._domain.maxCoords[i]
-                ):
-                    appendCell = False
-                    break
-
-            if appendCell:
+            if ( (cellBoundingBox.maxCoords >=  self._domain.minCoords).all()
+            ).all() and ( (cellBoundingBox.minCoords <  self._domain.maxCoords).all()
+            ):
                 cellsInDomain.append(cell)
 
         return cellsInDomain
 
-    def getCellForCoordinates(self, coordinates:np.ndarray):
-        if self._hasChildren:
-            b = coordinates < self._centerCoordinates
-            num = b.dot(1 << np.arange(b.size)[::-1])
-            return self._children[num].getCellForCoordinates(coordinates)
+    def getCellForCoordinates(self, coordinates: np.ndarray):
+        if self._children:
+            return self._children[self.getChildIDForCoordinates(coordinates)].getCellForCoordinates(coordinates)
 
         else:
             for cell in self._cellsInDomain:
                 if cell.isCoordinateInCell(coordinates):
                     return cell
-                        
 
-        return activeCells
+    def getChildIDForCoordinates(self, coordinates:np.ndarray):
+        num = 0
+        for i in range(len(coordinates)):
+            if coordinates[i] < self._centerCoordinates[i]:
+                num += 2 ** i  
+        return num

@@ -28,7 +28,9 @@
 
 from mpm.cells.base.cell import BaseCell
 from mpm.materialpoints.base.mp import BaseMaterialPoint
-from mpm.mpmmanagers.utils import KDTree, BoundingBox, buildModelBoundingBox
+from mpm.mpmmanagers.utils import KDTree, BoundingBox, buildBoundingBoxFromCells
+
+from collections import defaultdict
 
 import numpy as np
 
@@ -57,40 +59,20 @@ class SmartMaterialPointManager:
         self._options = options
 
         self._KDTree = KDTree(
-            buildModelBoundingBox(materialPointCells),
+            buildBoundingBoxFromCells(materialPointCells),
             self._options.get("KDTreeLevels"),
             materialPointCells,
         )
 
-    def _checkIfMPPartiallyInCell(self, mp: BaseMaterialPoint, cell: BaseCell):
-        """Check if at least one vertex of a MaterialPoint is within a given cell.
-
-        Returns
-        -------
-        bool
-            The truth value if this MaterialPoint is located in the cell.
-        """
-
-        for vCoord in mp.getVerticesCoordinates():
-            if cell.isCoordinateInCell(vCoord):
-                return True
-
-        return False
-
     def updateConnectivity(
         self,
     ):
-        self._activeCells = dict()
-        # self._attachedMaterialPoints = dict()
-        print("start")
+        self._activeCells = defaultdict(list)
 
         for mp in self._mps:
-            currCells = set( self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates() ) 
-
-            for cell in currCells:
-                self._activeCells.setdefault(cell, list()).append(mp)
-        print("end")
-        return self._activeCells
+            attachedCells = [self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates()]
+            for cell in attachedCells:
+                self._activeCells[cell].append(mp)
 
     def getActiveCells(
         self,
