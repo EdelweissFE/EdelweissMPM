@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# hyperelasticity -*- coding: utf-8 -*-
 #  ---------------------------------------------------------------------
 #
 #  _____    _      _              _         __  __ ____  __  __
@@ -47,14 +47,14 @@ from fe.linsolve.pardiso.pardiso import pardisoSolve
 from mpm.stepactions.dirichlet import Dirichlet
 from mpm.stepactions.bodyload import BodyLoad
 from fe.utils.exceptions import StepFailed
+import fe.utils.performancetiming as performancetiming
 
 import numpy as np
 from datetime import datetime
 
 
+@performancetiming.timeit("simulation")
 def run_sim():
-    tic = datetime.now()
-
     dimension = 2
 
     journal = Journal()
@@ -79,7 +79,7 @@ def run_sim():
         mpmModel,
         journal,
         x0=0.01,
-        l=99.98,
+        l=79.98,
         y0=60.0,
         h=20.0,
         nX=60,
@@ -89,7 +89,7 @@ def run_sim():
     )
 
     material = "GMDAMAGEDSHEARNEOHOOKE"
-    materialProperties = np.array([30000.0, 0.3, 0, 1e-9, 2e-9, 1.4999])
+    materialProperties = np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 
@@ -99,7 +99,7 @@ def run_sim():
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 4})
 
     journal.printSeperationLine()
 
@@ -113,16 +113,18 @@ def run_sim():
         allMPs,
         "displacement",
     )
+
     # fieldOutputController.addPerMaterialPointFieldOutput(
     #     "stress",
     #     allMPs,
     #     "stress",
     # )
-    # fieldOutputController.addPerMaterialPointFieldOutput(
-    #     "deformation gradient",
-    #     allMPs,
-    #     "deformation gradient",
-    # )
+
+    fieldOutputController.addPerMaterialPointFieldOutput(
+        "deformation gradient",
+        allMPs,
+        "deformation gradient",
+    )
 
     fieldOutputController.initializeJob()
 
@@ -130,9 +132,10 @@ def run_sim():
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode")
+    ensightOutput.updateDefinition(
+        fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode"
+    )
     # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["stress"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["strain"], create="perNode")
 
     ensightOutput.initializeJob()
 
@@ -176,7 +179,7 @@ def run_sim():
         np.array([0.0, -200.0]),
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-2, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 
@@ -193,7 +196,11 @@ def run_sim():
             adaptiveTimeStepper,
             linearSolver,
             mpmManager,
-            [dirichletBottom, dirichletLeft, dirichletRight],
+            [
+                dirichletBottom,
+                dirichletLeft,
+                # dirichletRight
+            ],
             [gravityLoad],
             mpmModel,
             fieldOutputController,
@@ -203,15 +210,25 @@ def run_sim():
 
     except StepFailed as e:
         print(e)
+    finally:
+        table = []
+        k1 = "solve step"
+        v1 = performancetiming.times[k1]
+        table.append(("{:}".format(k1), "{:10.4f}s".format(v1.time)))
+        for k2, v2 in v1.items():
+            table.append(("  {:}".format(k2), "  {:10.4f}s".format(v2.time)))
+            for k3, v3 in v2.items():
+                table.append(("    {:}".format(k3), "    {:10.4f}s".format(v3.time)))
+
+        journal.printTable(
+            table,
+            "step 1",
+        )
 
     fieldOutputController.finalizeJob()
     ensightOutput.finalizeJob()
 
     np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
-
-    toc = datetime.now()
-
-    print("total elapsed time = ", (toc - tic).total_seconds())
 
     return mpmModel
 
@@ -237,6 +254,8 @@ def test_sim():
 
 if __name__ == "__main__":
     mpmModel = run_sim()
+
+    print("elapsed time: {:}".format(performancetiming.times["simulation"].time))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")

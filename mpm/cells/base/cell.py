@@ -131,7 +131,7 @@ class BaseCell(ABC):
     @abstractmethod
     def computeMaterialPointKernels(
         self,
-        materialPoints: list[BaseMaterialPoint],
+        dU: np.ndarray,
         P: np.ndarray,
         K: np.ndarray,
         timeTotal: float,
@@ -141,14 +141,14 @@ class BaseCell(ABC):
 
         Parameters
         ----------
+        dU
+            The current solution increment.
         P
             The external load vector to be defined.
         K
             The stiffness matrix to be defined.
         U
             The current solution vector.
-        dU
-            The current solution vector increment.
         time
             Array of step time and total time.
         dTime

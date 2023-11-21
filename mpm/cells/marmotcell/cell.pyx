@@ -133,17 +133,18 @@ cdef class MarmotCellWrapper:
 
 
     cpdef void computeMaterialPointKernels(self, 
-                         double[::1] Pe, 
-                         double[::1] Ke, 
+                         double[::1] dUc, 
+                         double[::1] Pc, 
+                         double[::1] Kc, 
                          double timeNew, 
                          double dTime, ) nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
-        self._marmotCell.computeMaterialPointKernels( &Pe[0], &Ke[0], timeNew, dTime)
+        self._marmotCell.computeMaterialPointKernels(&dUc[0], &Pc[0], &Kc[0], timeNew, dTime)
 
-    cpdef void interpolateFieldsToMaterialPoints(self, double[::1] dQ) nogil:
+    cpdef void interpolateFieldsToMaterialPoints(self, double[::1] dUc) nogil:
 
-        self._marmotCell.interpolateFieldsToMaterialPoints(&dQ[0])
+        self._marmotCell.interpolateFieldsToMaterialPoints(&dUc[0])
 
     def computeBodyLoad(self, 
                          str loadType, 

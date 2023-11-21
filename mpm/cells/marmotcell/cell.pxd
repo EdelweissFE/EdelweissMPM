@@ -67,8 +67,9 @@ cdef extern from "Marmot/MarmotCell.h":
 
         void assignMaterialPoints(const vector[MarmotMaterialPoint*] materialPoints) 
 
-        void computeMaterialPointKernels(   double* Pe,
-                                            double* Ke,
+        void computeMaterialPointKernels(   const double* dUc,
+                                            double* Pc,
+                                            double* Kc,
                                             double timeNewTotal,
                                             double dT) except +
 
@@ -81,7 +82,7 @@ cdef extern from "Marmot/MarmotCell.h":
 
         const unordered_map[string, int]& getSupportedBodyLoadTypes()
 
-        void interpolateFieldsToMaterialPoints( const double* Q)
+        void interpolateFieldsToMaterialPoints( const double* dUc)
         
 cdef class MarmotCellWrapper:
     
@@ -99,12 +100,13 @@ cdef class MarmotCellWrapper:
     cdef double[:, ::1] _nodeCoordinates
 
     cpdef void computeMaterialPointKernels(self, 
+                     double[::1] dUc,
                      double[::1] residual, 
                      double[::1] dResidual_dQ, 
                      double timeNew, 
                      double dTime, ) nogil
 
     cpdef void interpolateFieldsToMaterialPoints(self, 
-                     double[::1] dQ) nogil 
+                     double[::1] dUc) nogil 
 
 

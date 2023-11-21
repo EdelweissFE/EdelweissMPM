@@ -84,9 +84,7 @@ def run_sim():
     )
 
     material = "GMDAMAGEDSHEARNEOHOOKE"
-    # material = "LINEARELASTIC"
-    materialProperties = np.array([30000.0, 0.3, 0, 1e-9, 2e-9, 1.4999])
-    # materialProperties = np.array([30000.0, 0.3, ])
+    materialProperties = np.array([30000.0, 0.3, 1, 1, 2, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 

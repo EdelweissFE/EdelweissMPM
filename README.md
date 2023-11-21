@@ -1,15 +1,15 @@
-[![documentation](https://github.com/EdelweissFE/EdelweissFE/actions/workflows/sphinx.yml/badge.svg)](https://edelweissfe.github.io/EdelweissFE)
+<!-- [![documentation](https://github.com/EdelweissMPM/EdelweissMPM/actions/workflows/sphinx.yml/badge.svg)](https://edelweissfe.github.io/EdelweissMPM) -->
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) 
 
-# EdelweissFE: A light-weight, platform-independent, parallel finite element framework.
+# EdelweissMPM: A light-weight, platform-independent, parallel material point module for EdelweissFE.
 
-<p align="center">
-  <img width="512" height="512" src="./doc/source/borehole_damage_lowdilation.gif">
-</p>
+<!-- <p align="center"> -->
+<!--   <img width="512" height="512" src="./doc/source/borehole_damage_lowdilation.gif"> -->
+<!-- </p> -->
 
-See the [documentation](https://edelweissfe.github.io/EdelweissFE).
+<!-- See the [documentation](https://edelweissfe.github.io/EdelweissMPM). -->
 
-EdelweissFE aims at an easy to understand, yet efficient implementation of the finite element method.
+EdelweissMPM aims at an easy to understand, yet efficient implementation of the material point method.
 Some features are:
 
  * Python for non performance-critical routines
@@ -19,4 +19,4 @@ Some features are:
  * Output to Paraview, Ensight, CSV, matplotlib
  * Interfaces to powerful direct and iterative linear solvers
 
-EdelweissFE makes use of the [Marmot](https://github.com/MAteRialMOdelingToolbox/Marmot/) library for finite element and constitutive model formulations.
+EdelweissMPM makes use of the [Marmot](https://github.com/MAteRialMOdelingToolbox/Marmot/) library for cells, material points and constitutive model formulations.
