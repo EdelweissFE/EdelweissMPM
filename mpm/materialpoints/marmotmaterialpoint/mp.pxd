@@ -104,6 +104,8 @@ cdef class MarmotMaterialPointWrapper:
     cdef int _nStateVars
     cdef int _nDim 
 
+    cdef public list _assignedCells
+
     cdef public double[::1]  _materialProperties
 
     cdef public np.ndarray _centerCoordinates

@@ -322,7 +322,7 @@ class NonlinearQuasistaticSolver:
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
-            self._computeCells(activeCells, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement)
+            self._computeCells(activeCells, dU, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
 
@@ -814,8 +814,8 @@ class NonlinearQuasistaticSolver:
             raise StepFailed("we have lost material points outside the grid!")
 
         activeCells = mpmManager.getActiveCells()
-        for c in activeCells:
-            c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
+        # for c in activeCells:
+        #     c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
 
         activeNodes = set([n for cell in activeCells for n in cell.nodes])
 
@@ -849,11 +849,12 @@ class NonlinearQuasistaticSolver:
 
     @decorator_timer("computation active cells")
     def _computeCells(
-        self, activeCells: list, P: DofVector, F: DofVector, K_VIJ: VIJSystemMatrix, time: float, dT: float
+            self, activeCells: list, dU:DofVector, P: DofVector, F: DofVector, K_VIJ: VIJSystemMatrix, time: float, dT: float
     ):
         for c in activeCells:
+            dUc = dU[c]
             Pc = np.zeros(c.nDof)
             Kc = K_VIJ[c]
-            c.computeMaterialPointKernels(Pc, Kc, time, dT)
+            c.computeMaterialPointKernels(dUc, Pc, Kc, time, dT)
             P[c] += Pc
             F[c] += abs(Pc)

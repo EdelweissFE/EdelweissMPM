@@ -68,6 +68,7 @@ cdef class MarmotMaterialPointWrapper:
         self._nVertices             = self._marmotMaterialPoint.getNumberOfVertices()
         self._nDim                  = self._marmotMaterialPoint.getDimension()
         self._hasMaterial           = False
+        self._assignedCells         = list()
 
     def __cinit__(self, materialPointType, 
                   int materialPointNumber, 
@@ -82,6 +83,7 @@ cdef class MarmotMaterialPointWrapper:
             The MarmotMaterialPoint which should be represented.
         materialPointNumber
             The unique number of the MaterialPoint."""
+
 
         self._vertexCoordinates = np.copy(vertexCoordinates)
         self._vertexCoordinatesView = self._vertexCoordinates
@@ -100,6 +102,15 @@ cdef class MarmotMaterialPointWrapper:
     @property
     def label(self):
         return self._label
+
+    @property
+    def assignedCells(self) -> list:
+        """The list of currently attached cells."""
+        return self._assignedCells
+
+    def assignCells(self, list cells):
+        """The list of currently attached cells."""
+        self._assignedCells = cells
     
     @property
     def materialPointType(self):

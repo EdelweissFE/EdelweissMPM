@@ -106,3 +106,6 @@ class Cell(BaseCell):
                 return True
 
         return False
+    
+    def getInterpolationVector(self, coordinate)->np.ndarray:
+        raise Exception("not implemented!")

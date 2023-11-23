@@ -57,6 +57,7 @@ class SmartMaterialPointManager:
         self._cells = materialPointCells
         self._mps = materialPoints
         self._options = options
+        self._activeCells = defaultdict(list)
 
         self._KDTree = KDTree(
             buildBoundingBoxFromCells(materialPointCells),
@@ -67,20 +68,25 @@ class SmartMaterialPointManager:
     def updateConnectivity(
         self,
     ):
+
         self._activeCells = defaultdict(list)
 
         for mp in self._mps:
-            attachedCells = [self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates()]
-            for cell in attachedCells:
+            
+            mp.assignCells( [self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates()])
+            for cell in mp.assignedCells:
                 self._activeCells[cell].append(mp)
+
+        for c, mps in self._activeCells.items():
+            c.assignMaterialPoints(mps)
 
     def getActiveCells(
         self,
     ):
         return self._activeCells.keys()
 
-    def getMaterialPointsInCell(self, cell: BaseCell):
-        return self._activeCells[cell]
+    # def getMaterialPointsInCell(self, cell: BaseCell):
+    #     return self._activeCells[cell]
 
     def hasLostMaterialPoints(
         self,

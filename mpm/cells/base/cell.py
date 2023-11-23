@@ -179,3 +179,15 @@ class BaseCell(ABC):
             The truth value if this coordinate is located in the cell.
         """
         pass
+
+    @abstractmethod
+    def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
+        """Get the interpolation vector for a given global coordinate. 
+
+        Returns
+        -------
+        np.ndarray
+            The interpolation vector for all nodes.
+        """
+
+        pass

@@ -40,6 +40,16 @@ class BaseMaterialPoint(ABC):
         pass
 
     @property
+    def assignedCells(self) -> list:
+        """The list of currently assigned cells."""
+        pass
+
+    @abstractmethod
+    def assignCells(self, cells:list):
+        """Assign the list of cells in which the material point is currently residing."""
+        pass
+
+    @property
     @abstractmethod
     def ensightType(self) -> str:
         """The shape of the materialpoint in Ensight Gold notation."""

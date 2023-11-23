@@ -129,21 +129,19 @@ cdef class MarmotCellWrapper:
     def ensightType(self):
         return self._ensightType
 
-
-
-
     cpdef void computeMaterialPointKernels(self, 
-                         double[::1] Pe, 
-                         double[::1] Ke, 
+                         double[::1] dUc, 
+                         double[::1] Pc, 
+                         double[::1] Kc, 
                          double timeNew, 
                          double dTime, ) nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
-        self._marmotCell.computeMaterialPointKernels( &Pe[0], &Ke[0], timeNew, dTime)
+        self._marmotCell.computeMaterialPointKernels( &dUc[0], &Pc[0], &Kc[0], timeNew, dTime)
 
-    cpdef void interpolateFieldsToMaterialPoints(self, double[::1] dQ) nogil:
+    cpdef void interpolateFieldsToMaterialPoints(self, double[::1] dUc) nogil:
 
-        self._marmotCell.interpolateFieldsToMaterialPoints(&dQ[0])
+        self._marmotCell.interpolateFieldsToMaterialPoints(&dUc[0])
 
     def computeBodyLoad(self, 
                          str loadType, 
@@ -166,6 +164,13 @@ cdef class MarmotCellWrapper:
     def isCoordinateInCell(self, coordinate: np.ndarray) -> bool:
         cdef double[::1] coords = coordinate
         return self._marmotCell.isCoordinateInCell(&coords[0])
+
+    def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
+        cdef double[::1] coords = coordinate
+        cdef np.ndarray N = np.zeros(self._nNodes)
+        cdef double[::1] Nview_ = N
+        self._marmotCell.getInterpolationVector(&Nview_[0], &coords[0])
+        return N
     
     def __dealloc__(self):
         del self._marmotCell

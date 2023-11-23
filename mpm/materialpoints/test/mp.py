@@ -36,12 +36,22 @@ class MaterialPoint(BaseMaterialPoint):
         self._label = label
         self._coordinates = coordinates
         self._volume = volume
+        self._assignedCells = list()
 
         self._displacement = np.zeros(2)
 
     @property
     def label(self) -> int:
         return self._label
+
+    @property
+    def assignedCells(self) -> list:
+        """The list of currently assigned cells."""
+        return self._assignedCells
+
+    def assignCells(self, cells:list):
+        """Assign the list of cells in which the material point is currently residing."""
+        self._assignedCells = cells
 
     @property
     def ensightType(self) -> str:
