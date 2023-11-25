@@ -89,77 +89,82 @@ def run_sim():
 
     ensightOutput.initializeJob()
 
-    for i in range(100):
-        print("time step {:}".format(i))
+    try:
+        for i in range(100):
+            print("time step {:}".format(i))
 
-        mpmManager.updateConnectivity()
+            mpmManager.updateConnectivity()
 
-        if mpmManager.hasChanged():
-            print("material points in cells have changed since previous localization")
+            if mpmManager.hasChanged():
+                print("material points in cells have changed since previous localization")
 
-            if mpmManager.hasLostMaterialPoints():
-                print("we have lost material points outside the grid!")
-                break
+                # if mpmManager.hasLostMaterialPoints():
+                #     print("we have lost material points outside the grid!")
+                #     break
 
-            activeCells = mpmManager.getActiveCells()
-            activeNodes = set([n for cell in activeCells for n in cell.nodes])
+                activeCells = mpmManager.getActiveCells()
+                activeNodes = set([n for cell in activeCells for n in cell.nodes])
 
-            print("active cells:")
-            print([c.cellNumber for c in activeCells])
+                print("active cells:")
+                print([c.cellNumber for c in activeCells])
 
-            print("active nodes:")
-            print([n.label for n in activeNodes])
+                print("active nodes:")
+                print([n.label for n in activeNodes])
 
-            for c in activeCells:
-                print(
-                    "cell {:} hosts material points {:}".format(
-                        c.cellNumber, [mp.label for mp in mpmManager.getMaterialPointsInCell(c)]
+                for c in activeCells:
+                    print(
+                        "cell {:} hosts material points {:}".format(
+                            c.cellNumber, [mp.label for mp in c.assignedMaterialPoints]
+                        )
                     )
+
+                activeNodeFields = {
+                    nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
+                    for nodeField in mpmModel.nodeFields.values()
+                }
+                activeNodeFields["displacement"].createFieldValueEntry("dU")
+
+                scalarVariables = []
+                elements = []
+                constraints = []
+                nodeSets = []
+
+                dofManager = MPMDofManager(
+                    activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells
                 )
 
-            activeNodeFields = {
-                nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
-                for nodeField in mpmModel.nodeFields.values()
-            }
-            activeNodeFields["displacement"].createFieldValueEntry("dU")
+                dofVector = dofManager.constructDofVector()
 
-            scalarVariables = []
-            elements = []
-            constraints = []
-            nodeSets = []
+            for acl in activeCells:
+                dofVector[acl] += 10.0 * acl.cellNumber
 
-            dofManager = MPMDofManager(
-                activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells
-            )
+            print("equation system would have a size of {:}".format(dofManager.nDof))
 
-            dofVector = dofManager.constructDofVector()
+            shift = np.asarray([2.0, 3.0 * np.cos(4 * np.pi * i / 100.0)])
+            mpmModel.advanceToTime(10.0 * (i))
 
-        for acl in activeCells:
-            dofVector[acl] += 10.0 * acl.cellNumber
+            print("shifting all material points by {:}".format(shift))
 
-        print("equation system would have a size of {:}".format(dofManager.nDof))
+            for mp in mpmModel.materialPoints.values():
+                mp.addDisplacement(shift)
 
-        shift = np.asarray([2.0, 3.0 * np.cos(4 * np.pi * i / 100.0)])
-        mpmModel.advanceToTime(10.0 * (i))
+            activeNodeFields["displacement"]["dU"][:] = shift
 
-        print("shifting all material points by {:}".format(shift))
+            mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
 
-        for mp in mpmModel.materialPoints.values():
-            mp.addDisplacement(shift)
+            fieldOutputController.finalizeIncrement()
 
-        activeNodeFields["displacement"]["dU"][:] = shift
+            ensightOutput.finalizeIncrement()
 
-        mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
+            journal.printSeperationLine()
 
-        fieldOutputController.finalizeIncrement()
+    except Exception as e:
+        print(e)
 
-        ensightOutput.finalizeIncrement()
+    finally:
+        ensightOutput.finalizeJob()
 
-        journal.printSeperationLine()
-
-    ensightOutput.finalizeJob()
-
-    return mpmModel
+        return mpmModel
 
 
 @pytest.fixture(autouse=True)

@@ -83,10 +83,8 @@ def run_sim():
         mpType="GradientEnhancedMicropolar/PlaneStrain",
     )
 
-    material = "GMDAMAGEDSHEARNEOHOOKE"
-    # material = "LINEARELASTIC"
-    materialProperties = np.array([30000.0, 0.3, 0, 1e-9, 2e-9, 1.4999])
-    # materialProperties = np.array([30000.0, 0.3, ])
+    material = "GMDamagedShearNeoHooke"
+    materialProperties = np.array([30000.0, 0.3, 1, 1, 2, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 
@@ -110,16 +108,6 @@ def run_sim():
         allMPs,
         "displacement",
     )
-    # fieldOutputController.addPerMaterialPointFieldOutput(
-    #     "stress",
-    #     allMPs,
-    #     "stress",
-    # )
-    # fieldOutputController.addPerMaterialPointFieldOutput(
-    #     "deformation gradient",
-    #     allMPs,
-    #     "deformation gradient",
-    # )
 
     fieldOutputController.initializeJob()
 
@@ -127,10 +115,6 @@ def run_sim():
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["stress"], create="perNode")
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["strain"], create="perNode")
-
     ensightOutput.initializeJob()
 
     outputManagers = [
@@ -183,9 +167,9 @@ def run_sim():
 
     iterationOptions = dict()
 
-    iterationOptions["nMaximumIterations"] = 5
-    iterationOptions["nCrititcalIterations"] = 3
-    iterationOptions["nAllowedResidualGrowths"] = 3
+    iterationOptions["max. iterations"] = 5
+    iterationOptions["critical iterations"] = 3
+    iterationOptions["allowed residual growths"] = 3
 
     linearSolver = pardisoSolve
 
@@ -196,6 +180,7 @@ def run_sim():
             mpmManager,
             [dirichletBottom, dirichletLeft, dirichletRight],
             [gravityLoad],
+            [],
             mpmModel,
             fieldOutputController,
             outputManagers,

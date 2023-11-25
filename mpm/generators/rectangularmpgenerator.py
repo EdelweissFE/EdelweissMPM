@@ -63,11 +63,11 @@ documentation = {
 # from fe.points.node import MaterialPoint
 # from fe.sets.nodeset import MaterialPointSet
 # from fe.utils.misc import convertLinesToStringDictionary
-from fe.models.femodel import FEModel
 from fe.journal.journal import Journal
 
 from mpm.models.mpmmodel import MPMModel
 from mpm.config.mplibrary import getMaterialPointClass
+from mpm.sets.materialpointset import MaterialPointSet
 
 import numpy as np
 
@@ -84,7 +84,9 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     firstMaterialPointLabel = int(kwargs.get("mpLabelStart", 1))
     mpClass = kwargs["mpProvider"]
     mpType = kwargs["mpType"]
-    mpVolume = float(kwargs.get("vol", 1.0))
+    mpThickness = float(kwargs.get("thickness", 1.0))
+
+    mpVolume = l * h / (nX * nY) * mpThickness
 
     MPFactory = getMaterialPointClass(mpClass)
 
@@ -103,5 +105,30 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
             model.materialPoints[currentMPLabel] = mp
             mps.append(mp)
             currentMPLabel += 1
+
+    mpGrid = np.asarray(mps).reshape(nX, nY)
+
+    model.materialPointSets["{:}_left".format(name)] = MaterialPointSet(
+        "{:}_left".format(name), [n for n in mpGrid[0, :]]
+    )
+    model.materialPointSets["{:}_right".format(name)] = MaterialPointSet(
+        "{:}_right".format(name), [n for n in mpGrid[-1, :]]
+    )
+    model.materialPointSets["{:}_top".format(name)] = MaterialPointSet(
+        "{:}_top".format(name), [n for n in mpGrid[:, -1]]
+    )
+    model.materialPointSets["{:}_bottom".format(name)] = MaterialPointSet(
+        "{:}_bottom".format(name), [n for n in mpGrid[:, 0]]
+    )
+    model.materialPointSets["{:}_leftBottom".format(name)] = MaterialPointSet(
+        "{:}_leftBottom".format(name), [mpGrid[0, 0]]
+    )
+    model.materialPointSets["{:}_leftTop".format(name)] = MaterialPointSet("{:}_leftTop".format(name), [mpGrid[0, -1]])
+    model.materialPointSets["{:}_rightBottom".format(name)] = MaterialPointSet(
+        "{:}_rightBottom".format(name), [mpGrid[-1, 0]]
+    )
+    model.materialPointSets["{:}_rightTop".format(name)] = MaterialPointSet(
+        "{:}_rightTop".format(name), [mpGrid[-1, -1]]
+    )
 
     return model

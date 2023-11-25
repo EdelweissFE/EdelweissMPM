@@ -25,11 +25,11 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from mpm.materialpoints.base.mp import BaseMaterialPoint
+from mpm.materialpoints.base.mp import MaterialPointBase
 import numpy as np
 
 
-class MaterialPoint(BaseMaterialPoint):
+class MaterialPoint(MaterialPointBase):
     shape = "point"
 
     def __init__(self, formulation: str, label: int, coordinates: np.ndarray, volume: float):
@@ -49,7 +49,7 @@ class MaterialPoint(BaseMaterialPoint):
         """The list of currently assigned cells."""
         return self._assignedCells
 
-    def assignCells(self, cells:list):
+    def assignCells(self, cells: list):
         """Assign the list of cells in which the material point is currently residing."""
         self._assignedCells = cells
 

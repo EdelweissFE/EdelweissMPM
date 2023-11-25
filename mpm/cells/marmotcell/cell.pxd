@@ -101,12 +101,9 @@ cdef class MarmotCellWrapper:
     
     cdef double[:, ::1] _nodeCoordinates
 
-    cpdef void computeMaterialPointKernels(self, 
-                                           double[::1] dUc,
-                     double[::1] Rhs, 
-                     double[::1] AMatrix, 
-                     double timeNew, 
-                     double dTime, ) nogil
+    cdef list _assignedMaterialPoints
+
+    cpdef void computeMaterialPointKernels(self, double[::1] dUc, double[::1] Rhs, double[::1] AMatrix, double timeNew, double dTime, ) nogil
 
     cpdef void interpolateFieldsToMaterialPoints(self, 
                      double[::1] dUc ) nogil 

@@ -26,20 +26,21 @@
 #  ---------------------------------------------------------------------
 """
 Implementing your own cells can be done easily by subclassing from 
-the abstract base class :class:`~BaseCell`.
+the abstract base class :class:`~CellBase`.
 """
 
 from abc import ABC, abstractmethod
 import numpy as np
 from fe.points.node import Node
-from mpm.cells.base.cell import BaseCell
-from mpm.materialpoints.base.mp import BaseMaterialPoint
+from mpm.cells.base.cell import CellBase
+from mpm.materialpoints.base.mp import MaterialPointBase
 
 
-class Cell(BaseCell):
+class Cell(CellBase):
     def __init__(self, cellType: str, cellNumber: int, nodes: list[Node]):
         self._cellType = cellType
         self._cellNumber = cellNumber
+        self._assignedMaterialPoints = list()
 
         self.nodes = nodes
         self.coordinates = np.array([n.coordinates for n in nodes])
@@ -77,16 +78,23 @@ class Cell(BaseCell):
     def ensightType(self) -> str:
         return "quad4"
 
+    @property
+    def assignedMaterialPoints(self) -> list:
+        return self._assignedMaterialPoints
+
+    def assignMaterialPoints(self, materialPoints):
+        self.materialPoints = materialPoints
+
     def interpolateSolutionContributionToMaterialPoints(
         self,
-        materialPoints: list[BaseMaterialPoint],
+        materialPoints: list[MaterialPointBase],
         dU: np.ndarray,
     ):
         pass
 
     def computeMaterialPointKernels(
         self,
-        materialPoints: list[BaseMaterialPoint],
+        materialPoints: list[MaterialPointBase],
         P: np.ndarray,
         K: np.ndarray,
         timeStep: float,
@@ -106,6 +114,6 @@ class Cell(BaseCell):
                 return True
 
         return False
-    
-    def getInterpolationVector(self, coordinate)->np.ndarray:
+
+    def getInterpolationVector(self, coordinate) -> np.ndarray:
         raise Exception("not implemented!")

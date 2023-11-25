@@ -25,7 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from mpm.cells.base.cell import BaseCell
+from mpm.cells.base.cell import CellBase
 from fe.utils.meshtools import extractNodesFromElementSet
 from fe.sets.orderedset import OrderedSet
 
@@ -48,7 +48,7 @@ class CellSet(list):
     #     instance._nodes = None
     #     return instance
 
-    # allowedObjectTypes = [BaseCell]
+    # allowedObjectTypes = [CellBase]
 
     def __init__(
         self,

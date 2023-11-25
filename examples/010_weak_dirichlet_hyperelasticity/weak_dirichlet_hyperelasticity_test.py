@@ -33,13 +33,13 @@ from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from mpm.sets.cellset import CellSet
 from fe.sets.nodeset import NodeSet
+from mpm.constraints.penaltyweakdirichlet import PenaltyWeakDirichlet
 
 from fe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from mpm.solvers.nqs import NonlinearQuasistaticSolver
@@ -88,7 +88,7 @@ def run_sim():
         mpType="GradientEnhancedMicropolar/PlaneStrain",
     )
 
-    material = "GMDAMAGEDSHEARNEOHOOKE"
+    material = "gmdamagedshearneohooke"
     materialProperties = np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
@@ -136,15 +136,6 @@ def run_sim():
         ensightOutput,
     ]
 
-    dirichletBottom = Dirichlet(
-        "bottom",
-        mpmModel.nodeSets["rectangular_grid_bottom"],
-        "displacement",
-        {1: 0.0},
-        mpmModel,
-        journal,
-    )
-
     dirichletLeft = Dirichlet(
         "left",
         mpmModel.nodeSets["rectangular_grid_left"],
@@ -154,23 +145,20 @@ def run_sim():
         journal,
     )
 
-    dirichletRight = Dirichlet(
-        "right",
-        mpmModel.nodeSets["rectangular_grid_right"],
-        "displacement",
-        {0: 0.0, 1: 0.0},
-        mpmModel,
-        journal,
-    )
-
-    gravityLoad = BodyLoad(
-        "theGravity",
-        mpmModel,
-        journal,
-        mpmModel.cells.values(),
-        "BodyForce",
-        np.array([0.0, -200.0]),
-    )
+    weakDirichlets = [
+        PenaltyWeakDirichlet(
+            "weak dirichlet {:}".format(mp.label),
+            mpmModel,
+            mp,
+            "displacement",
+            {
+                0: -50,
+                1: -50.0,
+            },
+            1e8,
+        )
+        for mp in mpmModel.materialPointSets["planeRect_right"]
+    ]
 
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
 
@@ -178,8 +166,8 @@ def run_sim():
 
     iterationOptions = dict()
 
-    iterationOptions["max. iterations"] = 5
-    iterationOptions["critical iterations"] = 3
+    iterationOptions["max. iterations"] = 15
+    iterationOptions["critical iterations"] = 5
     iterationOptions["allowed residual growths"] = 3
 
     linearSolver = pardisoSolve
@@ -190,11 +178,10 @@ def run_sim():
             linearSolver,
             mpmManager,
             [
-                dirichletBottom,
                 dirichletLeft,
             ],
-            [gravityLoad],
             [],
+            weakDirichlets,
             mpmModel,
             fieldOutputController,
             outputManagers,

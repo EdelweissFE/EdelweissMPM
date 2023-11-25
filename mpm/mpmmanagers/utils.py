@@ -25,10 +25,11 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from mpm.cells.base.cell import BaseCell
-from mpm.materialpoints.base.mp import BaseMaterialPoint
+from mpm.cells.base.cell import CellBase
+from mpm.materialpoints.base.mp import MaterialPointBase
 
 import numpy as np
+
 
 class BoundingBox:
     def __init__(self, A: np.ndarray, B: np.ndarray):
@@ -78,7 +79,7 @@ class BoundingBox:
         return string
 
 
-def buildBoundingBoxFromCells(materialPointCells: list[BaseCell], dimension: int = 2):
+def buildBoundingBoxFromCells(materialPointCells: list[CellBase], dimension: int = 2):
     cellsVertices = np.array([np.array([n.coordinates for n in cell.nodes]) for cell in materialPointCells])
 
     # min/max over all cells and nodes
@@ -89,7 +90,7 @@ def buildBoundingBoxFromCells(materialPointCells: list[BaseCell], dimension: int
 
 
 class KDTree:
-    def __init__(self, domain: BoundingBox, level: int, potentialCells: set[BaseCell]):
+    def __init__(self, domain: BoundingBox, level: int, potentialCells: set[CellBase]):
         self._domain = domain
         self._dimension = domain.dim
         self._centerCoordinates = domain.getCenterCoordinates()
@@ -103,11 +104,12 @@ class KDTree:
 
     def buildTree(self):
         if self._level > 0:
-
             for vertice in self._domain.getVertices():
                 childDomain = BoundingBox(vertice, self._centerCoordinates)
 
-                self._children[self.getChildIDForCoordinates(vertice)] = KDTree(childDomain, self._level - 1, self._cellsInDomain)
+                self._children[self.getChildIDForCoordinates(vertice)] = KDTree(
+                    childDomain, self._level - 1, self._cellsInDomain
+                )
 
     def filterCellsInDomain(self, cells):
         cellsInDomain = []
@@ -119,8 +121,8 @@ class KDTree:
                 ]
             )
 
-            if ( (cellBoundingBox.maxCoords >=  self._domain.minCoords).all()
-            ).all() and ( (cellBoundingBox.minCoords <  self._domain.maxCoords).all()
+            if ((cellBoundingBox.maxCoords >= self._domain.minCoords).all()).all() and (
+                (cellBoundingBox.minCoords < self._domain.maxCoords).all()
             ):
                 cellsInDomain.append(cell)
 
@@ -135,9 +137,11 @@ class KDTree:
                 if cell.isCoordinateInCell(coordinates):
                     return cell
 
-    def getChildIDForCoordinates(self, coordinates:np.ndarray):
+        raise Exception("Failed to determine cell for coordinate {:}".format(coordinates))
+
+    def getChildIDForCoordinates(self, coordinates: np.ndarray):
         num = 0
         for i in range(len(coordinates)):
             if coordinates[i] < self._centerCoordinates[i]:
-                num += 2 ** i  
+                num += 2**i
         return num

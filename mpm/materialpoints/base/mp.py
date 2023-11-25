@@ -30,7 +30,7 @@ import numpy as np
 from fe.points.node import Node
 
 
-class BaseMaterialPoint(ABC):
+class MaterialPointBase(ABC):
     """A basic material point."""
 
     @property
@@ -45,7 +45,7 @@ class BaseMaterialPoint(ABC):
         pass
 
     @abstractmethod
-    def assignCells(self, cells:list):
+    def assignCells(self, cells: list):
         """Assign the list of cells in which the material point is currently residing."""
         pass
 

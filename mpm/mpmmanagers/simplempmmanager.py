@@ -25,8 +25,9 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from mpm.cells.base.cell import BaseCell
-from mpm.materialpoints.base.mp import BaseMaterialPoint
+from mpm.cells.base.cell import CellBase
+from mpm.materialpoints.base.mp import MaterialPointBase
+from collections import defaultdict
 
 
 class SimpleMaterialPointManager:
@@ -35,16 +36,16 @@ class SimpleMaterialPointManager:
     Parameters
     ----------
     materialPointCells
-        The list of BaseCells
+        The list of CellBases
     materialPoints
         The list of Materialpoints
     """
 
-    def __init__(self, materialPointCells: list[BaseCell], materialPoints: list[BaseMaterialPoint]):
+    def __init__(self, materialPointCells: list[CellBase], materialPoints: list[MaterialPointBase]):
         self._cells = materialPointCells
         self._mps = materialPoints
 
-    def _checkIfMPPartiallyInCell(self, mp: BaseMaterialPoint, cell: BaseCell):
+    def _checkIfMPPartiallyInCell(self, mp: MaterialPointBase, cell: CellBase):
         """Check if at least one vertex of a MaterialPoint is within a given cell.
 
         Returns
@@ -64,25 +65,21 @@ class SimpleMaterialPointManager:
     ):
         self._activeCells = dict()
 
+        _mpAttachedCells = defaultdict(list)
+
         for cell in self._cells:
             mpsInCell = [mp for mp in self._mps if self._checkIfMPPartiallyInCell(mp, cell)]
 
             if mpsInCell:
                 self._activeCells[cell] = mpsInCell
+                cell.assignMaterialPoints(mpsInCell)
 
-        return self._activeCells
+                for mp in mpsInCell:
+                    _mpAttachedCells[mp].append(cell)
 
-    def getActiveCells(
-        self,
-    ):
-        return self._activeCells.keys()
+        for mp, cells in _mpAttachedCells.items():
+            mp.assignCells(cells)
 
-    def getMaterialPointsInCell(self, cell: BaseCell):
-        return self._activeCells[cell]
-
-    def hasLostMaterialPoints(
-        self,
-    ):
         attachedMPs = set([mp for mps in self._activeCells.values() for mp in mps])
 
         lost = len(attachedMPs) != len(self._mps)
@@ -92,7 +89,12 @@ class SimpleMaterialPointManager:
             for mp in lost_mps:
                 print(mp.getVertexCoordinates())
 
-        return lost
+            raise Exception("We have lost material points outside the grid.")
+
+    def getActiveCells(
+        self,
+    ):
+        return self._activeCells.keys()
 
     def hasChanged(
         self,

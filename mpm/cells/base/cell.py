@@ -26,17 +26,17 @@
 #  ---------------------------------------------------------------------
 """
 Implementing your own cells can be done easily by subclassing from 
-the abstract base class :class:`~BaseCell`.
+the abstract base class :class:`~CellBase`.
 """
 
 from abc import ABC, abstractmethod
 import numpy as np
 from fe.points.node import Node
 
-from mpm.materialpoints.base.mp import BaseMaterialPoint
+from mpm.materialpoints.base.mp import MaterialPointBase
 
 
-class BaseCell(ABC):
+class CellBase(ABC):
     @abstractmethod
     def __init__(self, cellType: str, cellNumber: int, nodes: list[Node]):
         """MPM cells in EdelweissFE should be derived from this
@@ -109,18 +109,32 @@ class BaseCell(ABC):
         """The shape of the element in Ensight Gold notation."""
         pass
 
+    @property
     @abstractmethod
-    def interpolateSolutionContributionToMaterialPoints(
-        self,
-        materialPoints: list[BaseMaterialPoint],
-        dU: np.ndarray,
-    ):
-        """Interpolate field solutions to MaterialPoints.
+    def assignedMaterialPoints(self) -> list[MaterialPointBase]:
+        """The shape of the element in Ensight Gold notation."""
+        pass
+
+    @abstractmethod
+    def assignMaterialPoints(self, materialPoints: list[MaterialPointBase]):
+        """Assign a list of material points which are currently residing within the cell.
 
         Parameters
         ----------
         materialPoints
-            The list of MaterialPoints for which the solution should be added.
+            The list of material points to be assigned.
+        """
+        pass
+
+    @abstractmethod
+    def interpolateSolutionContributionToMaterialPoints(
+        self,
+        dU: np.ndarray,
+    ):
+        """Interpolate field solutions to the assigned MaterialPoints.
+
+        Parameters
+        ----------
         dU
             The current solution vector contribution increment for all fields.
 
@@ -131,7 +145,7 @@ class BaseCell(ABC):
     @abstractmethod
     def computeMaterialPointKernels(
         self,
-        materialPoints: list[BaseMaterialPoint],
+        dU: np.ndarray,
         P: np.ndarray,
         K: np.ndarray,
         timeTotal: float,
@@ -141,14 +155,14 @@ class BaseCell(ABC):
 
         Parameters
         ----------
+        dU
+            The current solution increment.
         P
             The external load vector to be defined.
         K
             The stiffness matrix to be defined.
         U
             The current solution vector.
-        dU
-            The current solution vector increment.
         time
             Array of step time and total time.
         dTime
@@ -182,7 +196,7 @@ class BaseCell(ABC):
 
     @abstractmethod
     def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
-        """Get the interpolation vector for a given global coordinate. 
+        """Get the interpolation vector for a given global coordinate.
 
         Returns
         -------

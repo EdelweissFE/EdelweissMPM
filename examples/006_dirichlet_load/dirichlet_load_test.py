@@ -86,7 +86,7 @@ def run_sim():
         mpType="Displacement/SmallStrain/PlaneStrain",
     )
 
-    material = "LINEARELASTIC"
+    material = "LinearElastic"
     materialProperties = np.array([30000.0, 0.3])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
@@ -164,9 +164,9 @@ def run_sim():
 
     iterationOptions = dict()
 
-    iterationOptions["nMaximumIterations"] = 5
-    iterationOptions["nCrititcalIterations"] = 3
-    iterationOptions["nAllowedResidualGrowths"] = 3
+    iterationOptions["max. iterations"] = 5
+    iterationOptions["critical iterations"] = 3
+    iterationOptions["allowed residual growths"] = 3
 
     linearSolver = pardisoSolve
 
@@ -175,6 +175,7 @@ def run_sim():
         linearSolver,
         mpmManager,
         [dirichletLeft, dirichletRight],
+        [],
         [],
         mpmModel,
         fieldOutputController,

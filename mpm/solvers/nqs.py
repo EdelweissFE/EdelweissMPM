@@ -35,104 +35,114 @@ from fe.utils.exceptions import (
     ConditionalStop,
     StepFailed,
 )
-from time import time as getCurrentTime
+
+# from time import time as getCurrentTime
 from collections import defaultdict
+from fe.journal.journal import Journal
 from fe.config.linsolve import getLinSolverByName, getDefaultLinSolver
 from fe.config.timing import createTimingDict
 from fe.config.phenomena import getFieldSize
 from fe.numerics.csrgenerator import CSRGenerator
-from fe.models.femodel import FEModel
+from mpm.models.mpmmodel import MPMModel
 from fe.stepactions.base.stepactionbase import StepActionBase
 from fe.timesteppers.timestep import TimeStep
 from fe.outputmanagers.base.outputmanagerbase import OutputManagerBase
 from fe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatrix
 from fe.utils.fieldoutput import FieldOutputController
 from fe.constraints.base.constraintbase import ConstraintBase
-from fe.config.phenomena import fieldCorrectionTolerance, fluxResidualTolerance, fluxResidualToleranceAlternative
+
+from mpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
+from fe.stepactions.base.dirichletbase import DirichletBase
+
 from mpm.fields.nodefield import MPMNodeField
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.models.mpmmodel import MPMModel
 from fe.sets.nodeset import NodeSet
 from scipy.sparse import csr_matrix
 from numpy import ndarray
+import fe.utils.performancetiming as performancetiming
 
 
 class NonlinearQuasistaticSolver:
-    """This is the Nonlinear Implicit STatic -- solver.
+    """This is the serial nonlinear implicit quasi static solver
 
     Parameters
     ----------
-    jobInfo
-        A dictionary containing the job information.
     journal
         The journal instance for logging.
     """
 
-    identification = "NonlinearQuasistaticSolver"
+    identification = "MPM-NQS-Solver"
 
     validOptions = {
-        "maximumIterations": 10,
-        "criticalIterations": 5,
-        "allowedResidualGrowths": 10,
-        "nMaxIterationsForDefaultTolerances": 5,
+        "max. iterations": 10,
+        "critical iterations": 5,
+        "allowed residual growths": 10,
+        "iterations for alt. tolerances": 5,
+        "zero flux threshhold": 1e-9,
+        "default flux residual tolerance": 1e-4,
+        "default flux residual tolerance alt.": 1e-3,
+        "default field correction tolerance": 1e-3,
+        "spec. flux residual tolerances": dict(),
+        "spec. flux residual tolerances alt.": dict(),
+        "spec. field correction tolerances": dict(),
     }
 
-    def decorator_timer(name):
-        def outer(some_function):
-            from time import time
-
-            def inner(self, *args, **kwargs):
-                t1 = time()
-                result = some_function(self, *args, **kwargs)
-                end = time() - t1
-                self.computationTimes[name] += end
-                return result
-
-            return inner
-
-        return outer
-
-    def __init__(self, journal):
+    def __init__(self, journal: Journal):
         self.journal = journal
-        self.computationTimes = defaultdict(float)
 
+    @performancetiming.timeit("solve step")
     def solveStep(
         self,
         timeStepper,
         linearSolver,
         mpmManager,
         dirichlets,
-        bodyLoads,
-        model: FEModel,
+        bodyLoads: list[MPMBodyLoadBase],
+        constraints,
+        model: MPMModel,
         fieldOutputController: FieldOutputController,
         outputmanagers: list[OutputManagerBase],
         userIterationOptions: dict,
-    ) -> tuple[bool, FEModel]:
+    ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
         Parameters
         ----------
-        # stepNumber
-        #     The step number.
-        step
-            The dictionary containing the step definition.
-        stepActions
-            The dictionary containing all step actions.
+        timeStepper
+            The timeStepper instance.
+        linearSolver
+            The linear solver instance to be used.
+        mpmManager
+            The MPMManagerBase instance to be used for updating the connectivity.
+        dirichlets
+            The list of dirichlet StepActions.
+        bodyLoads
+            The list of bodyload StepActions.
+        constraints
+            The list of constraints.
         model
-            The  model tree.
+            The full MPMModel instance.
         fieldOutputController
             The field output controller.
+        outputmanagers
+            The list of OutputManagerBase instances.
+        userIterationOptions
+            The dict controlling the Newton cycle(s).
+
+        Returns
+        -------
+        tuple[bool, MPMModel]
+            The tuple containing:
+                - the truth value of success.
+                - the updated MPMModel.
         """
 
         iterationOptions = self.validOptions.copy()
-        iterationOptions["fieldCorrectionTolerances"] = fieldCorrectionTolerance
-        iterationOptions["fluxResidualTolerances"] = fluxResidualTolerance
-        iterationOptions["fluxResidualTolerancesAlternative"] = fluxResidualToleranceAlternative
-
         iterationOptions.update(userIterationOptions)
 
-        nMaximumIterations = iterationOptions["nMaximumIterations"]
-        nCrititicalIterations = iterationOptions["nCrititcalIterations"]
+        nMaximumIterations = iterationOptions["max. iterations"]
+        nCrititicalIterations = iterationOptions["critical iterations"]
 
         materialPoints = model.materialPoints.values()
 
@@ -159,7 +169,10 @@ class NonlinearQuasistaticSolver:
                     level=1,
                 )
 
-                mpmManager.updateConnectivity()
+                self._updateConnectivity(mpmManager)
+
+                for c in constraints:
+                    c.initializeTimeStep(model, timeStep)
 
                 if timeStep.number == 0 or mpmManager.hasChanged():
                     self.journal.message(
@@ -167,20 +180,21 @@ class NonlinearQuasistaticSolver:
                         self.identification,
                         level=1,
                     )
+
                     activeNodes, activeCells, activeNodeFields, activeNodeSets = self._assembleActiveDomain(
                         model, mpmManager
                     )
 
-                    theDofManager = MPMDofManager(
-                        activeNodeFields.values(), [], [], [], activeNodeSets.values(), activeCells
+                    theDofManager = self._createDofManager(
+                        activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
                     )
 
                     presentVariableNames = list(theDofManager.idcsOfFieldsInDofVector.keys())
 
-                    if theDofManager.idcsOfScalarVariablesInDofVector:
-                        presentVariableNames += [
-                            "scalar variables",
-                        ]
+                    # if theDofManager.idcsOfScalarVariablesInDofVector:
+                    #     presentVariableNames += [
+                    #         "scalar variables",
+                    #     ]
 
                     nVariables = len(presentVariableNames)
                     iterationHeader = ("{:^25}" * nVariables).format(*presentVariableNames)
@@ -190,12 +204,13 @@ class NonlinearQuasistaticSolver:
                 self.journal.message(iterationHeader2, self.identification, level=2)
 
                 try:
-                    dU, P, iterationHistory = self._solveIncrement(
+                    dU, P, iterationHistory = self._newtonSolve(
                         dirichlets,
                         bodyLoads,
                         activeNodeSets,
                         activeCells,
                         materialPoints,
+                        constraints,
                         theDofManager,
                         linearSolver,
                         iterationOptions,
@@ -218,7 +233,7 @@ class NonlinearQuasistaticSolver:
                         man.finalizeFailedIncrement()
 
                 else:
-                    if iterationHistory["iterations"] >= iterationOptions["nCrititcalIterations"]:
+                    if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
                     for field in activeNodeFields.values():
@@ -246,62 +261,61 @@ class NonlinearQuasistaticSolver:
         else:
             self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads)
 
-        finally:
-            self.journal.printTable(
-                [("Time in {:}".format(k), " {:10.4f}s".format(v)) for k, v in self.computationTimes.items()],
-                self.identification,
-            )
-
-    @decorator_timer("newton scheme")
-    def _solveIncrement(
+    @performancetiming.timeit("solve step", "newton iteration")
+    def _newtonSolve(
         self,
-        dirichlets,
-        bodyLoads,
-        activeNodeSets,
-        activeCells,
-        materialPoints,
-        theDofManager,
+        dirichlets: list,
+        bodyLoads: list,
+        activeNodeSets: list,
+        activeCells: list,
+        materialPoints: list,
+        constraints: list,
+        theDofManager: DofManager,
         linearSolver,
-        iterationOptions,
+        iterationOptions: dict,
         timeStep: TimeStep,
-        model,
+        model: MPMModel,
     ) -> tuple[DofVector, DofVector, DofVector, int, dict]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
         Parameters
         ----------
-        Un
-            The old solution vector.
-        dU
-            The old solution increment.
-        P
-            The old reaction vector.
-        K
-            The system matrix to be used.
-        elements
-            The dictionary containing all elements.
-        stepActions
-            The list of active step actions.
-        model
-            The model tree.
-        timeStep.
+        dirichlets
+            The list of dirichlet StepActions.
+        bodyLoads
+            The list of bodyload StepActions.
+        activeNodeSets
+            The list of (reduced) active NodeSets.
+        activeCells
+            The list of active cells.
+        materialPoints
+            The list of material points.
+        constraints
+            The list of constraints.
+        theDofManager
+            The DofManager instance for the current active model.
+        linearSolver
+            The instance of the linear solver to be used.
+        iterationOptions
+            The specified options controlling the Newton cycle.
+        timeStep
             The current time increment.
+        model
+            The full MPMModel instance.
 
         Returns
         -------
-        tuple[DofVector,DofVector,DofVector,int,dict]
-            A tuple containing
-                - the new solution vector
-                - the solution increment
-                - the new reaction vector
-                - the number of required iterations
-                - the history of residuals per field
+        tuple[DofVector,,DofVector,dict]
+            A tuple containing:
+                - the new solution increment vector.
+                - the current internal load vector.
+                - the increment residual history of the Newton cycle.
         """
 
         iterationCounter = 0
         incrementResidualHistory = {field: list() for field in theDofManager.idcsOfFieldsInDofVector}
 
-        nAllowedResidualGrowths = iterationOptions["nAllowedResidualGrowths"]
+        nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
         K_VIJ = theDofManager.constructVIJSystemMatrix()
         csrGenerator = CSRGenerator(K_VIJ)
@@ -323,10 +337,11 @@ class NonlinearQuasistaticSolver:
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._computeCells(activeCells, dU, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement)
+            self._computeConstraints(constraints, dU, P, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
 
-            R[:] = P
+            R[:] = -P
             R += PExt
 
             if iterationCounter == 0 and dirichlets:
@@ -348,7 +363,7 @@ class NonlinearQuasistaticSolver:
                     self._printResidualOutlierNodes(incrementResidualHistory)
                     raise DivergingSolution("Residual grew {:} times, cutting back".format(nAllowedResidualGrowths))
 
-                if iterationCounter == iterationOptions["nMaximumIterations"]:
+                if iterationCounter == iterationOptions["max. iterations"]:
                     self._printResidualOutlierNodes(incrementResidualHistory)
                     raise ReachedMaxIterations("Reached max. iterations in current increment, cutting back")
 
@@ -363,7 +378,7 @@ class NonlinearQuasistaticSolver:
 
         return dU, P, iterationHistory
 
-    @decorator_timer("compute body loads")
+    @performancetiming.timeit("solve step", "newton iteration", "compute body loads")
     def _computeBodyLoads(
         self,
         bodyForces: list[StepActionBase],
@@ -410,7 +425,7 @@ class NonlinearQuasistaticSolver:
 
         return PExt, K
 
-    @decorator_timer("dirichet on CSR")
+    @performancetiming.timeit("solve step", "newton iteration", "dirichet on CSR")
     def _applyDirichletKCsr(
         self, K: VIJSystemMatrix, dirichlets: list[StepActionBase], theDofManager
     ) -> VIJSystemMatrix:
@@ -445,7 +460,7 @@ class NonlinearQuasistaticSolver:
 
         return K
 
-    @decorator_timer("dirichlet on R")
+    @performancetiming.timeit("solve step", "newton iteration", "dirichlet on R")
     def _applyDirichlet(
         self, timeStep: TimeStep, R: DofVector, dirichlets: list[StepActionBase], activeNodeSets, theDofManager
     ):
@@ -475,13 +490,11 @@ class NonlinearQuasistaticSolver:
 
         return R
 
-    @decorator_timer("evaluation residuals")
+    @performancetiming.timeit("solve step", "newton iteration", "evaluation residuals")
     def _computeResiduals(
         self, R: DofVector, ddU: DofVector, dU: DofVector, F: DofVector, residualHistory: dict, theDofManager
     ) -> tuple[bool, dict]:
-        """Check the convergence, individually for each field,
-        similar to Abaqus based on the current total flux residual and the field correction
-        Is called by solveStep() to decide whether to continue iterating or stop.
+        """Compute the current residuals and relative flux residuals flux (R) and effort correction (ddU).
 
         Parameters
         ----------
@@ -491,10 +504,10 @@ class NonlinearQuasistaticSolver:
             The current correction increment.
         F
             The accumulated fluxes.
-        iterationCounter
-            The current iteration number.
         residualHistory
             The previous residuals.
+        theDofManager
+            The DofManager instance.
 
         Returns
         -------
@@ -511,47 +524,79 @@ class NonlinearQuasistaticSolver:
 
             indexOfMax = np.argmax(fieldResidualAbs)
             fluxResidual = fieldResidualAbs[indexOfMax]
-            normalizedFluxResidual = fluxResidual / max(spatialAveragedFluxes[field], 1e-6)
+
+            relativeFluxResidual = fluxResidual / max(spatialAveragedFluxes[field], 1e-16)
             nodeWithLargestResidual = theDofManager.getNodeForIndexInDofVector(indexOfMax)
 
+            maxIncrement = np.linalg.norm(dU[fieldIndices], np.inf)
             correction = np.linalg.norm(ddU[fieldIndices], np.inf) if ddU is not None else 0.0
-            correctionRelative = correction / max(np.linalg.norm(dU[fieldIndices], np.inf), 1e-9)
+            correctionRelative = correction / max(maxIncrement, 1e-16)
 
             residualHistory[field].append(
                 {
                     "fluxResidual": fluxResidual,
-                    "normalizedFluxResidual": normalizedFluxResidual,
+                    "spatial average flux": spatialAveragedFluxes[field],
+                    "relative flux residual": relativeFluxResidual,
+                    "max. increment": maxIncrement,
                     "correction": correction,
-                    "correctionRelative": correctionRelative,
-                    "nodeWithLargestResidual": nodeWithLargestResidual,
+                    "relative correction": correctionRelative,
+                    "node with largest residual": nodeWithLargestResidual,
                 }
             )
 
         return residualHistory
 
-    def _checkConvergence(self, iterations: int, incrementResidualHistory: dict, iterationOptions: dict):
+    def _checkConvergence(self, iterations: int, incrementResidualHistory: dict, iterationOptions: dict) -> bool:
+        """Check the status of convergence.
+
+        Parameters
+        ----------
+        iterations
+            The current number of iterations.
+        incrementResidualHistory
+            The dictionary containing information about all residuals (and history) for the current Newton cycle.
+        iterationOptions
+            The dictionary containing settings controlling the convergence tolerances.
+
+        Returns
+        -------
+        bool
+            The truth value of convergence."""
+
         iterationMessage = ""
         convergedAtAll = True
 
         iterationMessageTemplate = "{:11.2e}{:1}{:11.2e}{:1} "
 
-        if iterations < iterationOptions["nMaxIterationsForDefaultTolerances"]:  # standard tolerance set
-            fluxResidualTolerances = iterationOptions["fluxResidualTolerances"]
-        else:  # alternative tolerance set
-            fluxResidualTolerances = iterationOptions["fluxResidualTolerancesAlternative"]
+        useStrictFluxTolerances = iterations < iterationOptions["iterations for alt. tolerances"]
 
-        fieldCorrectionTolerances = iterationOptions["fieldCorrectionTolerances"]
-
-        # for field, fieldIndices in theDofManager.idcsOfFieldsInDofVector.items():
         for field, fieldIncrementResidualHistory in incrementResidualHistory.items():
-            correction = fieldIncrementResidualHistory[-1]["correction"]
-            correctionRelative = fieldIncrementResidualHistory[-1]["correctionRelative"]
+            lastResults = fieldIncrementResidualHistory[-1]
+            correction = lastResults["correction"]
+            correctionRelative = lastResults["relative correction"]
 
-            fluxResidual = fieldIncrementResidualHistory[-1]["fluxResidual"]
-            normalizedFluxResidual = fieldIncrementResidualHistory[-1]["normalizedFluxResidual"]
+            fluxResidual = lastResults["fluxResidual"]
+            relativeFluxResidual = lastResults["relative flux residual"]
+            spatialAveragedFlux = lastResults["spatial average flux"]
 
-            convergedCorrection = correctionRelative < 1e-3
-            convergedNormalizedFlux = normalizedFluxResidual < 1e-3  # fluxResidualTolerances[field]
+            if useStrictFluxTolerances:
+                fluxTolerance = iterationOptions["spec. flux residual tolerances"].get(
+                    field, iterationOptions["default flux residual tolerance"]
+                )
+            else:
+                fluxTolerance = iterationOptions["spec. flux residual tolerances alt."].get(
+                    field, iterationOptions["default flux residual tolerance alt."]
+                )
+
+            correctionTolerance = iterationOptions["spec. field correction tolerances"].get(
+                field, iterationOptions["default field correction tolerance"]
+            )
+
+            nonZeroIncrement = lastResults["max. increment"] > 1e-14
+            convergedCorrection = correctionRelative < correctionTolerance if nonZeroIncrement else True
+
+            nonZeroFlux = spatialAveragedFlux > iterationOptions["zero flux threshhold"]
+            convergedNormalizedFlux = relativeFluxResidual < fluxTolerance if nonZeroFlux else True
 
             iterationMessage += iterationMessageTemplate.format(
                 fluxResidual,
@@ -565,7 +610,7 @@ class NonlinearQuasistaticSolver:
 
         return convergedAtAll
 
-    @decorator_timer("linear solve")
+    @performancetiming.timeit("solve step", "newton iteration", "linear solve")
     def _linearSolve(self, A: csr_matrix, b: DofVector, linearSolver) -> ndarray:
         """Solve the linear equation system.
 
@@ -589,9 +634,9 @@ class NonlinearQuasistaticSolver:
 
         return ddU
 
-    @decorator_timer("conversion VIJ to CSR")
+    @performancetiming.timeit("solve step", "newton iteration", "conversion VIJ to CSR")
     def _VIJtoCSR(self, KCoo: VIJSystemMatrix, csrGenerator) -> csr_matrix:
-        """Construct a CSR matrix from VIJ format.
+        """Construct a CSR matrix from VIJ (COO)format.
 
         Parameters
         ----------
@@ -606,7 +651,7 @@ class NonlinearQuasistaticSolver:
 
         return KCsr
 
-    @decorator_timer("computation spatial fluxes")
+    @performancetiming.timeit("solve step", "newton iteration", "computation spatial fluxes")
     def _computeSpatialAveragedFluxes(self, F: DofVector, theDofManager) -> float:
         """Compute the spatial averaged flux for every field
         Is usually called by checkConvergence().
@@ -627,7 +672,7 @@ class NonlinearQuasistaticSolver:
 
         return spatialAveragedFluxes
 
-    @decorator_timer("assembly of loads")
+    @performancetiming.timeit("solve step", "newton iteration", "assembly loads")
     def _assembleLoads(
         self,
         nodeForces: list[StepActionBase],
@@ -663,54 +708,9 @@ class NonlinearQuasistaticSolver:
             - The modified external load vector.
             - The modified system matrix.
         """
-        # cloads
-        # for cLoad in nodeForces:
-        # # PExt = cLoad.applyOnP(PExt, increment)
-        # PExt[self.theDofManager.idcsOfFieldsOnNodeSetsInDofVector[cLoad.field][cLoad.nSet.name]] += cLoad.getLoad(
-        #     increment
-        # ).flatten()
-        # # dloads
-        # PExt, K = self.computeDistributedLoads(distributedLoads, U_np, PExt, K, increment)
         PExt, K = self._computeBodyLoads(bodyForces, U_np, PExt, K, timeStep)
 
         return PExt, K
-
-    # def extrapolateLastIncrement(
-    #     self, extrapolation: str, increment: tuple, dU: DofVector, dirichlets: list, lastIncrementSize: float, model
-    # ) -> tuple[DofVector, bool]:
-    #     """Depending on the current setting, extrapolate the solution of the last increment.
-
-    #     Parameters
-    #     ----------
-    #     extrapolation
-    #         The type of extrapolation.
-    #     increment
-    #         The current time increment.
-    #     dU
-    #         The last solution increment.
-    #     dirichlets
-    #         The list of active dirichlet boundary conditions.
-    #     lastIncrementSize
-    #         The size of the last increment.
-
-    #     Returns
-    #     -------
-    #     tuple[DofVector,bool]
-    #         - The extrapolated solution increment.
-    #         - True if an extrapolation was performed.
-    #     """
-
-    #     incNumber, incrementSize, stepProgress, dT, stepTime, totalTime = increment
-
-    #     if extrapolation == "linear" and lastIncrementSize:
-    #         dU *= incrementSize / lastIncrementSize
-    #         dU = self.applyDirichlet(increment, dU, dirichlets)
-    #         isExtrapolatedIncrement = True
-    #     else:
-    #         isExtrapolatedIncrement = False
-    #         dU[:] = 0.0
-
-    #     return dU, isExtrapolatedIncrement
 
     def _checkDivergingSolution(self, incrementResidualHistory: dict, maxGrowingIter: int) -> bool:
         """Check if the iterative solution scheme is diverging.
@@ -731,7 +731,7 @@ class NonlinearQuasistaticSolver:
         for history in incrementResidualHistory.values():
             nGrew = 0
             for i in range(len(history)):
-                if history[i]["normalizedFluxResidual"] > history[i - 1]["normalizedFluxResidual"]:
+                if history[i]["relative flux residual"] > history[i - 1]["relative flux residual"]:
                     nGrew += 1
 
             if nGrew > maxGrowingIter:
@@ -754,12 +754,13 @@ class NonlinearQuasistaticSolver:
         )
         for field, hist in incrementResidualHistory.items():
             self.journal.message(
-                "|{:20}|node {:10}|".format(field, hist[-1]["nodeWithLargestResidual"].label),
+                "|{:20}|node {:10}|".format(field, hist[-1]["node with largest residual"].label),
                 self.identification,
                 level=2,
             )
 
-    def _applyStepActionsAtStepStart(self, model: FEModel, actions):
+    @performancetiming.timeit("solve step", "step actions")
+    def _applyStepActionsAtStepStart(self, model: MPMModel, actions):
         """Called when all step actions should be appliet at the start a step.
 
         Parameters
@@ -773,7 +774,8 @@ class NonlinearQuasistaticSolver:
         for action in actions:
             action.applyAtStepStart(model)
 
-    def _applyStepActionsAtStepEnd(self, model: FEModel, actions):
+    @performancetiming.timeit("solve step", "step actions")
+    def _applyStepActionsAtStepEnd(self, model: MPMModel, actions):
         """Called when all step actions should finish a step.
 
         Parameters
@@ -787,7 +789,8 @@ class NonlinearQuasistaticSolver:
         for action in actions:
             action.applyAtStepEnd(model)
 
-    def _applyStepActionsAtIncrementStart(self, model: FEModel, timeStep: TimeStep, actions):
+    @performancetiming.timeit("solve step", "newton iteration", "step actions")
+    def _applyStepActionsAtIncrementStart(self, model: MPMModel, timeStep: TimeStep, actions):
         """Called when all step actions should be applied at the start of a step.
 
         Parameters
@@ -808,14 +811,27 @@ class NonlinearQuasistaticSolver:
 
         return fieldIndices.reshape((-1, dirichlet.fieldSize))[:, dirichlet.components].flatten()
 
-    @decorator_timer("assembly active domain")
-    def _assembleActiveDomain(self, model: MPMModel, mpmManager):
-        if mpmManager.hasLostMaterialPoints():
-            raise StepFailed("we have lost material points outside the grid!")
+    @performancetiming.timeit("solve step", "assembly active domain")
+    def _assembleActiveDomain(self, model: MPMModel, mpmManager) -> tuple[list, list, list, list]:
+        """Gather the active cells, determine the active NodeFields and NodeSets.
 
+        Parameters
+        ----------
+        model
+            The full MPMModel.
+        mpmManager
+            The MPMManager intance.
+
+        Returns
+        -------
+        tuple
+            The tuple containing:
+                - the list of active Nodes.
+                - the list of active Cells.
+                - the list of NodeFields on the active Nodes.
+                - the list of reduced NodeSets on the active Nodes.
+        """
         activeCells = mpmManager.getActiveCells()
-        # for c in activeCells:
-        #     c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
 
         activeNodes = set([n for cell in activeCells for n in cell.nodes])
 
@@ -831,26 +847,83 @@ class NonlinearQuasistaticSolver:
 
         return activeNodes, activeCells, activeNodeFields, activeNodeSets
 
-    @decorator_timer("preparation material points")
+    @performancetiming.timeit("solve step", "newton iteration", "preparation material points")
     def _prepareMaterialPoints(self, materialPoints: list, time: float, dT: float):
+        """Let the material points know that a new time step begins.
+
+        Parameters
+        ----------
+        materialPoints
+            The list of material points to be prepared.
+        time
+            The current time.
+        dT
+            The current time increment.
+        """
         for mp in materialPoints:
             mp.prepareYourself(time, dT)
 
-    @decorator_timer("interpolation to mps")
+    @performancetiming.timeit("solve step", "newton iteration", "interpolation to mps")
     def _interpolateFieldsToMaterialPoints(self, activeCells: list, dU: DofVector):
+        """Let the solution be interpolated to all material points using the cells.
+
+        Parameters
+        ----------
+        activeCells
+            The list of active cells, which contain material points.
+        dU
+            The current solution increment to be interpolated.
+        """
         for c in activeCells:
             dUCell = dU[c]
             c.interpolateFieldsToMaterialPoints(dUCell)
 
-    @decorator_timer("computation material points")
+    @performancetiming.timeit("solve step", "newton iteration", "computation material points")
     def _computeMaterialPoints(self, materialPoints: list, time: float, dT: float):
+        """Evaluate all material points' physics.
+
+        Parameters
+        ----------
+        materialPonts
+            The list material points to  evaluated.
+        time
+            The current time.
+        dT
+            The increment of time.
+        """
         for mp in materialPoints:
             mp.computeYourself(time, dT)
 
-    @decorator_timer("computation active cells")
+    @performancetiming.timeit("solve step", "newton iteration", "computation active cells")
     def _computeCells(
-            self, activeCells: list, dU:DofVector, P: DofVector, F: DofVector, K_VIJ: VIJSystemMatrix, time: float, dT: float
+        self,
+        activeCells: list,
+        dU: DofVector,
+        P: DofVector,
+        F: DofVector,
+        K_VIJ: VIJSystemMatrix,
+        time: float,
+        dT: float,
     ):
+        """Evaluate all cells.
+
+        Parameters
+        ----------
+        activeCells
+            The list of (active) cells to be evaluated.
+        dU
+            The current global solution increment vector.
+        P
+            The current global flux vector.
+        F
+            The accumulated nodal fluxes vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        time
+            The current time.
+        dT
+            The increment of time.
+        """
         for c in activeCells:
             dUc = dU[c]
             Pc = np.zeros(c.nDof)
@@ -858,3 +931,37 @@ class NonlinearQuasistaticSolver:
             c.computeMaterialPointKernels(dUc, Pc, Kc, time, dT)
             P[c] += Pc
             F[c] += abs(Pc)
+
+    @performancetiming.timeit("solve step", "newton iteration", "computation constraints")
+    def _computeConstraints(
+        self, constraints: list, dU: DofVector, P: DofVector, K_VIJ: VIJSystemMatrix, timeStep: TimeStep
+    ):
+        """Evaluate all constraints.
+
+        Parameters
+        ----------
+        constraints
+            The list of constraints to be evaluated.
+        dU
+            The current global solution increment vector.
+        P
+            The current global flux vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        timeStep
+            The current time increment.
+        """
+        for c in constraints:
+            dUc = dU[c]
+            Pc = np.zeros(c.nDof)
+            Kc = K_VIJ[c]
+            c.applyConstraint(dUc, Pc, Kc, timeStep)
+            P[c] += Pc
+
+    @performancetiming.timeit("solve step", "instancing dof manager")
+    def _createDofManager(self, *args):
+        return MPMDofManager(*args)
+
+    @performancetiming.timeit("solve step", "update connectivity")
+    def _updateConnectivity(self, mpmManager):
+        mpmManager.updateConnectivity()

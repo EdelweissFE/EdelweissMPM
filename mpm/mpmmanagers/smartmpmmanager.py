@@ -26,22 +26,23 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from mpm.cells.base.cell import BaseCell
-from mpm.materialpoints.base.mp import BaseMaterialPoint
+from mpm.cells.base.cell import CellBase
+from mpm.materialpoints.base.mp import MaterialPointBase
 from mpm.mpmmanagers.utils import KDTree, BoundingBox, buildBoundingBoxFromCells
+from mpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
 
 from collections import defaultdict
 
 import numpy as np
 
 
-class SmartMaterialPointManager:
+class SmartMaterialPointManager(MPMManagerBase):
     """A smart manager for material points and cells making use of a KDTree for loacation points in cells.
 
     Parameters
     ----------
     materialPointCells
-        The list of BaseCells
+        The list of CellBases
     materialPoints
         The list of Materialpoints
     options
@@ -50,8 +51,8 @@ class SmartMaterialPointManager:
 
     def __init__(
         self,
-        materialPointCells: list[BaseCell],
-        materialPoints: list[BaseMaterialPoint],
+        materialPointCells: list[CellBase],
+        materialPoints: list[MaterialPointBase],
         options: dict = {"KDTreeLevels": 1},
     ):
         self._cells = materialPointCells
@@ -68,12 +69,12 @@ class SmartMaterialPointManager:
     def updateConnectivity(
         self,
     ):
-
         self._activeCells = defaultdict(list)
 
         for mp in self._mps:
-            
-            mp.assignCells( [self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates()])
+            mp.assignCells(
+                [self._KDTree.getCellForCoordinates(vertexCoord) for vertexCoord in mp.getVertexCoordinates()]
+            )
             for cell in mp.assignedCells:
                 self._activeCells[cell].append(mp)
 
@@ -84,16 +85,6 @@ class SmartMaterialPointManager:
         self,
     ):
         return self._activeCells.keys()
-
-    # def getMaterialPointsInCell(self, cell: BaseCell):
-    #     return self._activeCells[cell]
-
-    def hasLostMaterialPoints(
-        self,
-    ):
-        attachedMPs = set([mp for mps in self._activeCells.values() for mp in mps])
-
-        return len(attachedMPs) != len(self._mps)
 
     def hasChanged(
         self,

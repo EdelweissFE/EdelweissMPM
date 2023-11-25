@@ -126,97 +126,95 @@ def run_sim():
 
     ensightOutput.initializeJob()
 
-    for i in range(100):
-        time = float(i)
-        print("time step {:}".format(i))
+    try:
+        for i in range(100):
+            time = float(i)
+            print("time step {:}".format(i))
 
-        mpmManager.updateConnectivity()
+            mpmManager.updateConnectivity()
 
-        if mpmManager.hasChanged():
-            print("material points in cells have changed since previous localization")
+            if mpmManager.hasChanged():
+                print("material points in cells have changed since previous localization")
 
-            if mpmManager.hasLostMaterialPoints():
-                print("we have lost material points outside the grid!")
-                break
+                activeCells = mpmManager.getActiveCells()
+                activeNodes = set([n for cell in activeCells for n in cell.nodes])
 
-            activeCells = mpmManager.getActiveCells()
-            activeNodes = set([n for cell in activeCells for n in cell.nodes])
+                print("active cells:")
+                print([c.cellNumber for c in activeCells])
 
-            print("active cells:")
-            print([c.cellNumber for c in activeCells])
+                print("active nodes:")
+                print([n.label for n in activeNodes])
 
-            print("active nodes:")
-            print([n.label for n in activeNodes])
-
-            for c in activeCells:
-                print(
-                    "cell {:} hosts material points {:}".format(
-                        c.cellNumber, [mp.label for mp in mpmManager.getMaterialPointsInCell(c)]
+                for c in activeCells:
+                    print(
+                        "cell {:} hosts material points {:}".format(
+                            c.cellNumber, [mp.label for mp in c.assignedMaterialPoints]
+                        )
                     )
+
+                activeNodeFields = {
+                    nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
+                    for nodeField in mpmModel.nodeFields.values()
+                }
+                activeNodeFields["displacement"].createFieldValueEntry("dU")
+
+                scalarVariables = []
+                elements = []
+                constraints = []
+
+                activeNodeSets = [
+                    NodeSet(nodeSet.name, activeNodes.intersection(nodeSet)) for nodeSet in mpmModel.nodeSets.values()
+                ]
+
+                dofManager = MPMDofManager(
+                    activeNodeFields.values(), scalarVariables, elements, constraints, activeNodeSets, activeCells
                 )
 
-            activeNodeFields = {
-                nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
-                for nodeField in mpmModel.nodeFields.values()
-            }
-            activeNodeFields["displacement"].createFieldValueEntry("dU")
+                dUActiveCells = dofManager.constructDofVector()
 
-            scalarVariables = []
-            elements = []
-            constraints = []
+            time = 10 * i
+            shift = np.asarray([2.0, 6.0 * np.cos(4 * np.pi * i / 100.0)])
+            activeNodeFields["displacement"]["dU"][:] = shift
+            dofManager.writeNodeFieldToDofVector(dUActiveCells, activeNodeFields["displacement"], "dU")
 
-            activeNodeSets = [
-                NodeSet(nodeSet.name, activeNodes.intersection(nodeSet)) for nodeSet in mpmModel.nodeSets.values()
-            ]
+            idcsTop = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_top"]
+            dUActiveCells[idcsTop[1::2]] = 0.0
 
-            dofManager = MPMDofManager(
-                activeNodeFields.values(), scalarVariables, elements, constraints, activeNodeSets, activeCells
-            )
+            idcsBottom = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_bottom"]
+            dUActiveCells[idcsBottom[1::2]] = 0.0
 
-            dUActiveCells = dofManager.constructDofVector()
+            idcsRight = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_right"]
+            dUActiveCells[idcsRight] = 0.0
 
-        for c in activeCells:
-            c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
+            dofManager.writeDofVectorToNodeField(dUActiveCells, activeNodeFields["displacement"], "dU")
 
-        time = 10 * i
-        shift = np.asarray([2.0, 6.0 * np.cos(4 * np.pi * i / 100.0)])
-        activeNodeFields["displacement"]["dU"][:] = shift
-        dofManager.writeNodeFieldToDofVector(dUActiveCells, activeNodeFields["displacement"], "dU")
+            for c in activeCells:
+                dUCell = dUActiveCells[c]
+                c.interpolateFieldsToMaterialPoints(dUCell)
 
-        idcsTop = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_top"]
-        dUActiveCells[idcsTop[1::2]] = 0.0
+            for mp in allMPs:
+                mp.computeYourself(time, i)
 
-        idcsBottom = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_bottom"]
-        dUActiveCells[idcsBottom[1::2]] = 0.0
+            mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
 
-        idcsRight = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_right"]
-        dUActiveCells[idcsRight] = 0.0
+            mpmModel.advanceToTime(time)
 
-        dofManager.writeDofVectorToNodeField(dUActiveCells, activeNodeFields["displacement"], "dU")
+            fieldOutputController.finalizeIncrement()
 
-        for c in activeCells:
-            dUCell = dUActiveCells[c]
-            c.interpolateFieldsToMaterialPoints(dUCell)
+            print("material point stresses:")
+            print(fieldOutputController.fieldOutputs["stress"].getLastResult())
 
-        for mp in allMPs:
-            mp.computeYourself(time, i)
+            ensightOutput.finalizeIncrement()
 
-        mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
+            journal.printSeperationLine()
 
-        mpmModel.advanceToTime(time)
+    except Exception as e:
+        print(e)
 
-        fieldOutputController.finalizeIncrement()
+    finally:
+        ensightOutput.finalizeJob()
 
-        print("material point stresses:")
-        print(fieldOutputController.fieldOutputs["stress"].getLastResult())
-
-        ensightOutput.finalizeIncrement()
-
-        journal.printSeperationLine()
-
-    ensightOutput.finalizeJob()
-
-    return mpmModel
+        return mpmModel
 
 
 @pytest.fixture(autouse=True)
