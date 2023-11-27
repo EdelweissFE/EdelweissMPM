@@ -63,7 +63,21 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/cells/marmotcell/cell.pyx",
+            "mpm/cells/marmotcell/marmotcell.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "mpm/cells/marmotcell/lagrangianmarmotcell.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         libraries=["Marmot"],
@@ -90,13 +104,13 @@ extensions += [
 setup(
     name="EdelweissMPM",
     version="v23.10",
-    description="EdelweissMPM: A material point solver.",
+    description="EdelweissMPM: A material point solver module for EdelweissFE.",
     license="LGPL-2.1",
     packages=find_packages(),
     include_package_data=True,
     author="Matthias Neuner",
     author_email="matthias.neuner@uibk.ac.at",
-    url="https://github.com/EdelweissFE/EdelweissFE",
+    url="https://github.com/EdelweissFE/EdelweissMPM",
     cmdclass={"build_ext": build_ext},
     ext_modules=cythonize(extensions, compiler_directives=directives, annotate=True, language_level=3),
 ),

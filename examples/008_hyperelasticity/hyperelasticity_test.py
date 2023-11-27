@@ -67,7 +67,7 @@ def run_sim():
         h=100.0,
         nX=12,
         nY=12,
-        cellProvider="marmot",
+        cellProvider="LagrangianMarmotCell",
         cellType="GradientEnhancedMicropolar/Quad4",
     )
     rectangularmpgenerator.generateModelData(

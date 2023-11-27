@@ -67,7 +67,7 @@ def run_sim():
         h=100.0,
         nX=15,
         nY=30,
-        cellProvider="marmot",
+        cellProvider="LagrangianMarmotCell",
         cellType="Displacement/SmallStrain/Quad4",
     )
     rectangularmpgenerator.generateModelData(
