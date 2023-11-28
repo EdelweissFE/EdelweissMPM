@@ -46,39 +46,9 @@ from mpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotCellFactor
     
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class LagrangianMarmotCellWrapper(MarmotCellWrapper):
-    # cdef classes cannot subclass. Hence we do not subclass from the BaseCell,
-    # but still we follow the interface for compatiblity.
 
     def __init__(self, cellType, cellNumber, nodes):
-        """This element serves as a wrapper for LagrangianMarmotCells.
-
-        For the documentation of MarmotCells, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
-
-        Parameters
-        ----------
-        elementType 
-            The Marmot element which should be represented, e.g., CPE4.
-        elNumber
-            The number of the element."""
-
-            
-        self._cellNumber = cellNumber
-        self._cellType = cellType
-        
-        self._nNodes                         = self._marmotCell.getNNodes()
-        
-        self._nDof                           = self._marmotCell.getNDofPerCell()
-        
-        cdef vector[vector[string]] fields  = self._marmotCell.getNodeFields()
-        self._fields                         = [ [ s.decode('utf-8')  for s in n  ] for n in fields ]
-        
-        cdef vector[int] permutationPattern = self._marmotCell.getDofIndicesPermutationPattern()
-        self._dofIndicesPermutation          = np.asarray(permutationPattern)
-    
-        cdef dict supportedBodyLoads = self._marmotCell.getSupportedBodyLoadTypes()
-        self._supportedBodyLoads = {k.decode() :  v for k, v in supportedBodyLoads.items()  }
-        
-        self._ensightType                    = self._marmotCell.getCellShape().decode('utf-8')
+        super().__init__(cellType, cellNumber, nodes)
 
     def __cinit__(self, str cellType, int cellNumber, list nodes):
         """This C-level method is responsible for actually creating the MarmotCell.

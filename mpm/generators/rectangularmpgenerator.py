@@ -81,7 +81,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     l = float(kwargs.get("l", 1.0))
     nX = int(kwargs.get("nX", 10))
     nY = int(kwargs.get("nY", 10))
-    firstMaterialPointLabel = int(kwargs.get("mpLabelStart", 1))
+    firstMaterialPointNumber = int(kwargs.get("mpNumberStart", 1))
     mpClass = kwargs["mpProvider"]
     mpType = kwargs["mpType"]
     mpThickness = float(kwargs.get("thickness", 1.0))
@@ -96,15 +96,15 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     ]
 
     mps = []
-    currentMPLabel = firstMaterialPointLabel
+    currentMPNumber = firstMaterialPointNumber
 
     for x in range(nX):
         for y in range(nY):
             mpCoordinates = grid[:, x, y].reshape(-1, 2)
-            mp = MPFactory(mpType, currentMPLabel, mpCoordinates, mpVolume)
-            model.materialPoints[currentMPLabel] = mp
+            mp = MPFactory(mpType, currentMPNumber, mpCoordinates, mpVolume)
+            model.materialPoints[currentMPNumber] = mp
             mps.append(mp)
-            currentMPLabel += 1
+            currentMPNumber += 1
 
     mpGrid = np.asarray(mps).reshape(nX, nY)
 

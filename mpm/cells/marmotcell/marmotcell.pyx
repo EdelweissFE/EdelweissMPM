@@ -40,6 +40,39 @@ from mpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrappe
     
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotCellWrapper:
+    """This cell as a wrapper for MarmotCells.
+
+    For the documentation of MarmotCells, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
+
+    Parameters
+    ----------
+    cellType
+        The Marmot element which should be represented, e.g., CPE4.
+    cellNumber
+        The (unique) label of this cell.
+    nodes
+        The list of nodes for this Cell.
+        """
+
+
+    def __init__(self, cellType, cellNumber, nodes):
+        self._cellNumber = cellNumber
+        self._cellType = cellType
+        
+        self._nNodes                         = self._marmotCell.getNNodes()
+        
+        self._nDof                           = self._marmotCell.getNDofPerCell()
+        
+        cdef vector[vector[string]] fields  = self._marmotCell.getNodeFields()
+        self._fields                         = [ [ s.decode('utf-8')  for s in n  ] for n in fields ]
+        
+        cdef vector[int] permutationPattern = self._marmotCell.getDofIndicesPermutationPattern()
+        self._dofIndicesPermutation          = np.asarray(permutationPattern)
+    
+        cdef dict supportedBodyLoads = self._marmotCell.getSupportedBodyLoadTypes()
+        self._supportedBodyLoads = {k.decode() :  v for k, v in supportedBodyLoads.items()  }
+        
+        self._ensightType                    = self._marmotCell.getCellShape().decode('utf-8')
 
     @property
     def cellNumber(self):

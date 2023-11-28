@@ -83,7 +83,7 @@ def generateModelData(model, journal, **kwargs):
     l = float(kwargs.get("l", 1.0))
     nX = int(kwargs.get("nX", 10))
     nY = int(kwargs.get("nY", 10))
-    firstNodeLabel = int(kwargs.get("cellLabelStart", 1))
+    firstNodeNumber = int(kwargs.get("cellNumberStart", 1))
     cellClass = kwargs["cellProvider"]
     cellType = kwargs["cellType"]
     nodesPerCell = int(kwargs.get("nodesPerCell", 4))
@@ -107,25 +107,25 @@ def generateModelData(model, journal, **kwargs):
     ]
 
     nodes = []
-    currentNodeLabel = firstNodeLabel
+    currentNodeNumber = firstNodeNumber
 
     for x in range(nNodesX):
         for y in range(nNodesY):
-            node = Node(currentNodeLabel, grid[:, x, y])
-            model.nodes[currentNodeLabel] = node
+            node = Node(currentNodeNumber, grid[:, x, y])
+            model.nodes[currentNodeNumber] = node
             nodes.append(node)
-            currentNodeLabel += 1
+            currentNodeNumber += 1
 
     nG = np.asarray(nodes).reshape(nNodesX, nNodesY)
 
-    currentCellLabel = 1
+    currentCellNumber = 1
 
     cells = []
     for x in range(nX):
         for y in range(nY):
             if nodesPerCell == 4:
                 cellNodes = [nG[x, y], nG[x + 1, y], nG[x + 1, y + 1], nG[x, y + 1]]
-                newCell = CellFactory(cellType, currentCellLabel, cellNodes)
+                newCell = CellFactory(cellType, currentCellNumber, cellNodes)
 
             elif nodesPerCell == 8:
                 cellNodes = [
@@ -138,11 +138,11 @@ def generateModelData(model, journal, **kwargs):
                     nG[2 * x + 1, 2 * y + 2],
                     nG[2 * x, 2 * y + 1],
                 ]
-                newCell = CellFactory(cellType, currentCellLabel, cellNodes)
+                newCell = CellFactory(cellType, currentCellNumber, cellNodes)
             cells.append(newCell)
-            model.cells[currentCellLabel] = newCell
+            model.cells[currentCellNumber] = newCell
 
-            currentCellLabel += 1
+            currentCellNumber += 1
 
     model.nodeSets["{:}_left".format(name)] = NodeSet("{:}_left".format(name), [n for n in nG[0, :]])
     model.nodeSets["{:}_right".format(name)] = NodeSet("{:}_right".format(name), [n for n in nG[-1, :]])
