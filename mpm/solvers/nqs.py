@@ -64,7 +64,8 @@ import fe.utils.performancetiming as performancetiming
 
 
 class NonlinearQuasistaticSolver:
-    """This is the serial nonlinear implicit quasi static solver
+    """This is the serial nonlinear implicit quasi static solver.
+
 
     Parameters
     ----------
@@ -218,14 +219,14 @@ class NonlinearQuasistaticSolver:
                         model,
                     )
 
-                except CutbackRequest as e:
-                    self.journal.message(str(e), self.identification, 1)
-                    timeStepper.discardAndChangeIncrement(max(e.cutbackSize, 0.25))
+                # except CutbackRequest as e:
+                #     self.journal.message(str(e), self.identification, 1)
+                #     timeStepper.discardAndChangeIncrement(max(e.cutbackSize, 0.25))
 
-                    for man in outputmanagers:
-                        man.finalizeFailedIncrement()
+                #     for man in outputmanagers:
+                #         man.finalizeFailedIncrement()
 
-                except (ReachedMaxIterations, DivergingSolution) as e:
+                except Exception as e:
                     self.journal.message(str(e), self.identification, 1)
                     timeStepper.discardAndChangeIncrement(0.25)
 
@@ -246,9 +247,7 @@ class NonlinearQuasistaticSolver:
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
                     )
 
-                    fieldOutputController.finalizeIncrement()
-                    for man in outputmanagers:
-                        man.finalizeIncrement()
+                    self._finalizeOutput(fieldOutputController, outputmanagers)
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)
@@ -965,3 +964,9 @@ class NonlinearQuasistaticSolver:
     @performancetiming.timeit("solve step", "update connectivity")
     def _updateConnectivity(self, mpmManager):
         mpmManager.updateConnectivity()
+
+    @performancetiming.timeit("solve step", "postprocessing & output")
+    def _finalizeOutput(self, fieldOutputController, outputmanagers):
+        fieldOutputController.finalizeIncrement()
+        for man in outputmanagers:
+            man.finalizeIncrement()

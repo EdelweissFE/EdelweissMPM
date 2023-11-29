@@ -74,17 +74,13 @@ cdef extern from "Marmot/MarmotMaterialPoint.h":
 
         void prepareYourself(double timeNew, double dT) 
 
-        void computeYourself(double timeNew, double dT) except +RuntimeError
+        void computeYourself(double timeNew, double dT) except +ValueError
 
         StateView getStateView( const string& stateName ) 
-
-        # void getCoordinatesAtCenter(double* ) 
 
         int getDimension()
 
         int getNumberOfVertices() 
-
-        # void assignVertexCoordinates(const double* ) 
 
         void getVertexCoordinates(double* ) 
 

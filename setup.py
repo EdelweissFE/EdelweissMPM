@@ -101,6 +101,22 @@ extensions += [
     )
 ]
 
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "mpm/solvers/nqsmarmotparallel.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        language="c++",
+        extra_compile_args=[
+            "-fopenmp",
+            "-Wno-maybe-uninitialized",
+        ],
+        extra_link_args=["-fopenmp"],
+    )
+]
+
 setup(
     name="EdelweissMPM",
     version="v23.10",
