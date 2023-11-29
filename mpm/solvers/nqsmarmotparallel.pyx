@@ -31,6 +31,7 @@ from mpm.solvers.nqs import NonlinearQuasistaticSolver
 import numpy as np
 from cython.parallel cimport parallel, threadid, prange
 from mpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper, MarmotMaterialPoint
+from mpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotCell
 from libc.stdlib cimport malloc, free
 from libcpp.string cimport string
 from time import time as getCurrentTime
@@ -101,3 +102,113 @@ class NQSParallelForMarmot(NonlinearQuasistaticSolver):
                
         finally:
             free( cppMPs )
+
+    @performancetiming.timeit("solve step", "newton iteration", "computation active cells")
+    def _computeCells(
+        self,
+        activeCells_,
+        double[::1] dU ,
+        double[::1] P ,
+        double[::1] F ,
+        K_VIJ,
+        float time ,
+        float dT,
+        theDofManager,
+    ):
+        """Evaluate all cells.
+
+        Parameters
+        ----------
+        activeCells
+            The list of (active) cells to be evaluated.
+        dU
+            The current global solution increment vector.
+        P
+            The current global flux vector.
+        F
+            The accumulated nodal fluxes vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        time
+            The current time.
+        dT
+            The increment of time.
+        theDofManager
+            The DofManager instance.
+        """
+        cdef:
+            int cellNDof, cellNumber, cellIdxInVIJ, cellIdxInPe, threadID, currentIdxInU   
+            int desiredThreads = self.numThreads
+            int nActiveCells = len(activeCells_)
+            list activeCells = list(activeCells_)
+        
+            long[::1] I             = K_VIJ.I
+            double[::1] K_mView     = K_VIJ
+            double[::1] dU_mView    = dU 
+            double[::1] P_mView     = P
+            double[::1] F_mView     = F
+            
+            # oversized Buffers for parallel computing:
+            # tables [nThreads x max(activeCells.ndof) ] for U & dU (can be overwritten during parallel computing)
+            maxNDofOfAnyCell      = theDofManager.largestNumberOfCellNDof
+            double[:, ::1] dUe  = np.empty((desiredThreads, maxNDofOfAnyCell), )
+            # oversized buffer for Pe ( size = sum(activeCells.ndof) )
+            double[::1] Pe = np.zeros(theDofManager.accumulatedCellNDof) 
+  
+        
+            MarmotCellWrapper backendBasedCythonCell
+            # lists (cpp activeCells + indices and nDofs), which can be accessed parallely
+            MarmotCell** cppActiveCells =      <MarmotCell**> malloc ( nActiveCells * sizeof(MarmotCell*) )
+            int[::1] cellIndicesInVIJ         = np.empty( (nActiveCells,), dtype=np.intc )
+            int[::1] cellIndexInPe            = np.empty( (nActiveCells,), dtype=np.intc )
+            int[::1] cellNDofs                = np.empty( (nActiveCells,), dtype=np.intc )
+       
+            int i,j=0
+           
+        for i in range(nActiveCells):
+            # prepare all lists for upcoming parallel element computing
+            backendBasedCythonCell   = activeCells[i]
+            cppActiveCells[i]              = backendBasedCythonCell._marmotCell
+            cellIndicesInVIJ[i]           = theDofManager.idcsOfHigherOrderEntitiesInVIJ[backendBasedCythonCell] 
+            cellNDofs[i]                  = backendBasedCythonCell.nDof 
+            # each element gets its place in the Pe buffer
+            cellIndexInPe[i] = j
+            j += cellNDofs[i]
+           
+        try:
+            for i in prange(nActiveCells, 
+                        schedule='dynamic', 
+                        num_threads=desiredThreads, 
+                        nogil=True):
+           
+                threadID      = threadid()
+                cellIdxInVIJ  = cellIndicesInVIJ[i]      
+                cellIdxInPe   = cellIndexInPe[i]
+                cellNDof = cellNDofs[i]
+               
+                for j in range (cellNDof):
+                    # copy global U & dU to buffer memories for element eval.
+                    currentIdxInU =     I [ cellIndicesInVIJ[i] +  j ]
+                    dUe[threadID, j] =  dU_mView[ currentIdxInU ]
+               
+                (<MarmotCell*> 
+                     cppActiveCells[i] )[0].computeMaterialPointKernels(
+                                                        &dUe[threadID, 0],
+                                                        &Pe[cellIdxInPe],
+                                                        &K_mView[cellIdxInVIJ],
+                                                        time,
+                                                        dT)
+           
+            #successful activeCells evaluation: condense oversize Pe buffer -> P
+            P_mView[:] = 0.0
+            F_mView[:] = 0.0
+            for i in range(nActiveCells):
+                cellIdxInVIJ =    cellIndicesInVIJ[i]
+                cellIdxInPe =     cellIndexInPe[i]
+                cellNDof =   cellNDofs[i]
+                for j in range (cellNDof): 
+                    P_mView[ I[cellIdxInVIJ + j] ] +=      Pe[ cellIdxInPe + j ]
+                    F_mView[ I[cellIdxInVIJ + j] ] += abs( Pe[ cellIdxInPe + j ] )
+        finally:
+            free( cppActiveCells )
+           

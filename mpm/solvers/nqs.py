@@ -335,7 +335,7 @@ class NonlinearQuasistaticSolver:
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
-            self._computeCells(activeCells, dU, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement)
+            self._computeCells(activeCells, dU, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager)
             self._computeConstraints(constraints, dU, P, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
@@ -903,6 +903,7 @@ class NonlinearQuasistaticSolver:
         K_VIJ: VIJSystemMatrix,
         time: float,
         dT: float,
+        theDofManager: DofManager,
     ):
         """Evaluate all cells.
 
@@ -922,6 +923,8 @@ class NonlinearQuasistaticSolver:
             The current time.
         dT
             The increment of time.
+        theDofManager
+            The DofManager instance.
         """
         for c in activeCells:
             dUc = dU[c]

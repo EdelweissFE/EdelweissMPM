@@ -71,8 +71,8 @@ def run_sim():
         l=100.0,
         y0=0.0,
         h=100.0,
-        nX=12,
-        nY=12,
+        nX=48,
+        nY=48,
         cellProvider="LagrangianMarmotCell",
         cellType="GradientEnhancedMicropolar/Quad4",
     )
@@ -153,8 +153,8 @@ def run_sim():
             mp,
             "displacement",
             {
-                0: -5,
-                1: -5.0,
+                0: -0,
+                1: -50.0,
             },
             1e8,
         )
