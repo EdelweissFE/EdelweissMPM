@@ -25,6 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 from fe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
+from mpm.fieldoutput.mpresultcollector import MaterialPointResultCollector
 from mpm.sets.materialpointset import MaterialPointSet
 from mpm.models.mpmmodel import MPMModel
 from fe.journal.journal import Journal
@@ -58,6 +59,9 @@ class MaterialPointFieldOutput(_FieldOutputBase):
         self.associatedSet = mpSet
         self.resultName = resultName
 
+        self.mpResultCollector = MaterialPointResultCollector(
+            list(self.associatedSet), self.resultName)
+
         super().__init__(name, model, journal, **kwargs)
 
     def updateResults(self, model: MPMModel):
@@ -70,7 +74,7 @@ class MaterialPointFieldOutput(_FieldOutputBase):
             The model tree.
         """
 
-        result = np.asarray([mp.getResultArray(self.resultName) for mp in self.associatedSet])
+        result = self.mpResultCollector.getCurrentResults()
 
         super()._applyResultsPipleline(result)
 

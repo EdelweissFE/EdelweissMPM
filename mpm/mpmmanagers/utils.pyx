@@ -33,6 +33,18 @@ cimport numpy as np
 
 
 cdef class BoundingBox:
+    """This class represents a bounding box.
+    
+    It is constructed from two points A and B, representing 2 opposing
+    vertices of the box.
+
+    Parameters
+    ----------
+    A
+        The first point.
+    B
+        The opposing point.
+    """
 
     cdef public int dim
     cdef public double[::1] minCoords
@@ -81,83 +93,121 @@ def buildBoundingBoxFromCells(materialPointCells, int dimension):
     for cell in materialPointCells:
         for node in cell.nodes:
             for j in range(dimension):
-                boundingBoxMin[j] = min ( boundingBoxMin[j], node.coordinates[j])
-                boundingBoxMax[j] = max ( boundingBoxMax[j], node.coordinates[j])
+                boundingBoxMin[j] = min ( boundingBoxMin[j], node.coordinates[j] )
+                boundingBoxMax[j] = max ( boundingBoxMax[j], node.coordinates[j] )
 
     return BoundingBox(boundingBoxMin, boundingBoxMax)
 
+cdef class BoundedCell:
+    """This classs represents a tuple of a 
+    cell and its bounding box.
 
-cdef list filterCellsInBoundingBox(cells, BoundingBox boundingBox, cellsBoundingBoxes):
+
+    Parameters
+    ----------
+    cell
+        The cell.
+    boundingBox
+        Its BoundingBox instance.
+    """
+
+    cdef public BoundingBox boundingBox
+    cdef public cell
+
+    def __init__(self, cell, boundingBox):
+        self.cell = cell
+        self.boundingBox = boundingBox
+
+cdef list filterCellsInBoundingBox(boundedCells, BoundingBox boundingBox ):
+    """ Get a list of cells which are overlapping with a given BoundingBox instance.
+
+    Parameters
+    ----------
+    boundedCells
+        The list of BoundedCell instances.
+    boundingBox
+        The BoundingBox instance for the overlap check.
+
+    Returns
+    -------
+    list
+       The list of BoundedCell instances passing the overlap check.
+    """
+
     cellsInDomain = []
 
-    for cell in cells:
-        cellBoundingBox = cellsBoundingBoxes[cell]
-
-        if (np.asarray(cellBoundingBox.maxCoords) >= np.asarray(boundingBox.minCoords)).all() and (
-            (np.asarray(cellBoundingBox.minCoords) < np.asarray(boundingBox.maxCoords)).all()
+    for cell in boundedCells:
+        if (np.asarray(cell.boundingBox.maxCoords) >= np.asarray(boundingBox.minCoords)).all() and (
+            (np.asarray(cell.boundingBox.minCoords) < np.asarray(boundingBox.maxCoords)).all()
         ):
             cellsInDomain.append(cell)
 
     return cellsInDomain
 
-cdef class KDTree:
+cdef class _KDTreeImpl:
+    """This is the background recursive implementation
+    of the KDTree branches.
+
+    Parameters
+    ----------
+    domain
+        The domain for this KDTRee level.
+    level
+        The current level.
+    boundedCellsInDomain
+        The list of BoundedCell instances which are living in this domain.
+    parent
+        The parent KDTRee branch. If None, this instance serves as the top level.
+    """
 
     cdef BoundingBox _domain
-    cdef int _dimension
     cdef double[::1] _centerCoordinates
     cdef int _level
-    cdef int _nCellsInDomain
+    cdef int _nBoundedCellsInDomain
     cdef dict cellsToChild
     cdef list _children
-    cdef KDTree _parent
-    cdef _cellsInDomain
+    cdef _KDTreeImpl _parent
+    cdef _boundedCellsInDomain
 
-    def __init__(self, domain , int level, cellsInDomain, KDTree parent = None, cellsBoundingBoxes = None):
+    def __init__(self, BoundingBox domain , int level, list boundedCellsInDomain, _KDTreeImpl parent = None):
         self._domain = domain
-        self._dimension = domain.dim
         self._centerCoordinates = self._domain.getCenterCoordinates()
         self._level = level
 
-        self._cellsInDomain = cellsInDomain
-
-        self._nCellsInDomain = len(self._cellsInDomain)
-
+        self._boundedCellsInDomain = boundedCellsInDomain
+        self._nBoundedCellsInDomain = len(self._boundedCellsInDomain)
         self._parent = parent
 
         if not parent:
             self.cellsToChild = dict()
-            cellsBoundingBoxes = {cell:buildBoundingBoxFromCells( [ cell, ], self._domain.dim ) for cell in cellsInDomain }
 
-        self.buildTree(cellsBoundingBoxes)
-
-    cdef buildTree(self, cellsBoundingBoxes):
-        if self._level > 0 and self._nCellsInDomain > 2 ** self._dimension :
-            self._children = [None] * 2**self._dimension
+        if self._level > 0 and self._nBoundedCellsInDomain > 2 ** self._domain.dim :
+            self._children = [None] * 2**self._domain.dim
             for vertice in self._domain.getVertices():
                 childDomain = BoundingBox(vertice, self._centerCoordinates)
 
-                self._children[self.getChildIDForCoordinates(vertice)] = KDTree(
+                self._children[self.getChildIDForCoordinates(vertice)] = _KDTreeImpl(
                     childDomain, self._level - 1, 
-                    filterCellsInBoundingBox( self._cellsInDomain, childDomain, cellsBoundingBoxes),
-                    self,
-                    cellsBoundingBoxes
+                    filterCellsInBoundingBox( self._boundedCellsInDomain, childDomain ),
+                    self
                 )
         else:
-            self.setCellsToChild(self._cellsInDomain, self)
-
-    cpdef getCellForCoordinates(self, double[::1] coordinates, list initialGuess=None):
-    
-        if initialGuess:
-            for cell in initialGuess:
-                if cell.isCoordinateInCell(np.asarray(coordinates)):
-                    return cell
-            
-            # that failed, but let's check the parent KDTree of the first initial guess cell.
-            return (<KDTree>self.cellsToChild[initialGuess[0]]).getCellForCoordinatesUpwards(coordinates)
-
-        return self.getCellForCoordinatesDownwards(coordinates)
+            self.linkBoundedCellsToChild(self._boundedCellsInDomain, self)
 
     cdef getCellForCoordinatesUpwards(self, double[::1] coordinates):
+        """Search for a recursively cell by first going levels upwards until 
+        the domain covers the coordinate, followed by a downward search.
+
+        Parameters
+        ----------
+        coordinates
+            The coordinates in question.
+
+        Returns
+        -------
+        CellBase
+            The found cell.
+        """
 
         if self._domain.containsCoordinates(coordinates):
             return self.getCellForCoordinatesDownwards(coordinates)
@@ -165,30 +215,121 @@ cdef class KDTree:
         return self._parent.getCellForCoordinatesUpwards(coordinates)
 
     cdef getCellForCoordinatesDownwards(self, double[::1] coordinates):
+        """Search for a recursively cell by first going levels down until 
+        until the lowest level is reached. Then, all covered cells are asked for 
+        the requested coordinates.
+
+        Parameters
+        ----------
+        coordinates
+            The coordinates in question.
+
+        Returns
+        -------
+        CellBase
+            The found cell.
+        """
 
         if self._children:
-            return (<KDTree>self._children[self.getChildIDForCoordinates(coordinates)]).getCellForCoordinatesDownwards(coordinates)
+            return (<_KDTreeImpl>self._children[self.getChildIDForCoordinates(coordinates)]).getCellForCoordinatesDownwards(coordinates)
 
         else:
-            for cell in self._cellsInDomain:
-                if cell.isCoordinateInCell(np.asarray(coordinates)):
-                    return cell
+            for cell in self._boundedCellsInDomain:
+                if cell.cell.isCoordinateInCell(np.asarray(coordinates)):
+                    return cell.cell
 
         raise Exception("Failed to determine cell for coordinate {:}".format(coordinates))
 
     cdef int getChildIDForCoordinates(self, double[::1] coordinates ):
+        """Compute the sub-divison ID for the K childs containing the given coordinates.
+
+        Parameters
+        ----------
+        coordinates
+            The coordinates in question.
+
+        Returns
+        -------
+        int
+            The ID of the child containing the requested coordinates.
+        """
+
         cdef int num = 0
         cdef int i 
-        for i in range(self._dimension):
+        for i in range(self._domain.dim):
             if coordinates[i] < self._centerCoordinates[i]:
                 num += 2**i
         return num
 
-    cdef setCellsToChild(self, cells, child):
+    cdef linkBoundedCellsToChild(self, cells, child):
+        """For fast access of lowest level KDTree childs for a given cell,
+        The lowest level instances communicate their covered cells up to
+        the top level parent instance.
+
+        Parameters
+        ----------
+        cells
+            The covered cells.
+        child
+            The lowest level KDTree instance covering those cells.
+        """
     
         if self._parent:
-            return self._parent.setCellsToChild(cells, child) 
+            return self._parent.linkBoundedCellsToChild(cells, child) 
 
         for cell in cells: 
-            self.cellsToChild[cell] = child
+            self.cellsToChild[cell.cell] = child
 
+
+cdef class KDTree:
+    """This is an efficient Kd tree implementation for searching 
+    the correct cell for a given (material point) coordinate.
+    
+    Parameters
+    ----------
+    domain
+        The domain which should be covered.
+    level
+        The maximum number of kd tree levels.
+    cellsInDomain
+        The list of cells in this domain.
+    """
+
+    cdef BoundingBox _domain
+    cdef _KDTreeImpl _tree 
+    cdef _cellsInDomain
+
+    def __init__(self, domain , int level, cellsInDomain):
+        self._domain = domain
+        self._cellsInDomain = cellsInDomain
+        boundedCells = [ BoundedCell(cell, buildBoundingBoxFromCells( [ cell, ], self._domain.dim )) for cell in cellsInDomain ]
+
+        self._tree = _KDTreeImpl( self._domain, level, boundedCells, None)
+
+    def getCellForCoordinates(self, double[::1] coordinates, list initialGuess=None) -> CellBase:
+        """Efficient lookup for the cell which contains the given coordinate.
+        If a list of initial guess cells is provided, the lookup speed can be increased
+        drastically.
+
+        Parameters
+        ----------
+        coordinates
+            The coordinates to be found.
+        initialGuess
+            The optional list of cells for improved lookup speed.
+
+        Returns
+        -------
+        CellBase
+            The cell containing the coordinate.
+        """
+    
+        if initialGuess:
+            for cell in initialGuess:
+                if cell.isCoordinateInCell(np.asarray(coordinates)):
+                    return cell
+            
+            # that failed, but let's check the parent KDTree of the first initial guess cell.
+            return (<_KDTreeImpl>self._tree.cellsToChild[initialGuess[0]]).getCellForCoordinatesUpwards(coordinates)
+
+        return self._tree.getCellForCoordinatesDownwards(coordinates)

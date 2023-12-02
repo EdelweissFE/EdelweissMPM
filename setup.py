@@ -91,6 +91,30 @@ extensions += [
     Extension(
         "*",
         sources=[
+            "mpm/mpmmanagers/utils.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "mpm/fieldoutput/mpresultcollector.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
             "mpm/materialpoints/marmotmaterialpoint/mp.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
