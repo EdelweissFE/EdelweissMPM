@@ -323,6 +323,9 @@ cdef class KDTree:
         CellBase
             The cell containing the coordinate.
         """
+
+        if not self._domain.containsCoordinates(coordinates):
+            raise Exception("requested coordinate outside domain")
     
         if initialGuess:
             for cell in initialGuess:

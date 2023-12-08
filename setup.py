@@ -91,6 +91,20 @@ extensions += [
     Extension(
         "*",
         sources=[
+            "mpm/cells/marmotcell/bsplinemarmotcell.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
             "mpm/mpmmanagers/utils.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],

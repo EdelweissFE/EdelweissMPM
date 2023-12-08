@@ -73,7 +73,10 @@ class SmartMaterialPointManager(MPMManagerBase):
 
         for mp in self._mps:
             mp.assignCells(
-                [self._KDTree.getCellForCoordinates(vertexCoord, initialGuess = mp.assignedCells) for vertexCoord in mp.getVertexCoordinates()]
+                [
+                    self._KDTree.getCellForCoordinates(vertexCoord, initialGuess=mp.assignedCells)
+                    for vertexCoord in mp.getVertexCoordinates()
+                ]
             )
             for cell in mp.assignedCells:
                 self._activeCells[cell].append(mp)

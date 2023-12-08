@@ -59,8 +59,7 @@ class MaterialPointFieldOutput(_FieldOutputBase):
         self.associatedSet = mpSet
         self.resultName = resultName
 
-        self.mpResultCollector = MaterialPointResultCollector(
-            list(self.associatedSet), self.resultName)
+        self.mpResultCollector = MaterialPointResultCollector(list(self.associatedSet), self.resultName)
 
         super().__init__(name, model, journal, **kwargs)
 

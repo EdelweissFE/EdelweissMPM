@@ -60,3 +60,8 @@ def getCellClass(provider: str) -> type:
         from mpm.cells.marmotcell.lagrangianmarmotcell import LagrangianMarmotCellWrapper
 
         return LagrangianMarmotCellWrapper
+
+    if provider.lower() == "BSplineMarmotCell".lower():
+        from mpm.cells.marmotcell.bsplinemarmotcell import BSplineMarmotCellWrapper
+
+        return BSplineMarmotCellWrapper

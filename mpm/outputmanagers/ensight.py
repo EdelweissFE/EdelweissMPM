@@ -117,7 +117,10 @@ def createUnstructuredPartFromMaterialPointSet(mpPartName, mps: list, partID: in
 class OutputManager(EnsightOutputManager):
     identification = "Ensight Export"
 
-    def __init__(self, name, model, fieldOutputController, journal, plotter):
+    def __init__(self, name, model, fieldOutputController, journal, plotter, **kwargs):
+        self._exportCellSetParts = kwargs.get("exportCellSetParts", True)
+        self._exportMPSetParts = kwargs.get("exportMPSetParts", True)
+
         self.mpSetToEnsightPart = dict()
         self.cellSetToEnsightPart = dict()
         return super().__init__(name, model, fieldOutputController, journal, plotter)
@@ -127,19 +130,21 @@ class OutputManager(EnsightOutputManager):
 
         partCounter = len(feModelParts) + 1
 
-        for setName, cellSet in self.model.cellSets.items():
-            self.cellSetToEnsightPart[setName] = createUnstructuredPartFromCellSet(
-                "CELLSET_{:}".format(setName), cellSet, partCounter
-            )
-            feModelParts.append(self.cellSetToEnsightPart[setName])
-            partCounter += 1
+        if self._exportCellSetParts:
+            for setName, cellSet in self.model.cellSets.items():
+                self.cellSetToEnsightPart[setName] = createUnstructuredPartFromCellSet(
+                    "CELLSET_{:}".format(setName), cellSet, partCounter
+                )
+                feModelParts.append(self.cellSetToEnsightPart[setName])
+                partCounter += 1
 
-        for setName, mpSet in self.model.materialPointSets.items():
-            self.mpSetToEnsightPart[setName] = createUnstructuredPartFromMaterialPointSet(
-                "MPSET_{:}".format(setName), mpSet, partCounter
-            )
-            feModelParts.append(self.mpSetToEnsightPart[setName])
-            partCounter += 1
+        if self._exportMPSetParts:
+            for setName, mpSet in self.model.materialPointSets.items():
+                self.mpSetToEnsightPart[setName] = createUnstructuredPartFromMaterialPointSet(
+                    "MPSET_{:}".format(setName), mpSet, partCounter
+                )
+                feModelParts.append(self.mpSetToEnsightPart[setName])
+                partCounter += 1
 
         return feModelParts
 

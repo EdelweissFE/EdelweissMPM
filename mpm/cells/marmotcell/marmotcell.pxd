@@ -45,6 +45,14 @@ cdef extern from "Marmot/MarmotMPMLibrary.h" namespace "MarmotLibrary" nogil:
                                const double* nodeCoordinates,
                                int sizeNodeCoordinates) except +ValueError
 
+        @staticmethod
+        MarmotCell* createBSplineCell(const string& cellName, 
+                               int cellNumber,
+                               const double* nodeCoordinates,
+                               int sizeNodeCoordinates,
+                               const double* knotVectors,
+                               int sizeKnotVectors) except +ValueError
+
 cdef extern from "Marmot/MarmotMaterialPoint.h" nogil:
 
     cdef cppclass MarmotMaterialPoint:
