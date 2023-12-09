@@ -74,8 +74,8 @@ def run_sim():
         nX=12,
         nY=12,
         cellProvider="BSplineMarmotCell",
-        cellType="GradientEnhancedMicropolar/BSpline/1",
-        order=1,
+        cellType="GradientEnhancedMicropolar/BSpline/3",
+        order=3,
     )
     rectangularmpgenerator.generateModelData(
         mpmModel,
@@ -91,7 +91,7 @@ def run_sim():
     )
 
     material = "gmdamagedshearneohooke"
-    materialProperties = np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999])
+    materialProperties = np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 
@@ -101,7 +101,7 @@ def run_sim():
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 4})
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 6})
 
     journal.printSeperationLine()
 
@@ -125,7 +125,7 @@ def run_sim():
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager(
-        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSets=False
+        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
     )
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
@@ -158,7 +158,7 @@ def run_sim():
                 0: -0,
                 1: -50.0,
             },
-            1e8,
+            1e5,
         )
         for mp in mpmModel.materialPointSets["planeRect_right"]
     ]
@@ -172,6 +172,7 @@ def run_sim():
     iterationOptions["max. iterations"] = 15
     iterationOptions["critical iterations"] = 5
     iterationOptions["allowed residual growths"] = 3
+    iterationOptions["zero increment threshhold"] = 1e-10
 
     linearSolver = pardisoSolve
 

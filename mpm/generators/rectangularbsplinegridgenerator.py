@@ -109,11 +109,9 @@ def generateModelData(model, journal, **kwargs):
     nodes = []
     currentNodeNumber = firstNodeNumber
 
-    print("nodes global")
     for x in range(nNodesX):
         for y in range(nNodesY):
             node = Node(currentNodeNumber, nodeGrid[:, x, y])
-            print(nodeGrid[:, x, y])
             model.nodes[currentNodeNumber] = node
             nodes.append(node)
             currentNodeNumber += 1

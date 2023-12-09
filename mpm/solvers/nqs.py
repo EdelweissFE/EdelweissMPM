@@ -80,6 +80,7 @@ class NonlinearQuasistaticSolver:
         "critical iterations": 5,
         "allowed residual growths": 10,
         "iterations for alt. tolerances": 5,
+        "zero increment threshhold": 1e-13,
         "zero flux threshhold": 1e-9,
         "default flux residual tolerance": 1e-4,
         "default flux residual tolerance alt.": 1e-3,
@@ -170,6 +171,7 @@ class NonlinearQuasistaticSolver:
                     level=1,
                 )
 
+                self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
                 self._updateConnectivity(mpmManager)
 
                 for c in constraints:
@@ -591,7 +593,7 @@ class NonlinearQuasistaticSolver:
                 field, iterationOptions["default field correction tolerance"]
             )
 
-            nonZeroIncrement = lastResults["max. increment"] > 1e-14
+            nonZeroIncrement = lastResults["max. increment"] > iterationOptions["zero increment threshhold"]
             convergedCorrection = correctionRelative < correctionTolerance if nonZeroIncrement else True
 
             nonZeroFlux = spatialAveragedFlux > iterationOptions["zero flux threshhold"]
