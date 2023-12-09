@@ -195,6 +195,19 @@ class CellBase(ABC):
         pass
 
     @abstractmethod
+    def getBoundingBox(
+        self,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Get the bounding box min. and max. of a cell
+
+        Returns
+        -------
+        tuple
+                The tuple containing the min. and max. coordinates of the bounding box.
+        """
+        pass
+
+    @abstractmethod
     def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
         """Get the interpolation vector for a given global coordinate.
 

@@ -91,10 +91,13 @@ def buildBoundingBoxFromCells(materialPointCells, int dimension):
     cdef int j
 
     for cell in materialPointCells:
-        for node in cell.nodes:
-            for j in range(dimension):
-                boundingBoxMin[j] = min ( boundingBoxMin[j], node.coordinates[j] )
-                boundingBoxMax[j] = max ( boundingBoxMax[j], node.coordinates[j] )
+        cellBoundingBoxMin, cellBoundingBoxMax = cell.getBoundingBox()
+        boundingBoxMin
+
+        # for node in cell.nodes:
+        for j in range(dimension):
+            boundingBoxMin[j] = min ( boundingBoxMin[j], cellBoundingBoxMin[j] )
+            boundingBoxMax[j] = max ( boundingBoxMax[j], cellBoundingBoxMax[j] )
 
     return BoundingBox(boundingBoxMin, boundingBoxMax)
 

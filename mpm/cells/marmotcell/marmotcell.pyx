@@ -148,6 +148,20 @@ cdef class MarmotCellWrapper:
         cdef double[::1] coords = coordinate
         return self._marmotCell.isCoordinateInCell(&coords[0])
 
+    def getBoundingBox(self, ):
+   
+        cdef int dim = self._nodeCoordinates.shape[1]
+        cdef np.ndarray boundingBoxMin = np.zeros(dim)
+        cdef np.ndarray boundingBoxMax = np.zeros(dim)
+        cdef double[::1] boundingBoxMinView = boundingBoxMin
+        cdef double[::1] boundingBoxMaxView = boundingBoxMax
+
+        self._marmotCell.getBoundingBox(&boundingBoxMinView[0], &boundingBoxMaxView[0])
+
+        return boundingBoxMin, boundingBoxMax
+
+
+
     def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
         cdef double[::1] coords = coordinate
         cdef np.ndarray N = np.zeros(self._nNodes)
