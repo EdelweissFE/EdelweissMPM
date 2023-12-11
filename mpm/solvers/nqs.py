@@ -518,6 +518,9 @@ class NonlinearQuasistaticSolver:
 
         """
 
+        if np.isnan(R).any():
+            raise DivergingSolution("NaN obtained in residual.")
+
         spatialAveragedFluxes = self._computeSpatialAveragedFluxes(F, theDofManager)
 
         for field, fieldIndices in theDofManager.idcsOfFieldsInDofVector.items():
@@ -960,7 +963,7 @@ class NonlinearQuasistaticSolver:
             Pc = np.zeros(c.nDof)
             Kc = K_VIJ[c]
             c.applyConstraint(dUc, Pc, Kc, timeStep)
-            P[c] += Pc
+            np.add.at(P, P.entitiesInDofVector[c], Pc)
 
     @performancetiming.timeit("solve step", "instancing dof manager")
     def _createDofManager(self, *args):

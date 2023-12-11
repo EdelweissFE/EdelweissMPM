@@ -106,6 +106,9 @@ class Cell(CellBase):
     def getCoordinatesAtCenter(self) -> np.ndarray:
         pass
 
+    def getBoundingBox(self) -> tuple[np.ndarray, np.ndarray]:
+        return (np.array([self.x_min, self.y_min]), np.array([self.x_max, self.y_max]))
+
     def isCoordinateInCell(self, coordinate: np.ndarray) -> bool:
         x, y = coordinate
 

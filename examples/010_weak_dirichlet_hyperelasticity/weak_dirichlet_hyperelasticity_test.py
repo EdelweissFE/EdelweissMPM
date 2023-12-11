@@ -152,10 +152,10 @@ def run_sim():
             mp,
             "displacement",
             {
-                0: -50,
+                0: -50.0,
                 1: -50.0,
             },
-            1e8,
+            1e7,
         )
         for mp in mpmModel.materialPointSets["planeRect_right"]
     ]
