@@ -195,6 +195,7 @@ def run_sim():
             ],
             [gravityLoad],
             [],
+            [],
             mpmModel,
             fieldOutputController,
             outputManagers,

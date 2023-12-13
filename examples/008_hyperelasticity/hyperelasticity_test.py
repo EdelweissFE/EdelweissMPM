@@ -181,6 +181,7 @@ def run_sim():
             [dirichletBottom, dirichletLeft, dirichletRight],
             [gravityLoad],
             [],
+            [],
             mpmModel,
             fieldOutputController,
             outputManagers,

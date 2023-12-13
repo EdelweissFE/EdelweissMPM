@@ -55,7 +55,7 @@ from datetime import datetime
 
 
 @performancetiming.timeit("simulation")
-def run_sim():
+def run_sim(bspline_order):
     dimension = 2
 
     journal = Journal()
@@ -74,8 +74,8 @@ def run_sim():
         nX=12,
         nY=12,
         cellProvider="BSplineMarmotCell",
-        cellType="GradientEnhancedMicropolar/BSpline/3",
-        order=3,
+        cellType="GradientEnhancedMicropolar/BSpline/{:}".format(bspline_order),
+        order=bspline_order,
     )
     rectangularmpgenerator.generateModelData(
         mpmModel,
@@ -125,7 +125,12 @@ def run_sim():
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager(
-        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
+        "ensight_order_{:}".format(bspline_order),
+        mpmModel,
+        fieldOutputController,
+        journal,
+        None,
+        exportCellSetParts=False,
     )
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
@@ -185,6 +190,7 @@ def run_sim():
                 dirichletLeft,
             ],
             [],
+            [],
             weakDirichlets,
             mpmModel,
             fieldOutputController,
@@ -226,7 +232,7 @@ def change_test_dir(request, monkeypatch):
 
 
 def test_sim():
-    mpmModel = run_sim()
+    mpmModel = run_sim(3)
 
     res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
     gold = np.loadtxt("gold.csv")
@@ -237,13 +243,14 @@ def test_sim():
 
 
 if __name__ == "__main__":
-    mpmModel = run_sim()
-
-    print("elapsed time: {:}".format(performancetiming.times["simulation"].time))
-
     parser = argparse.ArgumentParser()
+    parser.add_argument("--order", dest="order", type=int, help="order of the bsplines.")
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
     args = parser.parse_args()
+
+    mpmModel = run_sim(args.order)
+
+    print("elapsed time: {:}".format(performancetiming.times["simulation"].time))
 
     if args.create_gold:
         gold = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])

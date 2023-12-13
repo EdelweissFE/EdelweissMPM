@@ -177,6 +177,7 @@ def run_sim():
         [dirichletLeft, dirichletRight],
         [],
         [],
+        [],
         mpmModel,
         fieldOutputController,
         outputManagers,

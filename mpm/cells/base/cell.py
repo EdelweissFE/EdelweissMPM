@@ -161,10 +161,74 @@ class CellBase(ABC):
             The external load vector to be defined.
         K
             The stiffness matrix to be defined.
-        U
-            The current solution vector.
-        time
-            Array of step time and total time.
+        timeTotal
+            The current total time.
+        dTime
+            The time increment.
+        """
+
+        pass
+
+    @abstractmethod
+    def computeBodyLoad(
+        self,
+        loadType: str,
+        load: np.ndarray,
+        P: np.ndarray,
+        K: np.ndarray,
+        timeTotal: float,
+        dTime: float,
+    ):
+        """Compute bulk loads (body loads) for given time based for all assigned MaterialPoints.
+
+        Parameters
+        ----------
+        loadType
+            The type of load to be computed (e.g., 'bodyforce')
+        load
+            The float (vector) describing the load.
+        P
+            The external load vector to be defined.
+        K
+            The stiffness matrix to be defined.
+        timeTotal
+            The current total time.
+        dTime
+            The time increment.
+        """
+
+        pass
+
+    @abstractmethod
+    def computeDistributedLoad(
+        self,
+        loadType: str,
+        surfaceID: int,
+        materialPoint: MaterialPointBase,
+        load: np.ndarray,
+        P: np.ndarray,
+        K: np.ndarray,
+        timeTotal: float,
+        dTime: float,
+    ):
+        """Compute distributed (surface) a for given time based for a specific assigned material point.
+
+        Parameters
+        ----------
+        loadType
+            The type of load to be computed (e.g., 'pressure')
+        surfaceID
+            The ID describing the surface of the material point.
+        materialPoint
+            The specific (already assigned) mateiral point for computing the surface load.
+        load
+            The float (vector) describing the load.
+        P
+            The external load vector to be defined.
+        K
+            The stiffness matrix to be defined.
+        timeTotal
+            The current total time.
         dTime
             The time increment.
         """

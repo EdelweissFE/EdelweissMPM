@@ -103,6 +103,30 @@ class Cell(CellBase):
     ):
         pass
 
+    def computeBodyLoad(
+        self,
+        loadType: str,
+        load: np.ndarray,
+        P: np.ndarray,
+        K: np.ndarray,
+        timeTotal: float,
+        dTime: float,
+    ):
+        pass
+
+    def computeDistributedLoad(
+        self,
+        loadType: str,
+        surfaceID: int,
+        materialPoint: MaterialPointBase,
+        load: np.ndarray,
+        P: np.ndarray,
+        K: np.ndarray,
+        timeTotal: float,
+        dTime: float,
+    ):
+        pass
+
     def getCoordinatesAtCenter(self) -> np.ndarray:
         pass
 

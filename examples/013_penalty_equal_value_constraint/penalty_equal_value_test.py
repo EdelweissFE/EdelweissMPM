@@ -201,6 +201,7 @@ def run_sim():
                 dirichletLeft,
             ],
             [gravityLoad],
+            [],
             constraints,
             mpmModel,
             fieldOutputController,

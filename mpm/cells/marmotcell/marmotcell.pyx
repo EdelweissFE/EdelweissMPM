@@ -1,29 +1,28 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #  ---------------------------------------------------------------------
 #
-#  _____    _      _              _         _____ _____ 
-# | ____|__| | ___| |_      _____(_)___ ___|  ___| ____|
-# |  _| / _` |/ _ \ \ \ /\ / / _ \ / __/ __| |_  |  _|  
-# | |__| (_| |  __/ |\ V  V /  __/ \__ \__ \  _| | |___ 
-# |_____\__,_|\___|_| \_/\_/ \___|_|___/___/_|   |_____|
-#                                                       
-# 
+#  _____    _      _              _         __  __ ____  __  __
+# | ____|__| | ___| |_      _____(_)___ ___|  \/  |  _ \|  \/  |
+# |  _| / _` |/ _ \ \ \ /\ / / _ \ / __/ __| |\/| | |_) | |\/| |
+# | |__| (_| |  __/ |\ V  V /  __/ \__ \__ \ |  | |  __/| |  | |
+# |_____\__,_|\___|_| \_/\_/ \___|_|___/___/_|  |_|_|   |_|  |_|
+#
+#
 #  Unit of Strength of Materials and Structural Analysis
 #  University of Innsbruck,
-#  2017 - today
-# 
+#  2023 - today
+#
 #  Matthias Neuner matthias.neuner@uibk.ac.at
-# 
-#  This file is part of EdelweissFE.
-# 
+#
+#  This file is part of EdelweissMPM.
+#
 #  This library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public
 #  License as published by the Free Software Foundation; either
 #  version 2.1 of the License, or (at your option) any later version.
-# 
+#
 #  The full text of the license can be found in the file LICENSE.md at
-#  the top level directory of EdelweissFE.
+#  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
 import numpy as np
@@ -71,6 +70,9 @@ cdef class MarmotCellWrapper:
     
         cdef dict supportedBodyLoads = self._marmotCell.getSupportedBodyLoadTypes()
         self._supportedBodyLoads = {k.decode() :  v for k, v in supportedBodyLoads.items()  }
+
+        cdef dict supportedDistributedLoads = self._marmotCell.getSupportedDistributedLoadTypes()
+        self._supportedDistributedLoads = {k.decode() :  v for k, v in supportedDistributedLoads.items()  }
         
         self._ensightType                    = self._marmotCell.getCellShape().decode('utf-8')
 
@@ -127,11 +129,33 @@ cdef class MarmotCellWrapper:
     def computeBodyLoad(self, 
                          str loadType, 
                          double[::1] load, 
-                         double[::1] Pe, 
-                         double[::1] Ke, 
+                         double[::1] Pc, 
+                         double[::1] Kc, 
                          double timeNew, 
-                         double dTime, ):
-        self._marmotCell.computeBodyLoad( self._supportedBodyLoads[loadType.upper()], &load[0], &Pe[0], &Ke[0], timeNew, dTime)
+                         double dTime):
+
+        self._marmotCell.computeBodyLoad( self._supportedBodyLoads[loadType.upper()], &load[0], &Pc[0], &Kc[0], timeNew, dTime)
+
+    def computeDistributedLoad(self, 
+                         str loadType, 
+                         int surfaceID, 
+                         materialPoint, 
+                         double[::1] load, 
+                         double[::1] Pc, 
+                         double[::1] Kc, 
+                         double timeNew, 
+                         double dTime):
+
+        cdef int mpNumber = materialPoint.label
+
+        self._marmotCell.computeDistributedLoad( self._supportedDistributedLoads[loadType.upper()], 
+                                                surfaceID,
+                                                mpNumber,
+                                                &load[0], 
+                                                &Pc[0], 
+                                                &Kc[0], 
+                                                timeNew, 
+                                                dTime)
 
     def assignMaterialPoints(self, list marmotMaterialPointWrappers):
         cdef vector[MarmotMaterialPoint*] mps
@@ -159,8 +183,6 @@ cdef class MarmotCellWrapper:
         self._marmotCell.getBoundingBox(&boundingBoxMinView[0], &boundingBoxMaxView[0])
 
         return boundingBoxMin, boundingBoxMax
-
-
 
     def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
         cdef double[::1] coords = coordinate

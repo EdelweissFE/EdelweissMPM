@@ -45,6 +45,8 @@ from fe.config.phenomena import getFieldSize
 from fe.numerics.csrgenerator import CSRGenerator
 from mpm.models.mpmmodel import MPMModel
 from fe.stepactions.base.stepactionbase import StepActionBase
+from mpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
+from mpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 from fe.timesteppers.timestep import TimeStep
 from fe.outputmanagers.base.outputmanagerbase import OutputManagerBase
 from fe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatrix
@@ -52,6 +54,7 @@ from fe.utils.fieldoutput import FieldOutputController
 from fe.constraints.base.constraintbase import ConstraintBase
 
 from mpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
+from mpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 from fe.stepactions.base.dirichletbase import DirichletBase
 
 from mpm.fields.nodefield import MPMNodeField
@@ -61,6 +64,7 @@ from fe.sets.nodeset import NodeSet
 from scipy.sparse import csr_matrix
 from numpy import ndarray
 import fe.utils.performancetiming as performancetiming
+import traceback
 
 
 class NonlinearQuasistaticSolver:
@@ -101,6 +105,7 @@ class NonlinearQuasistaticSolver:
         mpmManager,
         dirichlets,
         bodyLoads: list[MPMBodyLoadBase],
+        distributedLoads: list[MPMDistributedLoadBase],
         constraints,
         model: MPMModel,
         fieldOutputController: FieldOutputController,
@@ -210,6 +215,7 @@ class NonlinearQuasistaticSolver:
                     dU, P, iterationHistory = self._newtonSolve(
                         dirichlets,
                         bodyLoads,
+                        distributedLoads,
                         activeNodeSets,
                         activeCells,
                         materialPoints,
@@ -230,6 +236,7 @@ class NonlinearQuasistaticSolver:
 
                 except Exception as e:
                     self.journal.message(str(e), self.identification, 1)
+                    print(traceback.format_exc())
                     timeStepper.discardAndChangeIncrement(0.25)
 
                     for man in outputmanagers:
@@ -267,6 +274,7 @@ class NonlinearQuasistaticSolver:
         self,
         dirichlets: list,
         bodyLoads: list,
+        distributedLoads: list,
         activeNodeSets: list,
         activeCells: list,
         materialPoints: list,
@@ -285,6 +293,8 @@ class NonlinearQuasistaticSolver:
             The list of dirichlet StepActions.
         bodyLoads
             The list of bodyload StepActions.
+        distributedLoads
+            The list of distributed load StepActions.
         activeNodeSets
             The list of (reduced) active NodeSets.
         activeCells
@@ -341,6 +351,7 @@ class NonlinearQuasistaticSolver:
             self._computeConstraints(constraints, dU, P, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
+            PExt, K = self._computeDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep, theDofManager)
 
             R[:] = -P
             R += PExt
@@ -425,6 +436,60 @@ class NonlinearQuasistaticSolver:
                     PExt[cl] += Pc
 
         return PExt, K
+
+    @performancetiming.timeit("solve step", "newton iteration", "compute distributed loads")
+    def _computeDistributedLoads(
+        self,
+        distributedLoads: list[MPMDistributedLoadBase],
+        PExt: DofVector,
+        K_VIJ: VIJSystemMatrix,
+        timeStep: TimeStep,
+        theDofManager,
+        # activeCells,
+    ) -> tuple[DofVector, VIJSystemMatrix]:
+        """Loop over all body forces loads acting on elements, and evaluate them.
+        Assembles into the global external load vector and the system matrix.
+
+        Parameters
+        ----------
+        distributedLoads
+            The list of distributed loads.
+        U_np
+            The current solution vector.
+        PExt
+            The external load vector to be augmented.
+        K
+            The system matrix to be augmented.
+        timeStep
+            The current time increment.
+
+        Returns
+        -------
+        tuple[DofVector,VIJSystemMatrix]
+            The augmented load vector and system matrix.
+        """
+
+        for distributedLoad in distributedLoads:
+            for mp in distributedLoad.mpSet:
+                surfaceID, loadVector = distributedLoad.getCurrentMaterialPointLoad(mp, timeStep)
+
+                for cl in mp.assignedCells:
+                    Pc = np.zeros(cl.nDof)
+                    Kc = K_VIJ[cl]
+                    # print(Kc.shape)
+                    cl.computeDistributedLoad(
+                        distributedLoad.loadType,
+                        surfaceID,
+                        mp,
+                        loadVector,
+                        Pc,
+                        Kc,
+                        timeStep.totalTime,
+                        timeStep.timeIncrement,
+                    )
+                    PExt[cl] += Pc
+
+        return PExt, K_VIJ
 
     @performancetiming.timeit("solve step", "newton iteration", "dirichet on CSR")
     def _applyDirichletKCsr(
@@ -676,45 +741,45 @@ class NonlinearQuasistaticSolver:
 
         return spatialAveragedFluxes
 
-    @performancetiming.timeit("solve step", "newton iteration", "assembly loads")
-    def _assembleLoads(
-        self,
-        nodeForces: list[StepActionBase],
-        distributedLoads: list[StepActionBase],
-        bodyForces: list[StepActionBase],
-        U_np: DofVector,
-        PExt: DofVector,
-        K: VIJSystemMatrix,
-        timeStep: TimeStep,
-    ) -> tuple[DofVector, VIJSystemMatrix]:
-        """Assemble all loads into a right hand side vector.
+    # @performancetiming.timeit("solve step", "newton iteration", "assembly loads")
+    # def _assembleLoads(
+    #     self,
+    #     nodeForces: list[StepActionBase],
+    #     distributedLoads: list[StepActionBase],
+    #     bodyForces: list[StepActionBase],
+    #     U_np: DofVector,
+    #     PExt: DofVector,
+    #     K: VIJSystemMatrix,
+    #     timeStep: TimeStep,
+    # ) -> tuple[DofVector, VIJSystemMatrix]:
+    #     """Assemble all loads into a right hand side vector.
 
-        Parameters
-        ----------
-        nodeForces
-            The list of concentrated (nodal) loads.
-        distributedLoads
-            The list of distributed (surface) loads.
-        bodyForces
-            The list of body (volumetric) loads.
-        U_np
-            The current solution vector.
-        PExt
-            The external load vector.
-        K
-            The system matrix.
-        timeStep
-            The current time increment.
+    #     Parameters
+    #     ----------
+    #     nodeForces
+    #         The list of concentrated (nodal) loads.
+    #     distributedLoads
+    #         The list of distributed (surface) loads.
+    #     bodyForces
+    #         The list of body (volumetric) loads.
+    #     U_np
+    #         The current solution vector.
+    #     PExt
+    #         The external load vector.
+    #     K
+    #         The system matrix.
+    #     timeStep
+    #         The current time increment.
 
-        Returns
-        -------
-        tuple[DofVector,VIJSystemMatrix]
-            - The modified external load vector.
-            - The modified system matrix.
-        """
-        PExt, K = self._computeBodyLoads(bodyForces, U_np, PExt, K, timeStep)
+    #     Returns
+    #     -------
+    #     tuple[DofVector,VIJSystemMatrix]
+    #         - The modified external load vector.
+    #         - The modified system matrix.
+    #     """
+    #     PExt, K = self._computeBodyLoads(bodyForces, U_np, PExt, K, timeStep)
 
-        return PExt, K
+    #     return PExt, K
 
     def _checkDivergingSolution(self, incrementResidualHistory: dict, maxGrowingIter: int) -> bool:
         """Check if the iterative solution scheme is diverging.

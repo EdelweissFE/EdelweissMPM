@@ -81,14 +81,25 @@ cdef extern from "Marmot/MarmotCell.h":
                                             double timeNewTotal,
                                             double dT) except +
 
-        void computeBodyLoad            (   int type, 
+        void computeBodyLoad(               int type, 
                                             const double* load, 
-                                            double* Pe,
-                                            double* Ke,
+                                            double* Pc,
+                                            double* Kc,
+                                            double timeNewTotal,
+                                            double dT) except +
+
+        void computeDistributedLoad(        int type, 
+                                            int surfaceID, 
+                                            int materialPointNumber,
+                                            const double* load, 
+                                            double* Pc,
+                                            double* Kc,
                                             double timeNewTotal,
                                             double dT) except +
 
         const unordered_map[string, int]& getSupportedBodyLoadTypes()
+
+        const unordered_map[string, int]& getSupportedDistributedLoadTypes()
 
         void interpolateFieldsToMaterialPoints( const double* Q)
 
@@ -108,6 +119,8 @@ cdef class MarmotCellWrapper:
     cdef np.ndarray _dofIndicesPermutation
 
     cdef dict _supportedBodyLoads
+
+    cdef dict _supportedDistributedLoads
     
     cdef double[:, ::1] _nodeCoordinates
 
