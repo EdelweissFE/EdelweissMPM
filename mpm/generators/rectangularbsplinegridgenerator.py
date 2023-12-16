@@ -80,7 +80,7 @@ def generateModelData(model, journal, **kwargs):
     l = float(kwargs.get("l", 1.0))
     nX = int(kwargs.get("nX", 10))
     nY = int(kwargs.get("nY", 10))
-    order = int(kwargs["order"] )
+    order = int(kwargs["order"])
 
     firstNodeNumber = int(kwargs.get("cellNumberStart", 1))
     cellClass = kwargs["cellProvider"]

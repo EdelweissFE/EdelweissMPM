@@ -353,7 +353,7 @@ class NonlinearQuasistaticSolver:
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
             PExt, K = self._computeDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep, theDofManager)
 
-            R[:] = -P
+            R[:] = P
             R += PExt
 
             if iterationCounter == 0 and dirichlets:
@@ -361,6 +361,8 @@ class NonlinearQuasistaticSolver:
             else:
                 for dirichlet in dirichlets:
                     R[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
+
+                # TODO: unindent following block!
 
                 incrementResidualHistory = self._computeResiduals(
                     R, ddU, dU, F, incrementResidualHistory, theDofManager
@@ -382,7 +384,7 @@ class NonlinearQuasistaticSolver:
             K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
             K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager)
 
-            ddU = self._linearSolve(K_CSR, R, linearSolver)
+            ddU = self._linearSolve(K_CSR, -R, linearSolver)
             dU += ddU
             iterationCounter += 1
 
