@@ -231,11 +231,33 @@ def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
 
-def test_sim():
+def test_sim_order1():
+    mpmModel = run_sim(1)
+
+    res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+    gold = np.loadtxt("gold_order_1.csv")
+
+    print(res - gold)
+
+    assert np.isclose(res, gold).all()
+
+
+def test_sim_order2():
+    mpmModel = run_sim(2)
+
+    res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
+    gold = np.loadtxt("gold_order_2.csv")
+
+    print(res - gold)
+
+    assert np.isclose(res, gold).all()
+
+
+def test_sim_order3():
     mpmModel = run_sim(3)
 
     res = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
-    gold = np.loadtxt("gold.csv")
+    gold = np.loadtxt("gold_order_3.csv")
 
     print(res - gold)
 
@@ -244,7 +266,7 @@ def test_sim():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--order", dest="order", type=int, help="order of the bsplines.")
+    parser.add_argument("order", type=int, help="order of the bsplines.")
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
     args = parser.parse_args()
 
@@ -254,4 +276,4 @@ if __name__ == "__main__":
 
     if args.create_gold:
         gold = np.array([mp.getResultArray("displacement") for mp in mpmModel.materialPoints.values()])
-        np.savetxt("gold.csv", gold)
+        np.savetxt("gold_order_{:}.csv".format(args.order), gold)

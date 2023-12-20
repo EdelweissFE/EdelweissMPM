@@ -98,10 +98,10 @@ class MaterialPointBase(ABC):
         pass
 
     @abstractmethod
-    def acceptLastState(
+    def acceptStateAndPosition(
         self,
     ):
-        """Accept the computed state (in nonlinear iteration schemes)."""
+        """Accept the computed state (in nonlinear iteration schemes) and the position."""
 
         pass
 

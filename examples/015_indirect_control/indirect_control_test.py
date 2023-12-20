@@ -40,12 +40,14 @@ from mpm.sets.cellset import CellSet
 from fe.sets.nodeset import NodeSet
 
 from fe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from mpm.solvers.nqs import NonlinearQuasistaticSolver
+from mpm.solvers.nqsmparclength import NonlinearQuasistaticMarmotArcLengthSolver
 from fe.linsolve.pardiso.pardiso import pardisoSolve
 from mpm.stepactions.dirichlet import Dirichlet
 from mpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
 from fe.utils.exceptions import StepFailed
 import fe.utils.performancetiming as performancetiming
+
+from mpm.stepactions.indirectcontrol import IndirectControl
 
 import numpy as np
 
@@ -69,17 +71,17 @@ def run_sim():
         nX=12,
         nY=12,
         cellProvider="BSplineMarmotCell",
-        cellType="GradientEnhancedMicropolar/BSpline/2",
-        order=2,
+        cellType="GradientEnhancedMicropolar/BSpline/3",
+        order=3,
     )
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
         x0=0.01,
-        l=99.98,
+        l=80,
         y0=60.01,
         h=10.0,
-        nX=100,
+        nX=80,
         nY=10,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
@@ -110,6 +112,11 @@ def run_sim():
         allMPs,
         "displacement",
     )
+    fieldOutputController.addPerMaterialPointFieldOutput(
+        "deformation gradient",
+        allMPs,
+        "deformation gradient",
+    )
 
     fieldOutputController.initializeJob()
 
@@ -119,33 +126,18 @@ def run_sim():
 
     # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
+    ensightOutput.updateDefinition(
+        fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode"
+    )
     ensightOutput.initializeJob()
 
     outputManagers = [
         ensightOutput,
     ]
 
-    dirichletBottom = Dirichlet(
-        "bottom",
-        mpmModel.nodeSets["rectangular_grid_bottom"],
-        "displacement",
-        {1: 0.0},
-        mpmModel,
-        journal,
-    )
-
     dirichletLeft = Dirichlet(
         "left",
         mpmModel.nodeSets["rectangular_grid_left"],
-        "displacement",
-        {0: 0.0, 1: 0.0},
-        mpmModel,
-        journal,
-    )
-
-    dirichletRight = Dirichlet(
-        "right",
-        mpmModel.nodeSets["rectangular_grid_right"],
         "displacement",
         {0: 0.0, 1: 0.0},
         mpmModel,
@@ -158,12 +150,12 @@ def run_sim():
         journal,
         mpmModel.materialPointSets["planeRect_top"],
         "Pressure",
-        np.array([0.0, -20.0 * 100.0 / 100]),
+        np.array([0.0, -1.0e-3 * 80 / 80]),
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 2e-2, 2e-2, 1e-3, 100, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-1, 1e-1, 1e-1, 100, journal)
 
-    nonlinearSolver = NonlinearQuasistaticSolver(journal)
+    nonlinearSolver = NonlinearQuasistaticMarmotArcLengthSolver(journal)
 
     iterationOptions = dict()
 
@@ -173,12 +165,25 @@ def run_sim():
 
     linearSolver = pardisoSolve
 
+    mprightTop = list(mpmModel.materialPointSets["planeRect_rightTop"])[0]
+    mpleftTop = list(mpmModel.materialPointSets["planeRect_leftTop"])[0]
+
+    indirectcontrol = IndirectControl(
+        "IndirectController",
+        mpmModel,
+        [mpleftTop, mprightTop],
+        50.0,
+        np.array([[0, 1], [0, -1]]),
+        "displacement",
+        journal,
+    )
+
     try:
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
             mpmManager,
-            [dirichletBottom, dirichletLeft, dirichletRight],
+            [dirichletLeft],
             [],
             [pressureLoad],
             [],
@@ -186,6 +191,7 @@ def run_sim():
             fieldOutputController,
             outputManagers,
             iterationOptions,
+            indirectcontrol,
         )
 
     except StepFailed as e:
@@ -206,8 +212,8 @@ def run_sim():
             "step 1",
         )
 
-    fieldOutputController.finalizeJob()
-    ensightOutput.finalizeJob()
+        fieldOutputController.finalizeJob()
+        ensightOutput.finalizeJob()
 
     return mpmModel
 

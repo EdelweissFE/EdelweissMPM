@@ -90,7 +90,7 @@ def run_sim():
     )
 
     material = "GMDAMAGEDSHEARNEOHOOKE"
-    materialProperties = np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999])
+    materialProperties = np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 
@@ -170,7 +170,7 @@ def run_sim():
         journal,
         mpmModel.cells.values(),
         "BodyForce",
-        np.array([0.0, -50.0]),
+        np.array([0.0, -20.0e-1]),
     )
 
     constraints = [

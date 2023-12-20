@@ -333,39 +333,39 @@ class NonlinearQuasistaticSolver:
 
         dU = theDofManager.constructDofVector()
         dU[:] = 0.0
-        R = theDofManager.constructDofVector()
+        Rhs = theDofManager.constructDofVector()
         F = theDofManager.constructDofVector()
-        P = theDofManager.constructDofVector()
+        PInt = theDofManager.constructDofVector()
         PExt = theDofManager.constructDofVector()
         ddU = None
 
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
 
         while True:
-            P[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
+            PInt[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
 
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
-            self._computeCells(activeCells, dU, P, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager)
-            self._computeConstraints(constraints, dU, P, K_VIJ, timeStep)
+            self._computeCells(
+                activeCells, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            )
+            self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
             PExt, K = self._computeDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep, theDofManager)
 
-            R[:] = P
-            R += PExt
+            Rhs[:] = -PInt
+            Rhs -= PExt
 
             if iterationCounter == 0 and dirichlets:
-                R = self._applyDirichlet(timeStep, R, dirichlets, activeNodeSets, theDofManager)
+                Rhs = self._applyDirichlet(timeStep, Rhs, dirichlets, activeNodeSets, theDofManager)
             else:
                 for dirichlet in dirichlets:
-                    R[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
-
-                # TODO: unindent following block!
+                    Rhs[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
 
                 incrementResidualHistory = self._computeResiduals(
-                    R, ddU, dU, F, incrementResidualHistory, theDofManager
+                    Rhs, ddU, dU, F, incrementResidualHistory, theDofManager
                 )
 
                 converged = self._checkConvergence(iterationCounter, incrementResidualHistory, iterationOptions)
@@ -384,13 +384,13 @@ class NonlinearQuasistaticSolver:
             K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
             K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager)
 
-            ddU = self._linearSolve(K_CSR, -R, linearSolver)
+            ddU = self._linearSolve(K_CSR, Rhs, linearSolver)
             dU += ddU
             iterationCounter += 1
 
         iterationHistory = {"iterations": iterationCounter, "incrementResidualHistory": incrementResidualHistory}
 
-        return dU, P, iterationHistory
+        return dU, PInt, iterationHistory
 
     @performancetiming.timeit("solve step", "newton iteration", "compute body loads")
     def _computeBodyLoads(
@@ -742,46 +742,6 @@ class NonlinearQuasistaticSolver:
             spatialAveragedFluxes[field] = np.linalg.norm(F[theDofManager.idcsOfFieldsInDofVector[field]], 1) / nDof
 
         return spatialAveragedFluxes
-
-    # @performancetiming.timeit("solve step", "newton iteration", "assembly loads")
-    # def _assembleLoads(
-    #     self,
-    #     nodeForces: list[StepActionBase],
-    #     distributedLoads: list[StepActionBase],
-    #     bodyForces: list[StepActionBase],
-    #     U_np: DofVector,
-    #     PExt: DofVector,
-    #     K: VIJSystemMatrix,
-    #     timeStep: TimeStep,
-    # ) -> tuple[DofVector, VIJSystemMatrix]:
-    #     """Assemble all loads into a right hand side vector.
-
-    #     Parameters
-    #     ----------
-    #     nodeForces
-    #         The list of concentrated (nodal) loads.
-    #     distributedLoads
-    #         The list of distributed (surface) loads.
-    #     bodyForces
-    #         The list of body (volumetric) loads.
-    #     U_np
-    #         The current solution vector.
-    #     PExt
-    #         The external load vector.
-    #     K
-    #         The system matrix.
-    #     timeStep
-    #         The current time increment.
-
-    #     Returns
-    #     -------
-    #     tuple[DofVector,VIJSystemMatrix]
-    #         - The modified external load vector.
-    #         - The modified system matrix.
-    #     """
-    #     PExt, K = self._computeBodyLoads(bodyForces, U_np, PExt, K, timeStep)
-
-    #     return PExt, K
 
     def _checkDivergingSolution(self, incrementResidualHistory: dict, maxGrowingIter: int) -> bool:
         """Check if the iterative solution scheme is diverging.

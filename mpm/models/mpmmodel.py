@@ -131,7 +131,7 @@ class MPMModel(FEModel):
         """
 
         for mp in self.materialPoints.values():
-            mp.acceptLastState()
+            mp.acceptStateAndPosition()
 
         return super().advanceToTime(time)
 

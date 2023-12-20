@@ -120,13 +120,14 @@ cdef class MarmotMaterialPointWrapper:
     def ensightType(self):
         return self._ensightType
 
-    def acceptLastState(self,):
+    def acceptStateAndPosition(self,):
+        self._marmotMaterialPoint.acceptStateAndPosition()
         self._stateVars[:] = self._stateVarsTemp
 
     def initializeYourself(self):
         self._stateVarsTemp[:] = self._stateVars
         self._marmotMaterialPoint.initializeYourself()
-        self.acceptLastState()
+        self.acceptStateAndPosition()
         
     def prepareYourself(self, timeTotal: float, dTime: float):
         self._stateVarsTemp[:] = self._stateVars

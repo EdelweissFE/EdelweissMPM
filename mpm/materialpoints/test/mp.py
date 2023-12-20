@@ -75,12 +75,12 @@ class MaterialPoint(MaterialPointBase):
     # def computeMaterialResponse(self, timeStep: float, timeTotal: float, dT: float):
     #     pass
 
-    def acceptLastState(
+    def acceptStateAndPosition(
         self,
     ):
         pass
 
-    def resetToLastValidState(
+    def resetToLastValidStateAndPosition(
         self,
     ):
         pass

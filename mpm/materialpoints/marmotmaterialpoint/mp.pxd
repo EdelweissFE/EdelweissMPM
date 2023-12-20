@@ -76,6 +76,8 @@ cdef extern from "Marmot/MarmotMaterialPoint.h":
 
         void computeYourself(double timeNew, double dT) except +ValueError
 
+        void acceptStateAndPosition()
+
         StateView getStateView( const string& stateName ) 
 
         int getDimension()

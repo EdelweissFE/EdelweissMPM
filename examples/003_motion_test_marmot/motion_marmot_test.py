@@ -124,17 +124,11 @@ def run_sim():
 
     ensightOutput.initializeJob()
 
-    for i in range(100):
-        print("time step {:}".format(i))
+    try:
+        for i in range(100):
+            print("time step {:}".format(i))
 
-        mpmManager.updateConnectivity()
-
-        if mpmManager.hasChanged():
-            print("material points in cells have changed since previous localization")
-
-            if mpmManager.hasLostMaterialPoints():
-                print("we have lost material points outside the grid!")
-                break
+            mpmManager.updateConnectivity()
 
             activeCells = mpmManager.getActiveCells()
             activeNodes = set([n for cell in activeCells for n in cell.nodes])
@@ -148,7 +142,7 @@ def run_sim():
             for c in activeCells:
                 print(
                     "cell {:} hosts material points {:}".format(
-                        c.cellNumber, [mp.label for mp in mpmManager.getMaterialPointsInCell(c)]
+                        c.cellNumber, [mp.label for mp in c.assignedMaterialPoints]
                     )
                 )
 
@@ -164,36 +158,41 @@ def run_sim():
             nodeSets = []
 
             dofManager = MPMDofManager(
-                activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells
+                activeNodeFields.values(),
+                scalarVariables,
+                elements,
+                constraints,
+                nodeSets,
+                activeCells,
             )
 
             dofVector = dofManager.constructDofVector()
 
-        for c in activeCells:
-            c.assignMaterialPoints(mpmManager.getMaterialPointsInCell(c))
+            time = 10 * i
+            shift = np.asarray([2.0, 2.0 * np.cos(4 * np.pi * i / 100.0)])
 
-        time = 10 * i
-        shift = np.asarray([2.0, 2.0 * np.cos(4 * np.pi * i / 100.0)])
+            activeNodeFields["displacement"]["dU"][:] = shift
+            dofManager.writeNodeFieldToDofVector(dofVector, activeNodeFields["displacement"], "dU")
 
-        activeNodeFields["displacement"]["dU"][:] = shift
-        dofManager.writeNodeFieldToDofVector(dofVector, activeNodeFields["displacement"], "dU")
+            for c in activeCells:
+                dUCell = dofVector[c]
+                c.interpolateFieldsToMaterialPoints(dUCell)
 
-        for c in activeCells:
-            dUCell = dofVector[c]
-            c.interpolateFieldsToMaterialPoints(dUCell)
+            for mp in allMPs:
+                mp.computeYourself(time, i)
 
-        for mp in allMPs:
-            mp.computeYourself(time, i)
+            mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
 
-        mpmModel.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
+            mpmModel.advanceToTime(time)
 
-        mpmModel.advanceToTime(time)
+            fieldOutputController.finalizeIncrement()
 
-        fieldOutputController.finalizeIncrement()
+            ensightOutput.finalizeIncrement()
 
-        ensightOutput.finalizeIncrement()
+            journal.printSeperationLine()
 
-        journal.printSeperationLine()
+    except Exception as e:
+        print(e)
 
     ensightOutput.finalizeJob()
 
@@ -222,7 +221,12 @@ if __name__ == "__main__":
     mpmModel = run_sim()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
+    parser.add_argument(
+        "--create-gold",
+        dest="create_gold",
+        action="store_true",
+        help="create the gold file.",
+    )
     args = parser.parse_args()
 
     if args.create_gold:

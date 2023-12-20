@@ -328,7 +328,7 @@ cdef class KDTree:
         """
 
         if not self._domain.containsCoordinates(coordinates):
-            raise Exception("requested coordinate outside domain")
+            raise Exception("requested coordinate {:} outside domain".format(np.asarray(coordinates)))
     
         if initialGuess:
             for cell in initialGuess:
