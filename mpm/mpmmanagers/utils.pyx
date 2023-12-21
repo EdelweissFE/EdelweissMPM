@@ -67,10 +67,10 @@ cdef class BoundingBox:
         return (np.asarray(self.maxCoords) + np.asarray(self.minCoords)) / 2.0
 
     cdef double[:,::1] getVertices(self):
-        cdef double[:,::1] vertices = np.empty( ( 2 ** self.dim, self.dim) )
+        cdef double[:,::1] vertices = np.empty( ( pow( 2, self.dim ), self.dim) )
 
         cdef int i, j
-        for i in range( 2 ** self.dim):
+        for i in range( pow( 2, self.dim )):
             for j in range(self.dim):
 
                 vertices[i, j] = self.minCoords[j] if (i & (1 << j) ) else self.maxCoords[j] 
@@ -184,8 +184,8 @@ cdef class _KDTreeImpl:
         if not parent:
             self.cellsToChild = dict()
 
-        if self._level > 0 and self._nBoundedCellsInDomain > 2 ** self._domain.dim :
-            self._children = [None] * 2**self._domain.dim
+        if self._level > 0 and self._nBoundedCellsInDomain > pow (2, self._domain.dim):
+            self._children = [None] * pow( 2, self._domain.dim )
             for vertice in self._domain.getVertices():
                 childDomain = BoundingBox(vertice, self._centerCoordinates)
 
@@ -261,7 +261,7 @@ cdef class _KDTreeImpl:
         cdef int i 
         for i in range(self._domain.dim):
             if coordinates[i] < self._centerCoordinates[i]:
-                num += 2**i
+                num += pow(2,i)
         return num
 
     cdef linkBoundedCellsToChild(self, cells, child):
