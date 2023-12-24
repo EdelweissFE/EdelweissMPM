@@ -131,4 +131,12 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
         "{:}_rightTop".format(name), [mpGrid[-1, -1]]
     )
 
+    model.materialPointSets["{:}_boundary".format(name)] = MaterialPointSet(
+        "{:}_boundary".format(name),
+        [n for n in mpGrid[:, -1]]
+        + [n for n in mpGrid[:, 0]]
+        + [n for n in mpGrid[0, 1:-1]]
+        + [n for n in mpGrid[-1, 1:-1]],
+    )
+
     return model

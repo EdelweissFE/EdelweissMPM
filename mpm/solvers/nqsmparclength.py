@@ -30,7 +30,6 @@ from fe.utils.exceptions import (
     ReachedMaxIncrements,
     ReachedMaxIterations,
     ReachedMinIncrementSize,
-    CutbackRequest,
     DivergingSolution,
     ConditionalStop,
     StepFailed,
@@ -148,132 +147,6 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             userIterationOptions,
         )
 
-    #     iterationOptions = self.validOptions.copy()
-    #     iterationOptions.update(userIterationOptions)
-
-    #     nMaximumIterations = iterationOptions["max. iterations"]
-    #     nCrititicalIterations = iterationOptions["critical iterations"]
-
-    #     materialPoints = model.materialPoints.values()
-
-    #     self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads)
-
-    #     try:
-    #         for timeStep in timeStepper.generateTimeStep():
-    #             self.journal.printSeperationLine()
-    #             self.journal.message(
-    #                 "increment {:}: {:8f}, {:8f}; time {:10f} to {:10f}".format(
-    #                     timeStep.number,
-    #                     timeStep.stepProgressIncrement,
-    #                     timeStep.stepProgress,
-    #                     timeStep.totalTime - timeStep.timeIncrement,
-    #                     timeStep.totalTime,
-    #                 ),
-    #                 self.identification,
-    #                 level=1,
-    #             )
-
-    #             self.journal.message(
-    #                 "updating material point - cell connectivity",
-    #                 self.identification,
-    #                 level=1,
-    #             )
-
-    #             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
-    #             self._updateConnectivity(mpmManager)
-
-    #             for c in constraints:
-    #                 c.initializeTimeStep(model, timeStep)
-
-    #             if timeStep.number == 0 or mpmManager.hasChanged():
-    #                 self.journal.message(
-    #                     "material points in cells have changed since previous localization",
-    #                     self.identification,
-    #                     level=1,
-    #                 )
-
-    #                 activeNodes, activeCells, activeNodeFields, activeNodeSets = self._assembleActiveDomain(
-    #                     model, mpmManager
-    #                 )
-
-    #                 theDofManager = self._createDofManager(
-    #                     activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
-    #                 )
-
-    #                 presentVariableNames = list(theDofManager.idcsOfFieldsInDofVector.keys())
-
-    #                 # if theDofManager.idcsOfScalarVariablesInDofVector:
-    #                 #     presentVariableNames += [
-    #                 #         "scalar variables",
-    #                 #     ]
-
-    #                 nVariables = len(presentVariableNames)
-    #                 iterationHeader = ("{:^25}" * nVariables).format(*presentVariableNames)
-    #                 iterationHeader2 = (" {:<10}  {:<10}  ").format("||R||∞", "||ddU||∞") * nVariables
-
-    #             self.journal.message(iterationHeader, self.identification, level=2)
-    #             self.journal.message(iterationHeader2, self.identification, level=2)
-
-    #             try:
-    #                 dU, P, iterationHistory = self._newtonSolve(
-    #                     dirichlets,
-    #                     bodyLoads,
-    #                     distributedLoads,
-    #                     activeNodeSets,
-    #                     activeCells,
-    #                     materialPoints,
-    #                     constraints,
-    #                     theDofManager,
-    #                     linearSolver,
-    #                     iterationOptions,
-    #                     timeStep,
-    #                     model,
-    #                     arcLengthController,
-    #                     arcLengthParameter
-    #                 )
-
-    #             # except CutbackRequest as e:
-    #             #     self.journal.message(str(e), self.identification, 1)
-    #             #     timeStepper.discardAndChangeIncrement(max(e.cutbackSize, 0.25))
-
-    #             #     for man in outputmanagers:
-    #             #         man.finalizeFailedIncrement()
-
-    #             except Exception as e:
-    #                 self.journal.message(str(e), self.identification, 1)
-    #                 print(traceback.format_exc())
-    #                 timeStepper.discardAndChangeIncrement(0.25)
-
-    #                 for man in outputmanagers:
-    #                     man.finalizeFailedIncrement()
-
-    #             else:
-    #                 if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
-    #                     timeStepper.preventIncrementIncrease()
-
-    #                 for field in activeNodeFields.values():
-    #                     theDofManager.writeDofVectorToNodeField(dU, field, "dU")
-
-    #                 model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
-    #                 model.advanceToTime(timeStep.totalTime)
-
-    #                 self.journal.message(
-    #                     "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
-    #                 )
-
-    #                 self._finalizeOutput(fieldOutputController, outputmanagers)
-
-    #     except (ReachedMaxIncrements, ReachedMinIncrementSize):
-    #         self.journal.errorMessage("Incrementation failed", self.identification)
-    #         raise StepFailed()
-
-    #     except ConditionalStop:
-    #         self.journal.message("Conditional Stop", self.identification)
-    #         self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads)
-
-    #     else:
-    #         self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads)
-
     @performancetiming.timeit("solve step", "newton iteration")
     def _newtonSolve(
         self,
@@ -289,7 +162,6 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         iterationOptions: dict,
         timeStep: TimeStep,
         model: MPMModel,
-        # arcLengthController = None
     ) -> tuple[DofVector, DofVector, dict]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
@@ -358,9 +230,9 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         dU = theDofManager.constructDofVector()
         dU[:] = 0.0
 
-        R_ = np.tile(theDofManager.constructDofVector(), (2, 1)).T  # 2 RHSs
-        R_0 = R_[:, 0]
-        R_f = R_[:, 1]
+        Rhs_ = np.tile(theDofManager.constructDofVector(), (2, 1)).T  # 2 RHSs
+        Rhs_0 = Rhs_[:, 0]
+        Rhs_f = Rhs_[:, 1]
         F = theDofManager.constructDofVector()  # accumulated Flux vector
 
         P = theDofManager.constructDofVector()
@@ -402,22 +274,22 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             K_VIJ_f -= K_VIJ_0
 
             # Dead and Reference load ..
-            R_0[:] = P_0 + (Lambda + dLambda) * P_f + P
-            R_f[:] = P_f
+            Rhs_0[:] = -(P_0 + (Lambda + dLambda) * P_f + P)
+            Rhs_f[:] = -P_f
 
             # add stiffness contribution
             K_VIJ[:] += K_VIJ_0
             K_VIJ[:] += (Lambda + dLambda) * K_VIJ_f
 
-            R_f = self._applyDirichlet(referenceTimeStep, R_f, dirichlets, activeNodeSets, theDofManager)
+            Rhs_f = self._applyDirichlet(referenceTimeStep, Rhs_f, dirichlets, activeNodeSets, theDofManager)
             if iterationCounter == 0 and dirichlets:
-                R_0 = self._applyDirichlet(timeStep, R_0, dirichlets, activeNodeSets, theDofManager)
+                Rhs_0 = self._applyDirichlet(timeStep, Rhs_0, dirichlets, activeNodeSets, theDofManager)
             else:
                 for dirichlet in dirichlets:
-                    R_0[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
+                    Rhs_0[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
 
                 incrementResidualHistory = self._computeResiduals(
-                    R_0, ddU, dU, F, incrementResidualHistory, theDofManager
+                    Rhs_0, ddU, dU, F, incrementResidualHistory, theDofManager
                 )
 
                 converged = self._checkConvergence(iterationCounter, incrementResidualHistory, iterationOptions)
@@ -437,9 +309,9 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager)
 
             # solve 2 eq. systems at once:
-            ddU_ = self._linearSolve(K_CSR, -R_, linearSolver)
-            # q_0 = K⁻¹ * (  Pext_0  + dLambda * Pext_Ref - PInt  )
-            # q_f = K⁻¹ * (  Pext_Ref  )
+            ddU_ = self._linearSolve(K_CSR, Rhs_, linearSolver)
+            # q_0 = K⁻¹ * -(  Pext_0  + dLambda * Pext_Ref + PInt  )
+            # q_f = K⁻¹ * -(  Pext_Ref  )
             ddU_0, ddU_f = ddU_[:, 0], ddU_[:, 1]
 
             # compute the increment of the load parameter. Method depends on the employed arc length controller

@@ -86,6 +86,8 @@ cdef extern from "Marmot/MarmotMaterialPoint.h":
 
         void getVertexCoordinates(double* ) 
 
+        void getCenterCoordinates(double* ) 
+
         double getVolume() 
         
 cdef class MarmotMaterialPointWrapper:
@@ -118,6 +120,6 @@ cdef class MarmotMaterialPointWrapper:
 
     cpdef void computeYourself(self, 
                      double timeNew, 
-                     double dTime, ) nogil except *
+                     double dTime, ) except * nogil
 
     cdef double[::1] getStateView(self, string stateName)

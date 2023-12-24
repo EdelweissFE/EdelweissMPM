@@ -30,13 +30,11 @@ from fe.utils.exceptions import (
     ReachedMaxIncrements,
     ReachedMaxIterations,
     ReachedMinIncrementSize,
-    CutbackRequest,
     DivergingSolution,
     ConditionalStop,
     StepFailed,
 )
 
-# from time import time as getCurrentTime
 from collections import defaultdict
 from fe.journal.journal import Journal
 from fe.config.linsolve import getLinSolverByName, getDefaultLinSolver
@@ -88,10 +86,13 @@ class NonlinearQuasistaticSolver:
         "zero flux threshhold": 1e-9,
         "default flux residual tolerance": 1e-4,
         "default flux residual tolerance alt.": 1e-3,
-        "default field correction tolerance": 1e-3,
+        "default relative field correction tolerance": 1e-3,
+        "default field correction tolerance": 1e-0,
         "spec. flux residual tolerances": dict(),
         "spec. flux residual tolerances alt.": dict(),
+        "spec. relative field correction tolerances": dict(),
         "spec. field correction tolerances": dict(),
+        "failed increment cutback factor": 0.25,
     }
 
     def __init__(self, journal: Journal):
@@ -103,10 +104,10 @@ class NonlinearQuasistaticSolver:
         timeStepper,
         linearSolver,
         mpmManager,
-        dirichlets,
+        dirichlets: list[DirichletBase],
         bodyLoads: list[MPMBodyLoadBase],
         distributedLoads: list[MPMDistributedLoadBase],
-        constraints,
+        constraints: list[ConstraintBase],
         model: MPMModel,
         fieldOutputController: FieldOutputController,
         outputmanagers: list[OutputManagerBase],
@@ -227,17 +228,9 @@ class NonlinearQuasistaticSolver:
                         model,
                     )
 
-                # except CutbackRequest as e:
-                #     self.journal.message(str(e), self.identification, 1)
-                #     timeStepper.discardAndChangeIncrement(max(e.cutbackSize, 0.25))
-
-                #     for man in outputmanagers:
-                #         man.finalizeFailedIncrement()
-
-                except Exception as e:
+                except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
-                    print(traceback.format_exc())
-                    timeStepper.discardAndChangeIncrement(0.25)
+                    timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
 
                     for man in outputmanagers:
                         man.finalizeFailedIncrement()
@@ -272,7 +265,7 @@ class NonlinearQuasistaticSolver:
     @performancetiming.timeit("solve step", "newton iteration")
     def _newtonSolve(
         self,
-        dirichlets: list,
+        dirichlets: list[DirichletBase],
         bodyLoads: list,
         distributedLoads: list,
         activeNodeSets: list,
@@ -350,6 +343,19 @@ class NonlinearQuasistaticSolver:
             self._computeCells(
                 activeCells, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
+
+            # for cell in activeCells:
+            #     if len(cell.assignedMaterialPoints) < 3:
+            #         print(
+            #             "caution, cell {:} has only {:} mps".format(cell.cellNumber, len(cell.assignedMaterialPoints))
+            #         )
+            #         for mp in cell.assignedMaterialPoints:
+            #             print(mp.label)
+            #         dUc = dU[cell]
+            #         Kc = K_VIJ[cell].reshape((cell.nDof, -1))
+            #         np.fill_diagonal(Kc, Kc.diagonal() + 1e-2 * np.max(np.abs(Kc)))
+            #         PInt[cell] += dUc * 1e-2 * np.max(np.abs(Kc))
+
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
@@ -447,7 +453,6 @@ class NonlinearQuasistaticSolver:
         K_VIJ: VIJSystemMatrix,
         timeStep: TimeStep,
         theDofManager,
-        # activeCells,
     ) -> tuple[DofVector, VIJSystemMatrix]:
         """Loop over all body forces loads acting on elements, and evaluate them.
         Assembles into the global external load vector and the system matrix.
@@ -456,14 +461,14 @@ class NonlinearQuasistaticSolver:
         ----------
         distributedLoads
             The list of distributed loads.
-        U_np
-            The current solution vector.
         PExt
             The external load vector to be augmented.
-        K
+        K_VIJ
             The system matrix to be augmented.
         timeStep
             The current time increment.
+        theDofManager
+            The DofManager instance.
 
         Returns
         -------
@@ -478,7 +483,6 @@ class NonlinearQuasistaticSolver:
                 for cl in mp.assignedCells:
                     Pc = np.zeros(cl.nDof)
                     Kc = K_VIJ[cl]
-                    # print(Kc.shape)
                     cl.computeDistributedLoad(
                         distributedLoad.loadType,
                         surfaceID,
@@ -495,7 +499,7 @@ class NonlinearQuasistaticSolver:
 
     @performancetiming.timeit("solve step", "newton iteration", "dirichet on CSR")
     def _applyDirichletKCsr(
-        self, K: VIJSystemMatrix, dirichlets: list[StepActionBase], theDofManager
+        self, K: VIJSystemMatrix, dirichlets: list[DirichletBase], theDofManager: DofManager
     ) -> VIJSystemMatrix:
         """Apply the dirichlet bcs on the global stiffness matrix
         Is called by solveStep() before solving the global system.
@@ -530,7 +534,12 @@ class NonlinearQuasistaticSolver:
 
     @performancetiming.timeit("solve step", "newton iteration", "dirichlet on R")
     def _applyDirichlet(
-        self, timeStep: TimeStep, R: DofVector, dirichlets: list[StepActionBase], activeNodeSets, theDofManager
+        self,
+        timeStep: TimeStep,
+        R: DofVector,
+        dirichlets: list[DirichletBase],
+        activeNodeSets,
+        theDofManager: DofManager,
     ):
         """Apply the dirichlet bcs on the residual vector
         Is called by solveStep() before solving the global equatuon system.
@@ -543,6 +552,10 @@ class NonlinearQuasistaticSolver:
             The residual vector of the global equation system to be modified.
         dirichlets
             The list of dirichlet boundary conditions.
+        activeNodeSets
+            The sets with active nodes only.
+        theDofManager
+            The DofManager instance.
 
         Returns
         -------
@@ -560,7 +573,13 @@ class NonlinearQuasistaticSolver:
 
     @performancetiming.timeit("solve step", "newton iteration", "evaluation residuals")
     def _computeResiduals(
-        self, R: DofVector, ddU: DofVector, dU: DofVector, F: DofVector, residualHistory: dict, theDofManager
+        self,
+        R: DofVector,
+        ddU: DofVector,
+        dU: DofVector,
+        F: DofVector,
+        residualHistory: dict,
+        theDofManager: DofManager,
     ) -> tuple[bool, dict]:
         """Compute the current residuals and relative flux residuals flux (R) and effort correction (ddU).
 
@@ -570,6 +589,8 @@ class NonlinearQuasistaticSolver:
             The current residual.
         ddU
             The current correction increment.
+        dU
+            The current solution increment.
         F
             The accumulated fluxes.
         residualHistory
@@ -663,8 +684,14 @@ class NonlinearQuasistaticSolver:
                 field, iterationOptions["default field correction tolerance"]
             )
 
+            relativeCorrectionTolerance = iterationOptions["spec. relative field correction tolerances"].get(
+                field, iterationOptions["default relative field correction tolerance"]
+            )
+
             nonZeroIncrement = lastResults["max. increment"] > iterationOptions["zero increment threshhold"]
-            convergedCorrection = correctionRelative < correctionTolerance if nonZeroIncrement else True
+
+            convergedCorrection = correctionRelative < relativeCorrectionTolerance if nonZeroIncrement else True
+            convergedCorrection = convergedCorrection or correction < correctionTolerance
 
             nonZeroFlux = spatialAveragedFlux > iterationOptions["zero flux threshhold"]
             convergedNormalizedFlux = relativeFluxResidual < fluxTolerance if nonZeroFlux else True

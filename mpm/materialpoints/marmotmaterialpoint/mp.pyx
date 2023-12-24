@@ -67,6 +67,9 @@ cdef class MarmotMaterialPointWrapper:
         self._hasMaterial           = False
         self._assignedCells         = list()
 
+        self._centerCoordinates = np.ndarray(self._nDim)
+        self._centerCoordinatesView = self._centerCoordinates
+
     def __cinit__(self, materialPointType, 
                   int materialPointNumber, 
                   np.ndarray vertexCoordinates, 
@@ -151,20 +154,25 @@ cdef class MarmotMaterialPointWrapper:
         return <double[:res.stateSize]> ( res.stateLocation )
 
     def getVertexCoordinates(self):
-        """Compute the underlying MarmotMaterialPoint center of mass coordinates."""
+        """Get the underlying MarmotMaterialPoint vertex coordinates."""
 
         self._marmotMaterialPoint.getVertexCoordinates(&self._vertexCoordinatesView[0,0]) 
     
         return self._vertexCoordinates
 
 
+    def getCenterCoordinates(self):
+        """Compute the underlying MarmotMaterialPoint center of mass coordinates."""
+        self._marmotMaterialPoint.getVertexCoordinates(&self._centerCoordinatesView[0]) 
+
+        return self._centerCoordinates
+
     cpdef void computeYourself(self, 
                          double timeNew, 
-                         double dTime, ) nogil except *:
+                         double dTime, ) except * nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
         self._marmotMaterialPoint.computeYourself(timeNew, dTime)
-
 
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         pass

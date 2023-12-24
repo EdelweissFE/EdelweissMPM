@@ -36,6 +36,7 @@ from libc.stdlib cimport malloc, free
 from libcpp.string cimport string
 from time import time as getCurrentTime
 from multiprocessing import cpu_count
+# from fe.utils.exceptions import CutbackRequest
 import os
 
 class NQSParallelForMarmot(NonlinearQuasistaticSolver):
@@ -107,11 +108,11 @@ class NQSParallelForMarmot(NonlinearQuasistaticSolver):
     def _computeCells(
         self,
         activeCells_,
-        double[::1] dU ,
-        double[::1] P ,
-        double[::1] F ,
+        double[::1] dU,
+        double[::1] P,
+        double[::1] F,
         K_VIJ,
-        float time ,
+        float time,
         float dT,
         theDofManager,
     ):
