@@ -78,9 +78,9 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         The journal instance for logging.
     """
 
-    identification = "MPM-NQS-Solver"
+    identification = "MPM-NQS-ArcLength"
 
-    @performancetiming.timeit("solve step")
+    # @performancetiming.timeit("solve step")
     def solveStep(
         self,
         timeStepper,
@@ -147,7 +147,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             userIterationOptions,
         )
 
-    @performancetiming.timeit("solve step", "newton iteration")
+    @performancetiming.timeit("newton iteration")
     def _newtonSolve(
         self,
         dirichlets: list,

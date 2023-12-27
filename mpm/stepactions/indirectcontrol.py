@@ -121,9 +121,7 @@ class IndirectControl(ArcLengthControllerBase):
         dUMatrices = [dU[idcs].reshape((-1, self._fieldSize)) for idcs in mpIndices]
 
         Ns = [
-            np.asarray(
-                [cell.getInterpolationVector(mp.getVertexCoordinates()[0]) for cell in mp.assignedCells]
-            ).flatten()
+            np.asarray([cell.getInterpolationVector(mp.getCenterCoordinates()) for cell in mp.assignedCells]).flatten()
             for mp in self._materialPoints
         ]
 

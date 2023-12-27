@@ -63,7 +63,7 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
         self._delta = self._loadVector
         if "f_t" in kwargs:
             t = sp.symbols("t")
-            self._amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t)"]), "numpy")
+            self._amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t"]), "numpy")
         else:
             self._amplitude = lambda x: x
 

@@ -31,6 +31,9 @@ from mpm.materialpoints.base.mp import MaterialPointBase
 import numpy as np
 cimport numpy as np
 
+cdef int _2pow (int exp) nogil:
+    cdef int res = 1 << exp
+    return res
 
 cdef class BoundingBox:
     """This class represents a bounding box.
@@ -55,7 +58,7 @@ cdef class BoundingBox:
         self.minCoords = np.minimum(A, B)
         self.maxCoords = np.maximum(A, B)
 
-    cdef int containsCoordinates(self, double[::1] coordinates):
+    cdef int containsCoordinates(self, double[::1] coordinates) nogil:
         cdef int i
         for i in range(self.dim):
             if coordinates[i] <  self.minCoords[i] or coordinates[i] >= self.maxCoords[i]:
@@ -67,10 +70,10 @@ cdef class BoundingBox:
         return (np.asarray(self.maxCoords) + np.asarray(self.minCoords)) / 2.0
 
     cdef double[:,::1] getVertices(self):
-        cdef double[:,::1] vertices = np.empty( ( pow( 2, self.dim ), self.dim) )
+        cdef double[:,::1] vertices = np.empty( ( _2pow(  self.dim ), self.dim) )
 
         cdef int i, j
-        for i in range( pow( 2, self.dim )):
+        for i in range( _2pow(  self.dim )):
             for j in range(self.dim):
 
                 vertices[i, j] = self.minCoords[j] if (i & (1 << j) ) else self.maxCoords[j] 
@@ -184,8 +187,8 @@ cdef class _KDTreeImpl:
         if not parent:
             self.cellsToChild = dict()
 
-        if self._level > 0 and self._nBoundedCellsInDomain > pow (2, self._domain.dim):
-            self._children = [None] * pow( 2, self._domain.dim )
+        if self._level > 0 and self._nBoundedCellsInDomain > _2pow (self._domain.dim):
+            self._children = [None] * _2pow(  self._domain.dim )
             for vertice in self._domain.getVertices():
                 childDomain = BoundingBox(vertice, self._centerCoordinates)
 
@@ -243,7 +246,7 @@ cdef class _KDTreeImpl:
 
         raise Exception("Failed to determine cell for coordinate {:}".format(coordinates))
 
-    cdef int getChildIDForCoordinates(self, double[::1] coordinates ):
+    cdef int getChildIDForCoordinates(self, double[::1] coordinates ) nogil:
         """Compute the sub-divison ID for the K childs containing the given coordinates.
 
         Parameters
@@ -261,7 +264,7 @@ cdef class _KDTreeImpl:
         cdef int i 
         for i in range(self._domain.dim):
             if coordinates[i] < self._centerCoordinates[i]:
-                num += pow(2,i)
+                num += _2pow(i)
         return num
 
     cdef linkBoundedCellsToChild(self, cells, child):

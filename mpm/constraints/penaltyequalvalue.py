@@ -95,7 +95,7 @@ class PenaltyEqualValue(MPMConstraintBase):
         currentNodeIdx = 0
         meanValue = 0.0
         for mp in self._constrainedMPs:
-            center = mp.getVertexCoordinates()[0]
+            center = mp.getCenterCoordinates()
 
             for c in mp.assignedCells:
                 nNodesCell = c.nNodes
@@ -114,7 +114,7 @@ class PenaltyEqualValue(MPMConstraintBase):
         # Part 2: compute the penalized difference between mean value and mp value:
         currentNodeIdx = 0
         for mp in self._constrainedMPs:
-            center = mp.getVertexCoordinates()[0]
+            center = mp.getCenterCoordinates()
 
             for c in mp.assignedCells:
                 nNodesCell = c.nNodes

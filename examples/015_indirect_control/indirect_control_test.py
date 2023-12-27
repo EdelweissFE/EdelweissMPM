@@ -98,7 +98,7 @@ def run_sim():
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, dimension, options={"KDTreeLevels": 10})
 
     journal.printSeperationLine()
 
@@ -198,22 +198,12 @@ def run_sim():
         raise
 
     finally:
-        table = []
-        k1 = "solve step"
-        v1 = performancetiming.times[k1]
-        table.append(("{:}".format(k1), "{:10.4f}s".format(v1.time)))
-        for k2, v2 in v1.items():
-            table.append(("  {:}".format(k2), "  {:10.4f}s".format(v2.time)))
-            for k3, v3 in v2.items():
-                table.append(("    {:}".format(k3), "    {:10.4f}s".format(v3.time)))
-
-        journal.printTable(
-            table,
-            "step 1",
-        )
-
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
+
+        prettytable = performancetiming.makePrettyTable()
+        prettytable.min_table_width = journal.linewidth
+        print(prettytable)
 
     return mpmModel
 

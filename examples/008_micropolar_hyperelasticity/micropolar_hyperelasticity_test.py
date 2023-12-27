@@ -1,4 +1,4 @@
-# hyperelasticity -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #  ---------------------------------------------------------------------
 #
 #  _____    _      _              _         __  __ ____  __  __
@@ -26,14 +26,12 @@
 #  ---------------------------------------------------------------------
 import pytest
 import argparse
-import numpy as np
 
 from fe.journal.journal import Journal
 from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
@@ -48,12 +46,9 @@ from mpm.stepactions.dirichlet import Dirichlet
 from mpm.stepactions.bodyload import BodyLoad
 from fe.utils.exceptions import StepFailed
 import fe.utils.performancetiming as performancetiming
-
 import numpy as np
-from datetime import datetime
 
 
-@performancetiming.timeit("simulation")
 def run_sim():
     dimension = 2
 
@@ -79,17 +74,17 @@ def run_sim():
         mpmModel,
         journal,
         x0=0.01,
-        l=79.98,
-        y0=60.0,
-        h=20.0,
-        nX=60,
-        nY=15,
+        l=30.0,
+        y0=0.01,
+        h=60.0,
+        nX=20,
+        nY=40,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
     )
 
-    material = "GMDAMAGEDSHEARNEOHOOKE"
-    materialProperties = np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999])
+    material = "GMDamagedShearNeoHooke"
+    materialProperties = np.array([30000.0, 0.3, 1, 1, 2, 1.4999])
     for mp in mpmModel.materialPoints.values():
         mp.assignMaterial(material, materialProperties)
 
@@ -99,7 +94,7 @@ def run_sim():
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 4})
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, dimension, options={"KDTreeLevels": 3})
 
     journal.printSeperationLine()
 
@@ -114,22 +109,12 @@ def run_sim():
         "displacement",
     )
 
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "deformation gradient",
-        allMPs,
-        "deformation gradient",
-    )
-
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager("ensight", mpmModel, fieldOutputController, journal, None)
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
-    ensightOutput.updateDefinition(
-        fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode"
-    )
-
     ensightOutput.initializeJob()
 
     outputManagers = [
@@ -149,7 +134,9 @@ def run_sim():
         "left",
         mpmModel.nodeSets["rectangular_grid_left"],
         "displacement",
-        {0: 0.0, 1: 0.0},
+        {
+            0: 0.0,
+        },
         mpmModel,
         journal,
     )
@@ -158,7 +145,9 @@ def run_sim():
         "right",
         mpmModel.nodeSets["rectangular_grid_right"],
         "displacement",
-        {0: 0.0, 1: 0.0},
+        {
+            0: 0.0,
+        },
         mpmModel,
         journal,
     )
@@ -169,10 +158,10 @@ def run_sim():
         journal,
         mpmModel.cells.values(),
         "BodyForce",
-        np.array([0.0, -200.0]),
+        np.array([0.0, -1000.0]),
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-2, 100, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 
@@ -189,10 +178,7 @@ def run_sim():
             adaptiveTimeStepper,
             linearSolver,
             mpmManager,
-            [
-                dirichletBottom,
-                dirichletLeft,
-            ],
+            [dirichletBottom, dirichletLeft, dirichletRight],
             [gravityLoad],
             [],
             [],
@@ -203,26 +189,15 @@ def run_sim():
         )
 
     except StepFailed as e:
-        print(e)
+        raise
+
     finally:
-        table = []
-        k1 = "solve step"
-        v1 = performancetiming.times[k1]
-        table.append(("{:}".format(k1), "{:10.4f}s".format(v1.time)))
-        for k2, v2 in v1.items():
-            table.append(("  {:}".format(k2), "  {:10.4f}s".format(v2.time)))
-            for k3, v3 in v2.items():
-                table.append(("    {:}".format(k3), "    {:10.4f}s".format(v3.time)))
+        fieldOutputController.finalizeJob()
+        ensightOutput.finalizeJob()
 
-        journal.printTable(
-            table,
-            "step 1",
-        )
-
-    fieldOutputController.finalizeJob()
-    ensightOutput.finalizeJob()
-
-    np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
+        prettytable = performancetiming.makePrettyTable()
+        prettytable.min_table_width = journal.linewidth
+        print(prettytable)
 
     return mpmModel
 
@@ -248,8 +223,6 @@ def test_sim():
 
 if __name__ == "__main__":
     mpmModel = run_sim()
-
-    print("elapsed time: {:}".format(performancetiming.times["simulation"].time))
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")

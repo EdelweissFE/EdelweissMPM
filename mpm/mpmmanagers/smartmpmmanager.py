@@ -53,6 +53,7 @@ class SmartMaterialPointManager(MPMManagerBase):
         self,
         materialPointCells: list[CellBase],
         materialPoints: list[MaterialPointBase],
+        dimension: int,
         options: dict = {"KDTreeLevels": 1},
     ):
         self._cells = materialPointCells
@@ -61,7 +62,7 @@ class SmartMaterialPointManager(MPMManagerBase):
         self._activeCells = defaultdict(list)
 
         self._KDTree = KDTree(
-            buildBoundingBoxFromCells(materialPointCells, 2),
+            buildBoundingBoxFromCells(materialPointCells, dimension),
             self._options.get("KDTreeLevels"),
             materialPointCells,
         )

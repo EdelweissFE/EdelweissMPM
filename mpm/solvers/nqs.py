@@ -87,7 +87,7 @@ class NonlinearQuasistaticSolver:
         "default flux residual tolerance": 1e-4,
         "default flux residual tolerance alt.": 1e-3,
         "default relative field correction tolerance": 1e-3,
-        "default field correction tolerance": 1e-0,
+        "default field correction tolerance": 1e-14,
         "spec. flux residual tolerances": dict(),
         "spec. flux residual tolerances alt.": dict(),
         "spec. relative field correction tolerances": dict(),
@@ -239,10 +239,10 @@ class NonlinearQuasistaticSolver:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
-                    for field in activeNodeFields.values():
-                        theDofManager.writeDofVectorToNodeField(dU, field, "dU")
+                    # for field in activeNodeFields.values():
+                    #     theDofManager.writeDofVectorToNodeField(dU, field, "dU")
 
-                    model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
+                    # model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
                     model.advanceToTime(timeStep.totalTime)
 
                     self.journal.message(
@@ -262,7 +262,7 @@ class NonlinearQuasistaticSolver:
         else:
             self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads)
 
-    @performancetiming.timeit("solve step", "newton iteration")
+    @performancetiming.timeit("newton iteration")
     def _newtonSolve(
         self,
         dirichlets: list[DirichletBase],
@@ -344,18 +344,6 @@ class NonlinearQuasistaticSolver:
                 activeCells, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
 
-            # for cell in activeCells:
-            #     if len(cell.assignedMaterialPoints) < 3:
-            #         print(
-            #             "caution, cell {:} has only {:} mps".format(cell.cellNumber, len(cell.assignedMaterialPoints))
-            #         )
-            #         for mp in cell.assignedMaterialPoints:
-            #             print(mp.label)
-            #         dUc = dU[cell]
-            #         Kc = K_VIJ[cell].reshape((cell.nDof, -1))
-            #         np.fill_diagonal(Kc, Kc.diagonal() + 1e-2 * np.max(np.abs(Kc)))
-            #         PInt[cell] += dUc * 1e-2 * np.max(np.abs(Kc))
-
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
@@ -398,7 +386,7 @@ class NonlinearQuasistaticSolver:
 
         return dU, PInt, iterationHistory
 
-    @performancetiming.timeit("solve step", "newton iteration", "compute body loads")
+    @performancetiming.timeit("compute body loads")
     def _computeBodyLoads(
         self,
         bodyForces: list[StepActionBase],
@@ -445,7 +433,7 @@ class NonlinearQuasistaticSolver:
 
         return PExt, K
 
-    @performancetiming.timeit("solve step", "newton iteration", "compute distributed loads")
+    @performancetiming.timeit("compute distributed loads")
     def _computeDistributedLoads(
         self,
         distributedLoads: list[MPMDistributedLoadBase],
@@ -497,7 +485,7 @@ class NonlinearQuasistaticSolver:
 
         return PExt, K_VIJ
 
-    @performancetiming.timeit("solve step", "newton iteration", "dirichet on CSR")
+    @performancetiming.timeit("dirichlet on CSR")
     def _applyDirichletKCsr(
         self, K: VIJSystemMatrix, dirichlets: list[DirichletBase], theDofManager: DofManager
     ) -> VIJSystemMatrix:
@@ -532,7 +520,7 @@ class NonlinearQuasistaticSolver:
 
         return K
 
-    @performancetiming.timeit("solve step", "newton iteration", "dirichlet on R")
+    @performancetiming.timeit("dirichlet on R")
     def _applyDirichlet(
         self,
         timeStep: TimeStep,
@@ -571,7 +559,7 @@ class NonlinearQuasistaticSolver:
 
         return R
 
-    @performancetiming.timeit("solve step", "newton iteration", "evaluation residuals")
+    @performancetiming.timeit("evaluation residuals")
     def _computeResiduals(
         self,
         R: DofVector,
@@ -638,6 +626,7 @@ class NonlinearQuasistaticSolver:
 
         return residualHistory
 
+    @performancetiming.timeit("convergence check")
     def _checkConvergence(self, iterations: int, incrementResidualHistory: dict, iterationOptions: dict) -> bool:
         """Check the status of convergence.
 
@@ -708,7 +697,7 @@ class NonlinearQuasistaticSolver:
 
         return convergedAtAll
 
-    @performancetiming.timeit("solve step", "newton iteration", "linear solve")
+    @performancetiming.timeit("linear solve")
     def _linearSolve(self, A: csr_matrix, b: DofVector, linearSolver) -> ndarray:
         """Solve the linear equation system.
 
@@ -732,7 +721,7 @@ class NonlinearQuasistaticSolver:
 
         return ddU
 
-    @performancetiming.timeit("solve step", "newton iteration", "conversion VIJ to CSR")
+    @performancetiming.timeit("conversion VIJ to CSR")
     def _VIJtoCSR(self, KCoo: VIJSystemMatrix, csrGenerator) -> csr_matrix:
         """Construct a CSR matrix from VIJ (COO)format.
 
@@ -749,7 +738,7 @@ class NonlinearQuasistaticSolver:
 
         return KCsr
 
-    @performancetiming.timeit("solve step", "newton iteration", "computation spatial fluxes")
+    @performancetiming.timeit("computation spatial fluxes")
     def _computeSpatialAveragedFluxes(self, F: DofVector, theDofManager) -> float:
         """Compute the spatial averaged flux for every field
         Is usually called by checkConvergence().
@@ -817,7 +806,7 @@ class NonlinearQuasistaticSolver:
                 level=2,
             )
 
-    @performancetiming.timeit("solve step", "step actions")
+    @performancetiming.timeit("step actions")
     def _applyStepActionsAtStepStart(self, model: MPMModel, actions):
         """Called when all step actions should be appliet at the start a step.
 
@@ -832,7 +821,7 @@ class NonlinearQuasistaticSolver:
         for action in actions:
             action.applyAtStepStart(model)
 
-    @performancetiming.timeit("solve step", "step actions")
+    @performancetiming.timeit("step actions")
     def _applyStepActionsAtStepEnd(self, model: MPMModel, actions):
         """Called when all step actions should finish a step.
 
@@ -847,7 +836,7 @@ class NonlinearQuasistaticSolver:
         for action in actions:
             action.applyAtStepEnd(model)
 
-    @performancetiming.timeit("solve step", "newton iteration", "step actions")
+    @performancetiming.timeit("step actions")
     def _applyStepActionsAtIncrementStart(self, model: MPMModel, timeStep: TimeStep, actions):
         """Called when all step actions should be applied at the start of a step.
 
@@ -869,7 +858,7 @@ class NonlinearQuasistaticSolver:
 
         return fieldIndices.reshape((-1, dirichlet.fieldSize))[:, dirichlet.components].flatten()
 
-    @performancetiming.timeit("solve step", "assembly active domain")
+    @performancetiming.timeit("assembly active domain")
     def _assembleActiveDomain(self, model: MPMModel, mpmManager) -> tuple[list, list, list, list]:
         """Gather the active cells, determine the active NodeFields and NodeSets.
 
@@ -905,7 +894,7 @@ class NonlinearQuasistaticSolver:
 
         return activeNodes, activeCells, activeNodeFields, activeNodeSets
 
-    @performancetiming.timeit("solve step", "newton iteration", "preparation material points")
+    @performancetiming.timeit("preparation material points")
     def _prepareMaterialPoints(self, materialPoints: list, time: float, dT: float):
         """Let the material points know that a new time step begins.
 
@@ -921,7 +910,7 @@ class NonlinearQuasistaticSolver:
         for mp in materialPoints:
             mp.prepareYourself(time, dT)
 
-    @performancetiming.timeit("solve step", "newton iteration", "interpolation to mps")
+    @performancetiming.timeit("interpolation to mps")
     def _interpolateFieldsToMaterialPoints(self, activeCells: list, dU: DofVector):
         """Let the solution be interpolated to all material points using the cells.
 
@@ -936,7 +925,7 @@ class NonlinearQuasistaticSolver:
             dUCell = dU[c]
             c.interpolateFieldsToMaterialPoints(dUCell)
 
-    @performancetiming.timeit("solve step", "newton iteration", "computation material points")
+    @performancetiming.timeit("computation material points")
     def _computeMaterialPoints(self, materialPoints: list, time: float, dT: float):
         """Evaluate all material points' physics.
 
@@ -952,7 +941,7 @@ class NonlinearQuasistaticSolver:
         for mp in materialPoints:
             mp.computeYourself(time, dT)
 
-    @performancetiming.timeit("solve step", "newton iteration", "computation active cells")
+    @performancetiming.timeit("computation active cells")
     def _computeCells(
         self,
         activeCells: list,
@@ -993,7 +982,7 @@ class NonlinearQuasistaticSolver:
             P[c] += Pc
             F[c] += abs(Pc)
 
-    @performancetiming.timeit("solve step", "newton iteration", "computation constraints")
+    @performancetiming.timeit("computation constraints")
     def _computeConstraints(
         self, constraints: list, dU: DofVector, P: DofVector, K_VIJ: VIJSystemMatrix, timeStep: TimeStep
     ):
@@ -1019,15 +1008,15 @@ class NonlinearQuasistaticSolver:
             c.applyConstraint(dUc, Pc, Kc, timeStep)
             np.add.at(P, P.entitiesInDofVector[c], Pc)
 
-    @performancetiming.timeit("solve step", "instancing dof manager")
+    @performancetiming.timeit("instancing dof manager")
     def _createDofManager(self, *args):
         return MPMDofManager(*args)
 
-    @performancetiming.timeit("solve step", "update connectivity")
+    @performancetiming.timeit("update connectivity")
     def _updateConnectivity(self, mpmManager):
         mpmManager.updateConnectivity()
 
-    @performancetiming.timeit("solve step", "postprocessing & output")
+    @performancetiming.timeit("postprocessing & output")
     def _finalizeOutput(self, fieldOutputController, outputmanagers):
         fieldOutputController.finalizeIncrement()
         for man in outputmanagers:

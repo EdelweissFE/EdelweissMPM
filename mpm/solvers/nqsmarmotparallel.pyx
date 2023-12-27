@@ -66,7 +66,7 @@ class NQSParallelForMarmot(NonlinearQuasistaticSolver):
 
         super().__init__(journal)
 
-    @performancetiming.timeit("solve step", "newton iteration", "computation material points")
+    @performancetiming.timeit("computation material points")
     def _computeMaterialPoints(self, materialPoints_, float time, float dT):
         """Evaluate all material points' physics in an OpenMP prange loop.
 
@@ -104,7 +104,7 @@ class NQSParallelForMarmot(NonlinearQuasistaticSolver):
         finally:
             free( cppMPs )
 
-    @performancetiming.timeit("solve step", "newton iteration", "computation active cells")
+    @performancetiming.timeit("computation active cells")
     def _computeCells(
         self,
         activeCells_,

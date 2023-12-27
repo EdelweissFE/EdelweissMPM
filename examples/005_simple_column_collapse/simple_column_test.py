@@ -45,6 +45,7 @@ from fe.linsolve.pardiso.pardiso import pardisoSolve
 from mpm.stepactions.dirichlet import Dirichlet
 from mpm.stepactions.bodyload import BodyLoad
 from fe.utils.exceptions import StepFailed
+import fe.utils.performancetiming as performancetiming
 
 import numpy as np
 
@@ -94,7 +95,7 @@ def run_sim():
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
-    mpmManager = SmartMaterialPointManager(allCells, allMPs, options={"KDTreeLevels": 3})
+    mpmManager = SmartMaterialPointManager(allCells, allMPs, dimension, options={"KDTreeLevels": 3})
 
     journal.printSeperationLine()
 
@@ -192,10 +193,15 @@ def run_sim():
         )
 
     except StepFailed as e:
-        print(e)
+        raise
 
-    fieldOutputController.finalizeJob()
-    ensightOutput.finalizeJob()
+    finally:
+        fieldOutputController.finalizeJob()
+        ensightOutput.finalizeJob()
+
+        prettytable = performancetiming.makePrettyTable()
+        prettytable.min_table_width = journal.linewidth
+        print(prettytable)
 
     return mpmModel
 

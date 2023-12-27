@@ -40,6 +40,7 @@ from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from mpm.sets.cellset import CellSet
+import fe.utils.performancetiming as performancetiming
 
 import numpy as np
 
@@ -159,10 +160,14 @@ def run_sim():
             journal.printSeperationLine()
 
     except Exception as e:
-        print(e)
+        raise
 
     finally:
+        fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
+        prettytable = performancetiming.makePrettyTable()
+        prettytable.min_table_width = journal.linewidth
+        print(prettytable)
 
         return mpmModel
 

@@ -27,7 +27,6 @@
 import pytest
 import argparse
 
-# from fe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
 from fe.journal.journal import Journal
 from mpm.fields.nodefield import MPMNodeField
 from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
@@ -35,19 +34,18 @@ from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
 from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 
-# from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from mpm.models.mpmmodel import MPMModel
 from mpm.numerics.dofmanager import MPMDofManager
 from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from mpm.sets.cellset import CellSet
 from fe.sets.nodeset import NodeSet
 
-# from fe.steps.adaptivestep import AdaptiveStep
 from fe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from mpm.solvers.nqs import NonlinearQuasistaticSolver
 from fe.linsolve.pardiso.pardiso import pardisoSolve
 from mpm.stepactions.dirichlet import Dirichlet
 from mpm.stepactions.bodyload import BodyLoad
+import fe.utils.performancetiming as performancetiming
 
 import numpy as np
 
@@ -170,22 +168,30 @@ def run_sim():
 
     linearSolver = pardisoSolve
 
-    nonlinearSolver.solveStep(
-        adaptiveTimeStepper,
-        linearSolver,
-        mpmManager,
-        [dirichletLeft, dirichletRight],
-        [],
-        [],
-        [],
-        mpmModel,
-        fieldOutputController,
-        outputManagers,
-        iterationOptions,
-    )
+    try:
+        nonlinearSolver.solveStep(
+            adaptiveTimeStepper,
+            linearSolver,
+            mpmManager,
+            [dirichletLeft, dirichletRight],
+            [],
+            [],
+            [],
+            mpmModel,
+            fieldOutputController,
+            outputManagers,
+            iterationOptions,
+        )
+    except StepFailed as e:
+        raise
 
-    fieldOutputController.finalizeJob()
-    ensightOutput.finalizeJob()
+    finally:
+        fieldOutputController.finalizeJob()
+        ensightOutput.finalizeJob()
+
+        prettytable = performancetiming.makePrettyTable()
+        prettytable.min_table_width = journal.linewidth
+        print(prettytable)
 
     return mpmModel
 

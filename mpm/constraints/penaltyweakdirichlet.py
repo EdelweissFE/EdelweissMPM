@@ -87,7 +87,7 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         idxK = 0
 
         for c in self._constrainedMP.assignedCells:
-            center = self._constrainedMP.getVertexCoordinates()[0]
+            center = self._constrainedMP.getCenterCoordinates()
 
             nNodesCells = c.nNodes
             nDof = nNodesCells * self._fieldSize
