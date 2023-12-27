@@ -239,10 +239,13 @@ class NonlinearQuasistaticSolver:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
-                    # for field in activeNodeFields.values():
-                    #     theDofManager.writeDofVectorToNodeField(dU, field, "dU")
 
-                    # model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
+                    # TODO: Make this optional/flexibel via function arguments (?)
+                    for field in activeNodeFields.values():
+                        theDofManager.writeDofVectorToNodeField(dU, field, "dU")
+                        theDofManager.writeDofVectorToNodeField(P, field, "P")
+
+                    model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
                     model.advanceToTime(timeStep.totalTime)
 
                     self.journal.message(
@@ -322,7 +325,7 @@ class NonlinearQuasistaticSolver:
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
         K_VIJ = theDofManager.constructVIJSystemMatrix()
-        csrGenerator = CSRGenerator(K_VIJ)
+        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ) 
 
         dU = theDofManager.constructDofVector()
         dU[:] = 0.0
@@ -1015,6 +1018,10 @@ class NonlinearQuasistaticSolver:
     @performancetiming.timeit("update connectivity")
     def _updateConnectivity(self, mpmManager):
         mpmManager.updateConnectivity()
+
+    @performancetiming.timeit("instancing csr generator")
+    def _makeCachedCOOToCSRGenerator(self, K_VIJ):
+        return CSRGenerator(K_VIJ)
 
     @performancetiming.timeit("postprocessing & output")
     def _finalizeOutput(self, fieldOutputController, outputmanagers):
