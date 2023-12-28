@@ -147,6 +147,9 @@ class NonlinearQuasistaticSolver:
         """
 
         iterationOptions = self.validOptions.copy()
+
+        if userIterationOptions |iterationOptions != iterationOptions:
+            raise ValueError("Invalid options in iteration options!")
         iterationOptions.update(userIterationOptions)
 
         nMaximumIterations = iterationOptions["max. iterations"]
@@ -154,7 +157,7 @@ class NonlinearQuasistaticSolver:
 
         materialPoints = model.materialPoints.values()
 
-        self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads)
+        self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -257,10 +260,10 @@ class NonlinearQuasistaticSolver:
 
         except ConditionalStop:
             self.journal.message("Conditional Stop", self.identification)
-            self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads)
+            self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
 
         else:
-            self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads)
+            self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
 
     @performancetiming.timeit("newton iteration")
     def _newtonSolve(

@@ -74,7 +74,7 @@ class Dirichlet(DirichletBase):
                 - (self._amplitude(timeStep.stepProgress - timeStep.stepProgressIncrement))
             )
         else:
-            return 0.0
+            return np.tile( np.zeros_like(self._delta), len(nodes))
 
     def _getAmplitude(self, **kwargs: dict) -> callable:
         """Determine the amplitude for the step, depending on a potentially specified function.
