@@ -223,7 +223,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
         K_VIJ = theDofManager.constructVIJSystemMatrix()
-        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ) 
+        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
 
         K_VIJ_f = theDofManager.constructVIJSystemMatrix()
         K_VIJ_0 = theDofManager.constructVIJSystemMatrix()
@@ -268,7 +268,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             P_f, K_VIJ_f = self._computeDistributedLoads(
                 distributedLoads, P_f, K_VIJ_f, referenceTimeStep, theDofManager
             )
-        
+
             P_f -= P_0  # and subtract the dead part, since we are only interested in the homogeneous linear part
             K_VIJ_f -= K_VIJ_0
 

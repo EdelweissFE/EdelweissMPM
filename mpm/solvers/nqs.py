@@ -84,14 +84,16 @@ class NonlinearQuasistaticSolver:
         "iterations for alt. tolerances": 5,
         "zero increment threshhold": 1e-13,
         "zero flux threshhold": 1e-9,
-        "default flux residual tolerance": 1e-4,
-        "default flux residual tolerance alt.": 1e-3,
+        "default relative flux residual tolerance": 1e-4,
+        "default relative flux residual tolerance alt.": 1e-3,
         "default relative field correction tolerance": 1e-3,
-        "default field correction tolerance": 1e-14,
-        "spec. flux residual tolerances": dict(),
-        "spec. flux residual tolerances alt.": dict(),
+        "default absolute flux residual tolerance": 1e-14,
+        "default absolute field correction tolerance": 1e-14,
+        "spec. relative flux residual tolerances": dict(),
+        "spec. relative flux residual tolerances alt.": dict(),
         "spec. relative field correction tolerances": dict(),
-        "spec. field correction tolerances": dict(),
+        "spec. absolute flux residual tolerances": dict(),
+        "spec. absolute field correction tolerances": dict(),
         "failed increment cutback factor": 0.25,
     }
 
@@ -239,7 +241,6 @@ class NonlinearQuasistaticSolver:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
-
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in activeNodeFields.values():
                         theDofManager.writeDofVectorToNodeField(dU, field, "dU")
@@ -325,7 +326,7 @@ class NonlinearQuasistaticSolver:
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
         K_VIJ = theDofManager.constructVIJSystemMatrix()
-        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ) 
+        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
 
         dU = theDofManager.constructDofVector()
         dU[:] = 0.0
@@ -606,22 +607,22 @@ class NonlinearQuasistaticSolver:
             fieldResidualAbs = np.abs(R[fieldIndices])
 
             indexOfMax = np.argmax(fieldResidualAbs)
-            fluxResidual = fieldResidualAbs[indexOfMax]
+            fluxResidualAbsolute = fieldResidualAbs[indexOfMax]
 
-            relativeFluxResidual = fluxResidual / max(spatialAveragedFluxes[field], 1e-16)
+            fluxResidualRelative = fluxResidualAbsolute / max(spatialAveragedFluxes[field], 1e-16)
             nodeWithLargestResidual = theDofManager.getNodeForIndexInDofVector(indexOfMax)
 
             maxIncrement = np.linalg.norm(dU[fieldIndices], np.inf)
-            correction = np.linalg.norm(ddU[fieldIndices], np.inf) if ddU is not None else 0.0
-            correctionRelative = correction / max(maxIncrement, 1e-16)
+            correctionAbsolute = np.linalg.norm(ddU[fieldIndices], np.inf) if ddU is not None else 0.0
+            correctionRelative = correctionAbsolute / max(maxIncrement, 1e-16)
 
             residualHistory[field].append(
                 {
-                    "fluxResidual": fluxResidual,
+                    "absolute flux residual": fluxResidualAbsolute,
                     "spatial average flux": spatialAveragedFluxes[field],
-                    "relative flux residual": relativeFluxResidual,
+                    "relative flux residual": fluxResidualRelative,
                     "max. increment": maxIncrement,
-                    "correction": correction,
+                    "absolute correction": correctionAbsolute,
                     "relative correction": correctionRelative,
                     "node with largest residual": nodeWithLargestResidual,
                 }
@@ -656,45 +657,49 @@ class NonlinearQuasistaticSolver:
 
         for field, fieldIncrementResidualHistory in incrementResidualHistory.items():
             lastResults = fieldIncrementResidualHistory[-1]
-            correction = lastResults["correction"]
-            correctionRelative = lastResults["relative correction"]
+            correctionAbs = lastResults["absolute correction"]
+            correctionRel = lastResults["relative correction"]
 
-            fluxResidual = lastResults["fluxResidual"]
-            relativeFluxResidual = lastResults["relative flux residual"]
+            fluxResidualAbs = lastResults["absolute flux residual"]
+            fluxResidualRel = lastResults["relative flux residual"]
             spatialAveragedFlux = lastResults["spatial average flux"]
 
             if useStrictFluxTolerances:
-                fluxTolerance = iterationOptions["spec. flux residual tolerances"].get(
-                    field, iterationOptions["default flux residual tolerance"]
+                fluxTolRel = iterationOptions["spec. relative flux residual tolerances"].get(
+                    field, iterationOptions["default relative flux residual tolerance"]
                 )
             else:
-                fluxTolerance = iterationOptions["spec. flux residual tolerances alt."].get(
-                    field, iterationOptions["default flux residual tolerance alt."]
+                fluxTolRel = iterationOptions["spec. relative flux residual tolerances alt."].get(
+                    field, iterationOptions["default relative flux residual tolerance alt."]
                 )
 
-            correctionTolerance = iterationOptions["spec. field correction tolerances"].get(
-                field, iterationOptions["default field correction tolerance"]
+            fluxTolAbs = iterationOptions["spec. absolute flux residual tolerances"].get(
+                field, iterationOptions["default absolute flux residual tolerance"]
             )
 
-            relativeCorrectionTolerance = iterationOptions["spec. relative field correction tolerances"].get(
+            correctionTolRel = iterationOptions["spec. relative field correction tolerances"].get(
                 field, iterationOptions["default relative field correction tolerance"]
             )
 
-            nonZeroIncrement = lastResults["max. increment"] > iterationOptions["zero increment threshhold"]
+            correctionTolAbs = iterationOptions["spec. absolute field correction tolerances"].get(
+                field, iterationOptions["default absolute field correction tolerance"]
+            )
 
-            convergedCorrection = correctionRelative < relativeCorrectionTolerance if nonZeroIncrement else True
-            convergedCorrection = convergedCorrection or correction < correctionTolerance
+            nonZeroIncrement = lastResults["max. increment"] > iterationOptions["zero increment threshhold"]
+            convergedCorrection = correctionRel < correctionTolRel if nonZeroIncrement else True
+            convergedCorrection = convergedCorrection or correctionAbs < correctionTolAbs
 
             nonZeroFlux = spatialAveragedFlux > iterationOptions["zero flux threshhold"]
-            convergedNormalizedFlux = relativeFluxResidual < fluxTolerance if nonZeroFlux else True
+            convergedFlux = fluxResidualRel < fluxTolRel if nonZeroFlux else True
+            convergedFlux = convergedFlux or fluxResidualAbs < fluxTolAbs
 
             iterationMessage += iterationMessageTemplate.format(
-                fluxResidual,
-                "✓" if convergedNormalizedFlux else " ",
-                correction,
+                fluxResidualAbs,
+                "✓" if convergedFlux else " ",
+                correctionAbs,
                 "✓" if convergedCorrection else " ",
             )
-            convergedAtAll = convergedAtAll and convergedCorrection and convergedNormalizedFlux
+            convergedAtAll = convergedAtAll and convergedCorrection and convergedFlux
 
         self.journal.message(iterationMessage, self.identification)
 
