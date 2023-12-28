@@ -150,7 +150,7 @@ class NonlinearQuasistaticSolver:
 
         iterationOptions = self.validOptions.copy()
 
-        if userIterationOptions |iterationOptions != iterationOptions:
+        if userIterationOptions | iterationOptions != iterationOptions:
             raise ValueError("Invalid options in iteration options!")
         iterationOptions.update(userIterationOptions)
 
