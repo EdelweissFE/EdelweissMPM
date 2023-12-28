@@ -35,7 +35,6 @@ from fe.utils.exceptions import (
     StepFailed,
 )
 
-# from time import time as getCurrentTime
 from collections import defaultdict
 from fe.journal.journal import Journal
 from fe.config.linsolve import getLinSolverByName, getDefaultLinSolver
@@ -80,7 +79,6 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
 
     identification = "MPM-NQS-ArcLength"
 
-    # @performancetiming.timeit("solve step")
     def solveStep(
         self,
         timeStepper,
@@ -225,7 +223,10 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
         K_VIJ = theDofManager.constructVIJSystemMatrix()
-        csrGenerator = CSRGenerator(K_VIJ)
+        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
+
+        K_VIJ_f = theDofManager.constructVIJSystemMatrix()
+        K_VIJ_0 = theDofManager.constructVIJSystemMatrix()
 
         dU = theDofManager.constructDofVector()
         dU[:] = 0.0
@@ -238,8 +239,6 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         P = theDofManager.constructDofVector()
         P_0 = theDofManager.constructDofVector()
         P_f = theDofManager.constructDofVector()
-        K_VIJ_f = theDofManager.constructVIJSystemMatrix()
-        K_VIJ_0 = theDofManager.constructVIJSystemMatrix()
         ddU = None
 
         Lambda = model.additionalParameters["arc length parameter"]
