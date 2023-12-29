@@ -52,6 +52,7 @@ import fe.utils.performancetiming as performancetiming
 import numpy as np
 from datetime import datetime
 
+
 def run_sim():
     dimension = 2
 
