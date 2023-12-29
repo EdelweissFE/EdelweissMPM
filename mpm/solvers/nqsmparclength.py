@@ -160,6 +160,8 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         iterationOptions: dict,
         timeStep: TimeStep,
         model: MPMModel,
+        K_VIJ,
+        csrGenerator
     ) -> tuple[DofVector, DofVector, dict]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
@@ -215,6 +217,8 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
                 iterationOptions,
                 timeStep,
                 model,
+                K_VIJ,
+                csrGenerator
             )
 
         iterationCounter = 0
@@ -222,8 +226,8 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
 
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
-        K_VIJ = theDofManager.constructVIJSystemMatrix()
-        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
+        # K_VIJ = theDofManager.constructVIJSystemMatrix()
+        # csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
 
         K_VIJ_f = theDofManager.constructVIJSystemMatrix()
         K_VIJ_0 = theDofManager.constructVIJSystemMatrix()

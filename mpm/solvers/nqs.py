@@ -168,6 +168,8 @@ class NonlinearQuasistaticSolver:
 
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
 
+        activeCellsOld = None
+
         try:
             for timeStep in timeStepper.generateTimeStep():
                 self.journal.printSeperationLine()
@@ -195,31 +197,36 @@ class NonlinearQuasistaticSolver:
                 for c in constraints:
                     c.initializeTimeStep(model, timeStep)
 
-                if timeStep.number == 0 or mpmManager.hasChanged():
+
+                activeNodes, activeCells, activeNodeFields, activeNodeSets = self._assembleActiveDomain(
+                    model, mpmManager
+                )
+        
+                
+                if activeCells != activeCellsOld:
                     self.journal.message(
-                        "material points in cells have changed since previous localization",
+                        "active cells have changed, (re)initialzing equation system",
                         self.identification,
                         level=1,
                     )
-
-                    activeNodes, activeCells, activeNodeFields, activeNodeSets = self._assembleActiveDomain(
-                        model, mpmManager
-                    )
-
                     theDofManager = self._createDofManager(
                         activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
                     )
+                    K_VIJ = theDofManager.constructVIJSystemMatrix()
+                    csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
 
-                    presentVariableNames = list(theDofManager.idcsOfFieldsInDofVector.keys())
+                activeCellsOld = activeCells
 
-                    # if theDofManager.idcsOfScalarVariablesInDofVector:
-                    #     presentVariableNames += [
-                    #         "scalar variables",
-                    #     ]
+                presentVariableNames = list(theDofManager.idcsOfFieldsInDofVector.keys())
 
-                    nVariables = len(presentVariableNames)
-                    iterationHeader = ("{:^25}" * nVariables).format(*presentVariableNames)
-                    iterationHeader2 = (" {:<10}  {:<10}  ").format("||R||∞", "||ddU||∞") * nVariables
+                # if theDofManager.idcsOfScalarVariablesInDofVector:
+                #     presentVariableNames += [
+                #         "scalar variables",
+                #     ]
+
+                nVariables = len(presentVariableNames)
+                iterationHeader = ("{:^25}" * nVariables).format(*presentVariableNames)
+                iterationHeader2 = (" {:<10}  {:<10}  ").format("||R||∞", "||ddU||∞") * nVariables
 
                 self.journal.message(iterationHeader, self.identification, level=2)
                 self.journal.message(iterationHeader2, self.identification, level=2)
@@ -238,6 +245,8 @@ class NonlinearQuasistaticSolver:
                         iterationOptions,
                         timeStep,
                         model,
+                        K_VIJ,
+                        csrGenerator
                     )
 
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
@@ -291,6 +300,8 @@ class NonlinearQuasistaticSolver:
         iterationOptions: dict,
         timeStep: TimeStep,
         model: MPMModel,
+        K_VIJ,
+        csrGenerator
     ) -> tuple[DofVector, DofVector, DofVector, int, dict]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
@@ -335,8 +346,6 @@ class NonlinearQuasistaticSolver:
 
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
-        K_VIJ = theDofManager.constructVIJSystemMatrix()
-        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
 
         dU = theDofManager.constructDofVector()
         dU[:] = 0.0
