@@ -64,6 +64,8 @@ from numpy import ndarray
 import fe.utils.performancetiming as performancetiming
 import traceback
 
+from prettytable import PrettyTable
+
 
 class NonlinearQuasistaticSolver:
     """This is the serial nonlinear implicit quasi static solver.
@@ -153,6 +155,11 @@ class NonlinearQuasistaticSolver:
         if userIterationOptions | iterationOptions != iterationOptions:
             raise ValueError("Invalid options in iteration options!")
         iterationOptions.update(userIterationOptions)
+
+        table = PrettyTable(("Solver option", "value"))
+        table.add_rows([(k, v) for k, v in iterationOptions.items()])
+        table.align = "l"
+        self.journal.printPrettyTable(table, self.identification)
 
         nMaximumIterations = iterationOptions["max. iterations"]
         nCrititicalIterations = iterationOptions["critical iterations"]

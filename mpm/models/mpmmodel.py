@@ -34,6 +34,7 @@ from fe.sets.elementset import ElementSet
 from fe.sets.nodeset import NodeSet
 from mpm.fields.nodefield import MPMNodeField
 from fe.config.phenomena import phenomena, getFieldSize
+from prettytable import PrettyTable
 
 
 class MPMModel(FEModel):
@@ -162,3 +163,29 @@ class MPMModel(FEModel):
                 theNodeFields[field] = theNodeField
 
         return theNodeFields
+
+    def makePrettyTableSummary(self):
+        prettytable = PrettyTable(("model property", ""))
+
+        prettytable.add_row(("domain dim.", self.domainSize))
+        prettytable.add_row(("time", self.time))
+        prettytable.add_row(("nodes", len(self.nodes)))
+        prettytable.add_row(("elements", len(self.elements)))
+        prettytable.add_row(("node sets", list(self.nodeSets.keys())))
+        prettytable.add_row(("node fields", list(self.nodeFields.keys())))
+        prettytable.add_row(("element sets", list(self.elementSets.keys())))
+        prettytable.add_row(("sections", list(self.sections.keys())))
+        prettytable.add_row(("surfaces", list(self.surfaces.keys())))
+        prettytable.add_row(("constraints", list(self.constraints.keys())))
+        prettytable.add_row(("materials", list(self.materials.keys())))
+        prettytable.add_row(("analytical fields", list(self.analyticalFields.keys())))
+        prettytable.add_row(("scalar vars.", len(self.scalarVariables)))
+        prettytable.add_row(("material points", len(self.materialPoints)))
+        prettytable.add_row(("cells", len(self.cells)))
+        prettytable.add_row(("material point sets", list(self.materialPointSets.keys())))
+        prettytable.add_row(("cell sets", list(self.cellSets.keys())))
+
+        prettytable.min_width["model property"] = 80
+        prettytable.align = "l"
+
+        return prettytable

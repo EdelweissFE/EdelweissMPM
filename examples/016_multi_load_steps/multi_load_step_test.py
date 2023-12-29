@@ -100,6 +100,8 @@ def run_sim(logFile=None):
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
 
+    journal.printPrettyTable(mpmModel.makePrettyTableSummary(), "Model summary")
+
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
 
@@ -192,6 +194,7 @@ def run_sim(logFile=None):
     mpleftTop = list(mpmModel.materialPointSets["planeRect_leftTop"])[0]
 
     try:
+        journal.printSeperationLine()
         journal.message("preconsolidation & gravity", "Step 1")
         nonlinearSolver.solveStep(
             AdaptiveTimeStepper(mpmModel.time, 1.0, 2e-1, 2e-1, 2e-1, 100, journal),
@@ -233,6 +236,7 @@ def run_sim(logFile=None):
             np.array([0.0, 1.0e-3 * 80 / 80]),
         )
 
+        journal.printSeperationLine()
         journal.message("now counteract the loads!", "Step 2")
         nonlinearSolver.solveStep(
             AdaptiveTimeStepper(mpmModel.time, 1.0, 2e-1, 2e-1, 2e-1, 100, journal),
