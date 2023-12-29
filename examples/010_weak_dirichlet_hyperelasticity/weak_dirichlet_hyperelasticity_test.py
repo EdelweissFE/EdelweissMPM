@@ -52,8 +52,6 @@ import fe.utils.performancetiming as performancetiming
 import numpy as np
 from datetime import datetime
 
-
-@performancetiming.timeit("simulation")
 def run_sim():
     dimension = 2
 
@@ -70,8 +68,8 @@ def run_sim():
         l=100.0,
         y0=0.0,
         h=100.0,
-        nX=12,
-        nY=12,
+        nX=10,
+        nY=10,
         cellProvider="LagrangianMarmotCell",
         cellType="GradientEnhancedMicropolar/Quad4",
     )
@@ -95,6 +93,8 @@ def run_sim():
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
+
+    journal.printPrettyTable(mpmModel.makePrettyTableSummary(), "Model summary")
 
     allCells = mpmModel.cellSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
@@ -196,8 +196,7 @@ def run_sim():
         ensightOutput.finalizeJob()
 
         prettytable = performancetiming.makePrettyTable()
-        prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "Summary Step 1")
 
     np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
 
