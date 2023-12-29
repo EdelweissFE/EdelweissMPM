@@ -169,7 +169,6 @@ class NonlinearQuasistaticSolver:
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
 
         activeCellsOld = None
-
         try:
             for timeStep in timeStepper.generateTimeStep():
                 self.journal.printSeperationLine()
@@ -198,22 +197,40 @@ class NonlinearQuasistaticSolver:
                     c.initializeTimeStep(model, timeStep)
 
 
-                activeNodes, activeCells, activeNodeFields, activeNodeSets = self._assembleActiveDomain(
+                activeNodes_, activeCells, activeNodeFields_, activeNodeSets__ = self._assembleActiveDomain(
                     model, mpmManager
                 )
         
                 
                 if activeCells != activeCellsOld:
                     self.journal.message(
-                        "active cells have changed, (re)initialzing equation system",
+                        "active cells have changed, (re)initializing equation system",
                         self.identification,
                         level=1,
                     )
+
+                    activeNodes = set([n for cell in activeCells for n in cell.nodes])
+
+                    activeNodeFields = {
+                        nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
+                        for nodeField in model.nodeFields.values()
+                    }
+
+                    activeNodeSets = {
+                        nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
+                        for nodeSet in model.nodeSets.values()
+                    }
+
                     theDofManager = self._createDofManager(
                         activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
                     )
                     K_VIJ = theDofManager.constructVIJSystemMatrix()
+
                     csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
+
+                else:
+
+                    K_VIJ[:] = 0.0
 
                 activeCellsOld = activeCells
 
@@ -905,21 +922,21 @@ class NonlinearQuasistaticSolver:
                 - the list of NodeFields on the active Nodes.
                 - the list of reduced NodeSets on the active Nodes.
         """
-        activeCells = mpmManager.getActiveCells()
+        activeCells = set(mpmManager.getActiveCells())
 
-        activeNodes = set([n for cell in activeCells for n in cell.nodes])
+        # activeNodes = set([n for cell in activeCells for n in cell.nodes])
 
-        activeNodeFields = {
-            nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
-            for nodeField in model.nodeFields.values()
-        }
+        # activeNodeFields = {
+        #     nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
+        #     for nodeField in model.nodeFields.values()
+        # }
 
-        activeNodeSets = {
-            nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
-            for nodeSet in model.nodeSets.values()
-        }
+        # activeNodeSets = {
+        #     nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
+        #     for nodeSet in model.nodeSets.values()
+        # }
 
-        return activeNodes, activeCells, activeNodeFields, activeNodeSets
+        return None, activeCells, None, None 
 
     @performancetiming.timeit("preparation material points")
     def _prepareMaterialPoints(self, materialPoints: list, time: float, dT: float):
