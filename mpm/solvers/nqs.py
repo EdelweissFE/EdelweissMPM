@@ -169,6 +169,7 @@ class NonlinearQuasistaticSolver:
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
 
         activeCellsOld = None
+        newtonCache = None
         try:
             for timeStep in timeStepper.generateTimeStep():
                 self.journal.printSeperationLine()
@@ -196,41 +197,22 @@ class NonlinearQuasistaticSolver:
                 for c in constraints:
                     c.initializeTimeStep(model, timeStep)
 
+                activeCells = set(mpmManager.getActiveCells())
 
-                activeNodes_, activeCells, activeNodeFields_, activeNodeSets__ = self._assembleActiveDomain(
-                    model, mpmManager
-                )
-        
-                
                 if activeCells != activeCellsOld:
                     self.journal.message(
-                        "active cells have changed, (re)initializing equation system",
+                        "active cells have changed, (re)initializing equation system & clearing cache",
                         self.identification,
                         level=1,
                     )
 
-                    activeNodes = set([n for cell in activeCells for n in cell.nodes])
-
-                    activeNodeFields = {
-                        nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
-                        for nodeField in model.nodeFields.values()
-                    }
-
-                    activeNodeSets = {
-                        nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
-                        for nodeSet in model.nodeSets.values()
-                    }
+                    activeNodes, activeNodeFields, activeNodeSets = self._assembleActiveDomain(activeCells, model)
 
                     theDofManager = self._createDofManager(
                         activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
                     )
-                    K_VIJ = theDofManager.constructVIJSystemMatrix()
 
-                    csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
-
-                else:
-
-                    K_VIJ[:] = 0.0
+                    newtonCache = None
 
                 activeCellsOld = activeCells
 
@@ -249,7 +231,7 @@ class NonlinearQuasistaticSolver:
                 self.journal.message(iterationHeader2, self.identification, level=2)
 
                 try:
-                    dU, P, iterationHistory = self._newtonSolve(
+                    dU, P, iterationHistory, newtonCache = self._newtonSolve(
                         dirichlets,
                         bodyLoads,
                         distributedLoads,
@@ -262,8 +244,7 @@ class NonlinearQuasistaticSolver:
                         iterationOptions,
                         timeStep,
                         model,
-                        K_VIJ,
-                        csrGenerator
+                        newtonCache,
                     )
 
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
@@ -289,7 +270,7 @@ class NonlinearQuasistaticSolver:
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
                     )
 
-                    self._finalizeOutput(fieldOutputController, outputmanagers)
+                    self._finalizeIncrementOutput(fieldOutputController, outputmanagers)
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)
@@ -297,10 +278,12 @@ class NonlinearQuasistaticSolver:
 
         except ConditionalStop:
             self.journal.message("Conditional Stop", self.identification)
-            self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
 
-        else:
-            self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
+        self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
+
+        fieldOutputController.finalizeStep()
+        for man in outputmanagers:
+            man.finalizeStep()
 
     @performancetiming.timeit("newton iteration")
     def _newtonSolve(
@@ -317,9 +300,8 @@ class NonlinearQuasistaticSolver:
         iterationOptions: dict,
         timeStep: TimeStep,
         model: MPMModel,
-        K_VIJ,
-        csrGenerator
-    ) -> tuple[DofVector, DofVector, DofVector, int, dict]:
+        newtonCache: tuple = None,
+    ) -> tuple[DofVector, DofVector, dict, tuple]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
         Parameters
@@ -348,14 +330,18 @@ class NonlinearQuasistaticSolver:
             The current time increment.
         model
             The full MPMModel instance.
+        newtonCache
+            An arbitrary cache of (expensive) objects, which may be reused across time steps as long as the global system does not change.
+            If the system changes, the newtonCache is set to None.
 
         Returns
         -------
-        tuple[DofVector,,DofVector,dict]
+        tuple[DofVector,DofVector,dict, tuple]
             A tuple containing:
                 - the new solution increment vector.
                 - the current internal load vector.
                 - the increment residual history of the Newton cycle.
+                - a cache of expensive objects which may be reused.
         """
 
         iterationCounter = 0
@@ -363,13 +349,11 @@ class NonlinearQuasistaticSolver:
 
         nAllowedResidualGrowths = iterationOptions["allowed residual growths"]
 
+        if not newtonCache:
+            newtonCache = self._createNewtonCache(theDofManager)
+        K_VIJ, csrGenerator, dU, Rhs, F, PInt, PExt = newtonCache
 
-        dU = theDofManager.constructDofVector()
         dU[:] = 0.0
-        Rhs = theDofManager.constructDofVector()
-        F = theDofManager.constructDofVector()
-        PInt = theDofManager.constructDofVector()
-        PExt = theDofManager.constructDofVector()
         ddU = None
 
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
@@ -424,7 +408,7 @@ class NonlinearQuasistaticSolver:
 
         iterationHistory = {"iterations": iterationCounter, "incrementResidualHistory": incrementResidualHistory}
 
-        return dU, PInt, iterationHistory
+        return dU, PInt, iterationHistory, newtonCache
 
     @performancetiming.timeit("compute body loads")
     def _computeBodyLoads(
@@ -903,8 +887,8 @@ class NonlinearQuasistaticSolver:
         return fieldIndices.reshape((-1, dirichlet.fieldSize))[:, dirichlet.components].flatten()
 
     @performancetiming.timeit("assembly active domain")
-    def _assembleActiveDomain(self, model: MPMModel, mpmManager) -> tuple[list, list, list, list]:
-        """Gather the active cells, determine the active NodeFields and NodeSets.
+    def _assembleActiveDomain(self, activeCells, model: MPMModel) -> tuple[list, list, list]:
+        """Gather the Nodes, active NodeFields and NodeSets.
 
         Parameters
         ----------
@@ -918,25 +902,23 @@ class NonlinearQuasistaticSolver:
         tuple
             The tuple containing:
                 - the list of active Nodes.
-                - the list of active Cells.
                 - the list of NodeFields on the active Nodes.
                 - the list of reduced NodeSets on the active Nodes.
         """
-        activeCells = set(mpmManager.getActiveCells())
 
-        # activeNodes = set([n for cell in activeCells for n in cell.nodes])
+        activeNodes = set([n for cell in activeCells for n in cell.nodes])
 
-        # activeNodeFields = {
-        #     nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
-        #     for nodeField in model.nodeFields.values()
-        # }
+        activeNodeFields = {
+            nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
+            for nodeField in model.nodeFields.values()
+        }
 
-        # activeNodeSets = {
-        #     nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
-        #     for nodeSet in model.nodeSets.values()
-        # }
+        activeNodeSets = {
+            nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
+            for nodeSet in model.nodeSets.values()
+        }
 
-        return None, activeCells, None, None 
+        return activeNodes, activeNodeFields, activeNodeSets
 
     @performancetiming.timeit("preparation material points")
     def _prepareMaterialPoints(self, materialPoints: list, time: float, dT: float):
@@ -1065,7 +1047,34 @@ class NonlinearQuasistaticSolver:
         return CSRGenerator(K_VIJ)
 
     @performancetiming.timeit("postprocessing & output")
-    def _finalizeOutput(self, fieldOutputController, outputmanagers):
+    def _finalizeIncrementOutput(self, fieldOutputController, outputmanagers):
         fieldOutputController.finalizeIncrement()
         for man in outputmanagers:
             man.finalizeIncrement()
+
+    @performancetiming.timeit("creation newton cache")
+    def _createNewtonCache(self, theDofManager):
+        """Create expensive objects, which may be reused if the global system does not change.
+
+        Parameters
+        ----------
+        theDofManager
+            The DofManager instance.
+
+        Returns
+        -------
+        tuple
+            The collection of expensive objects.
+        """
+
+        K_VIJ = theDofManager.constructVIJSystemMatrix()
+        csrGenerator = self._makeCachedCOOToCSRGenerator(K_VIJ)
+        dU = theDofManager.constructDofVector()
+        Rhs = theDofManager.constructDofVector()
+        F = theDofManager.constructDofVector()
+        PInt = theDofManager.constructDofVector()
+        PExt = theDofManager.constructDofVector()
+
+        newtonCache = (K_VIJ, csrGenerator, dU, Rhs, F, PInt, PExt)
+
+        return newtonCache
