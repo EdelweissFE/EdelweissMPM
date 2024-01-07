@@ -211,6 +211,11 @@ class NonlinearQuasistaticSolver:
                     theDofManager = self._createDofManager(
                         activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
                     )
+                    self.journal.message(
+                        "resulting equation system has a size of {:}".format(theDofManager.nDof),
+                        self.identification,
+                        level=1,
+                    )
 
                     newtonCache = None
 
