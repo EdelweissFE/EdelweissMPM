@@ -194,8 +194,6 @@ class NonlinearQuasistaticSolver:
                 self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
                 self._updateConnectivity(mpmManager)
 
-                for c in constraints:
-                    c.initializeTimeStep(model, timeStep)
 
                 activeCells = set(mpmManager.getActiveCells())
 
@@ -205,6 +203,9 @@ class NonlinearQuasistaticSolver:
                         self.identification,
                         level=1,
                     )
+
+                    for c in constraints:
+                        c.initializeTimeStep(model, timeStep)
 
                     activeNodes, activeNodeFields, activeNodeSets = self._assembleActiveDomain(activeCells, model)
 
@@ -1037,7 +1038,14 @@ class NonlinearQuasistaticSolver:
             Pc = np.zeros(c.nDof)
             Kc = K_VIJ[c]
             c.applyConstraint(dUc, Pc, Kc, timeStep)
-            np.add.at(P, P.entitiesInDofVector[c], Pc)
+            try:
+                P[c] += Pc
+                # np.add.at(P, P.entitiesInDofVector[c], Pc)
+            except:
+                print(P[c].shape)
+                print(Pc)
+                print(Pc.shape)
+                raise
 
     @performancetiming.timeit("instancing dof manager")
     def _createDofManager(self, *args):

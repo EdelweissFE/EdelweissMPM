@@ -50,7 +50,7 @@ class PenaltyEqualValue(MPMConstraintBase):
 
     @property
     def nodes(self) -> list:
-        return self._nodes
+        return self._nodes.keys()
 
     @property
     def fieldsOnNodes(self) -> list:
@@ -79,55 +79,48 @@ class PenaltyEqualValue(MPMConstraintBase):
         pass
 
     def initializeTimeStep(self, model, timeStep):
-        self._nodes = [n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes]
+        self._nodes = { n : i for i, n in enumerate( set(n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes) ) }
+        # print(self._nodes)
 
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
-        P_Ai = PExt.reshape((-1, self._fieldSize))
-        dU_Bj = dU.reshape((-1, self._fieldSize))
-
-        K_AiBj = V.reshape(P_Ai.shape + dU_Bj.shape)
 
         i = self._prescribedComponent
+        P_i = PExt[i::self._fieldSize]
+        dU_j = dU[i::self._fieldSize]
+
+        K_ij = V.reshape( (self.nDof, self.nDof)  )[i::self._fieldSize, i::self._fieldSize]
 
         # Part 1: compute the mean values over all material points
 
-        dMeanValue_dDU_Bj = np.zeros_like(dU_Bj)
-        currentNodeIdx = 0
         meanValue = 0.0
+        dMeanValue_dDU_j = np.zeros_like(dU_j)
         for mp in self._constrainedMPs:
             center = mp.getCenterCoordinates()
 
             for c in mp.assignedCells:
-                nNodesCell = c.nNodes
-                nodeIdcs = slice(currentNodeIdx, currentNodeIdx + nNodesCell)
+                nodeIdcs = [ self._nodes[n] for n in c.nodes]
 
                 N = c.getInterpolationVector(center)
 
-                meanValue += N @ dU_Bj[nodeIdcs, i]
-                dMeanValue_dDU_Bj[nodeIdcs, i] += N
-
-                currentNodeIdx += nNodesCell
+                meanValue += N @ dU_j[nodeIdcs] 
+                dMeanValue_dDU_j[nodeIdcs] += N 
 
         meanValue /= len(self._constrainedMPs)
-        dMeanValue_dDU_Bj /= len(self._constrainedMPs)
+        dMeanValue_dDU_j /= len(self._constrainedMPs)
 
         # Part 2: compute the penalized difference between mean value and mp value:
-        currentNodeIdx = 0
         for mp in self._constrainedMPs:
             center = mp.getCenterCoordinates()
 
             for c in mp.assignedCells:
-                nNodesCell = c.nNodes
 
                 N = c.getInterpolationVector(center)
 
-                nodeIdcs = slice(currentNodeIdx, currentNodeIdx + nNodesCell)
+                nodeIdcs = [ self._nodes[n] for n in c.nodes]
 
-                mpValue = N @ dU_Bj[nodeIdcs, i]
+                mpValue = N @ dU_j[nodeIdcs]
 
-                P_Ai[nodeIdcs, i] += N * self._penaltyParameter * (mpValue - meanValue)
+                P_i[nodeIdcs] += N * self._penaltyParameter * (mpValue - meanValue)
 
-                K_AiBj[nodeIdcs, i, nodeIdcs, i] += np.outer(N, N) * self._penaltyParameter
-                K_AiBj[nodeIdcs, i, :, i] += np.outer(N, dMeanValue_dDU_Bj[:, i]) * -1 * self._penaltyParameter
-
-                currentNodeIdx += nNodesCell
+                K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
+                K_ij[nodeIdcs,:] += np.outer(N, dMeanValue_dDU_j) * -1 * self._penaltyParameter
