@@ -194,7 +194,6 @@ class NonlinearQuasistaticSolver:
                 self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
                 self._updateConnectivity(mpmManager)
 
-
                 activeCells = set(mpmManager.getActiveCells())
 
                 if activeCells != activeCellsOld:

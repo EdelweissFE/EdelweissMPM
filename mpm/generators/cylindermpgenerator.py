@@ -67,7 +67,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     frontMPs = []
     backMPs = []
     frontRightMP = []
-    for j, h in enumerate (heights):
+    for j, h in enumerate(heights):
         for i, (radius, nPoints) in enumerate(zip(Radii, T)):
             if not nPoints:
                 continue
@@ -101,7 +101,8 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     model.materialPointSets["{:}_sleeve".format(name)] = MaterialPointSet("{:}_sleeve".format(name), sleeveMPs)
     model.materialPointSets["{:}_front".format(name)] = MaterialPointSet("{:}_front".format(name), frontMPs)
     model.materialPointSets["{:}_back".format(name)] = MaterialPointSet("{:}_back".format(name), backMPs)
-    model.materialPointSets["{:}_frontRight".format(name)] = MaterialPointSet("{:}_frontRight".format(name), frontRightMP)
+    model.materialPointSets["{:}_frontRight".format(name)] = MaterialPointSet(
+        "{:}_frontRight".format(name), frontRightMP
+    )
 
     return model
-

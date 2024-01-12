@@ -79,16 +79,17 @@ class PenaltyEqualValue(MPMConstraintBase):
         pass
 
     def initializeTimeStep(self, model, timeStep):
-        self._nodes = { n : i for i, n in enumerate( set(n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes) ) }
+        self._nodes = {
+            n: i for i, n in enumerate(set(n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes))
+        }
         # print(self._nodes)
 
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
-
         i = self._prescribedComponent
-        P_i = PExt[i::self._fieldSize]
-        dU_j = dU[i::self._fieldSize]
+        P_i = PExt[i :: self._fieldSize]
+        dU_j = dU[i :: self._fieldSize]
 
-        K_ij = V.reshape( (self.nDof, self.nDof)  )[i::self._fieldSize, i::self._fieldSize]
+        K_ij = V.reshape((self.nDof, self.nDof))[i :: self._fieldSize, i :: self._fieldSize]
 
         # Part 1: compute the mean values over all material points
 
@@ -98,12 +99,12 @@ class PenaltyEqualValue(MPMConstraintBase):
             center = mp.getCenterCoordinates()
 
             for c in mp.assignedCells:
-                nodeIdcs = [ self._nodes[n] for n in c.nodes]
+                nodeIdcs = [self._nodes[n] for n in c.nodes]
 
                 N = c.getInterpolationVector(center)
 
-                meanValue += N @ dU_j[nodeIdcs] 
-                dMeanValue_dDU_j[nodeIdcs] += N 
+                meanValue += N @ dU_j[nodeIdcs]
+                dMeanValue_dDU_j[nodeIdcs] += N
 
         meanValue /= len(self._constrainedMPs)
         dMeanValue_dDU_j /= len(self._constrainedMPs)
@@ -113,14 +114,13 @@ class PenaltyEqualValue(MPMConstraintBase):
             center = mp.getCenterCoordinates()
 
             for c in mp.assignedCells:
-
                 N = c.getInterpolationVector(center)
 
-                nodeIdcs = [ self._nodes[n] for n in c.nodes]
+                nodeIdcs = [self._nodes[n] for n in c.nodes]
 
                 mpValue = N @ dU_j[nodeIdcs]
 
                 P_i[nodeIdcs] += N * self._penaltyParameter * (mpValue - meanValue)
 
                 K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
-                K_ij[nodeIdcs,:] += np.outer(N, dMeanValue_dDU_j) * -1 * self._penaltyParameter
+                K_ij[nodeIdcs, :] += np.outer(N, dMeanValue_dDU_j) * -1 * self._penaltyParameter
