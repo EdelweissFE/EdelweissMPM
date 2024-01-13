@@ -82,7 +82,6 @@ class PenaltyEqualValue(MPMConstraintBase):
         self._nodes = {
             n: i for i, n in enumerate(set(n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes))
         }
-        # print(self._nodes)
 
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
         i = self._prescribedComponent

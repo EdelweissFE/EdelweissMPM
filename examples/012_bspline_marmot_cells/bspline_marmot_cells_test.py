@@ -157,7 +157,7 @@ def run_sim(bspline_order):
         PenaltyWeakDirichlet(
             "weak dirichlet {:}".format(mp.label),
             mpmModel,
-            mp,
+            mpmModel.materialPointSets["planeRect_right"],
             "displacement",
             {
                 0: -0,
@@ -165,7 +165,6 @@ def run_sim(bspline_order):
             },
             1e5,
         )
-        for mp in mpmModel.materialPointSets["planeRect_right"]
     ]
 
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-1, 1e-1, 1e-3, 1000, journal)

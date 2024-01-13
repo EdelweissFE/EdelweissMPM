@@ -18,8 +18,8 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         The name of this constraint.
     model
         The full MPMModel instance.
-    constrainedMaterialPoint
-        The instance of the material point to be constrained.
+    constrainedMaterialPoints
+        The list of the material point to be constrained.
     field
         The field this constraint is acting on.
     prescribedStepDelta
@@ -32,14 +32,14 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         self,
         name: str,
         model: MPMModel,
-        constrainedMaterialPoint: MaterialPointBase,
+        constrainedMaterialPoints: list[MaterialPointBase],
         field: str,
         prescribedStepDelta: dict,
         penaltyParameter: float,
     ):
         self._name = name
         self._model = model
-        self._constrainedMP = constrainedMaterialPoint
+        self._constrainedMPs = constrainedMaterialPoints
         self._field = field
         self._prescribedStepDelta = prescribedStepDelta
         self._fieldSize = getFieldSize(self._field, model.domainSize)
@@ -51,7 +51,7 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
 
     @property
     def nodes(self) -> list:
-        return self._nodes
+        return self._nodes.keys()
 
     @property
     def fieldsOnNodes(self) -> list:
@@ -80,34 +80,28 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         pass
 
     def initializeTimeStep(self, model, timeStep):
-        self._nodes = [n for c in self._constrainedMP.assignedCells for n in c.nodes]
+        self._nodes = {
+            n: i for i, n in enumerate(set(n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes))
+        }
 
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
-        idxP = 0
-        idxK = 0
+        for i, prescribedComponent in self._prescribedStepDelta.items():
+            P_i = PExt[i :: self._fieldSize]
+            dU_j = dU[i :: self._fieldSize]
 
-        for c in self._constrainedMP.assignedCells:
-            center = self._constrainedMP.getCenterCoordinates()
+            K_ij = V.reshape((self.nDof, self.nDof))[i :: self._fieldSize, i :: self._fieldSize]
 
-            nNodesCells = c.nNodes
-            nDof = nNodesCells * self._fieldSize
+            for mp in self._constrainedMPs:
+                center = mp.getCenterCoordinates()
 
-            N = c.getInterpolationVector(center)
+                for c in mp.assignedCells:
+                    N = c.getInterpolationVector(center)
 
-            K = np.outer(N, N) * self._penaltyParameter
+                    nodeIdcs = [self._nodes[n] for n in c.nodes]
 
-            currentValue = N @ dU.reshape((-1, self._fieldSize))
+                    mpValue = N @ dU_j[nodeIdcs]
 
-            R_ = PExt[idxP : idxP + nDof]
-            K_ = V[idxK : idxK + nDof**2].reshape((nDof, nDof))
-
-            idxP += nDof
-            idxK += nDof**2
-
-            for i, prescribedComponent in self._prescribedStepDelta.items():
-                R_[i :: self._fieldSize] += (
-                    N
-                    * self._penaltyParameter
-                    * (currentValue[i] - prescribedComponent * timeStep.stepProgressIncrement)
-                )
-                K_[i :: self._fieldSize, i :: self._fieldSize] += K
+                    P_i[nodeIdcs] += (
+                        N * self._penaltyParameter * (mpValue - prescribedComponent * timeStep.stepProgressIncrement)
+                    )
+                    K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
