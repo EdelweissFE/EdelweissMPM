@@ -41,7 +41,7 @@ class MPMManagerBase(ABC):
     @abstractmethod
     def updateConnectivity(
         self,
-    )->bool:
+    ) -> bool:
         """
         Update the connectivity between observed cells and material points.
         Returns the truth value of a change during the last connectivity update.

@@ -75,11 +75,10 @@ class SmartMaterialPointManager(MPMManagerBase):
         hasChanged = False
 
         for mp in self._mps:
-            
             mpCells = [
-                    self._KDTree.getCellForCoordinates(vertexCoord, initialGuess=mp.assignedCells)
-                    for vertexCoord in mp.getVertexCoordinates()
-                    ]
+                self._KDTree.getCellForCoordinates(vertexCoord, initialGuess=mp.assignedCells)
+                for vertexCoord in mp.getVertexCoordinates()
+            ]
 
             if mpCells != mp.assignedCells:
                 mp.assignCells(mpCells)

@@ -1050,8 +1050,8 @@ class NonlinearQuasistaticSolver:
         return MPMDofManager(*args)
 
     @performancetiming.timeit("update connectivity")
-    def _updateConnectivity(self, mpmManager):
-        mpmManager.updateConnectivity()
+    def _updateConnectivity(self, mpmManager) -> bool:
+        return mpmManager.updateConnectivity()
 
     @performancetiming.timeit("instancing csr generator")
     def _makeCachedCOOToCSRGenerator(self, K_VIJ):

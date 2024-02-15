@@ -111,9 +111,9 @@ def run_sim():
         for i in range(100):
             print("time step {:}".format(i))
 
-            mpmManager.updateConnectivity()
+            hasChanged = mpmManager.updateConnectivity()
 
-            if mpmManager.hasChanged():
+            if hasChanged:
                 print("material points in cells have changed since previous localization")
 
                 activeCells = mpmManager.getActiveCells()
