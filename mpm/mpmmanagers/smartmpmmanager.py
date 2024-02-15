@@ -72,25 +72,29 @@ class SmartMaterialPointManager(MPMManagerBase):
     ):
         self._activeCells = defaultdict(list)
 
+        hasChanged = False
+
         for mp in self._mps:
-            mp.assignCells(
-                [
+            
+            mpCells = [
                     self._KDTree.getCellForCoordinates(vertexCoord, initialGuess=mp.assignedCells)
                     for vertexCoord in mp.getVertexCoordinates()
-                ]
-            )
+                    ]
+
+            if mpCells != mp.assignedCells:
+                mp.assignCells(mpCells)
+                hasChanged = True
+
             for cell in mp.assignedCells:
                 self._activeCells[cell].append(mp)
 
-        for c, mps in self._activeCells.items():
-            c.assignMaterialPoints(mps)
+        if hasChanged:
+            for c, mps in self._activeCells.items():
+                c.assignMaterialPoints(mps)
+
+        return hasChanged
 
     def getActiveCells(
         self,
     ):
         return self._activeCells.keys()
-
-    def hasChanged(
-        self,
-    ):
-        return True

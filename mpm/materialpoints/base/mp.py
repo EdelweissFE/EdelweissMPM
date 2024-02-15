@@ -40,12 +40,12 @@ class MaterialPointBase(ABC):
         pass
 
     @property
-    def assignedCells(self) -> list:
+    def assignedCells(self) -> set:
         """The list of currently assigned cells."""
         pass
 
     @abstractmethod
-    def assignCells(self, cells: list):
+    def assignCells(self, cells: set):
         """Assign the list of cells in which the material point is currently residing."""
         pass
 

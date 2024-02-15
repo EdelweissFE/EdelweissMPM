@@ -192,11 +192,12 @@ class NonlinearQuasistaticSolver:
                 )
 
                 self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
-                self._updateConnectivity(mpmManager)
 
-                activeCells = set(mpmManager.getActiveCells())
+                connectivityHasChanged = self._updateConnectivity(mpmManager)
 
-                if activeCells != activeCellsOld:
+                if connectivityHasChanged:
+                    activeCells = set(mpmManager.getActiveCells())
+
                     self.journal.message(
                         "active cells have changed, (re)initializing equation system & clearing cache",
                         self.identification,
@@ -218,8 +219,6 @@ class NonlinearQuasistaticSolver:
                     )
 
                     newtonCache = None
-
-                activeCellsOld = activeCells
 
                 presentVariableNames = list(theDofManager.idcsOfFieldsInDofVector.keys())
 

@@ -91,12 +91,9 @@ class SimpleMaterialPointManager:
 
             raise Exception("We have lost material points outside the grid.")
 
+        return True
+
     def getActiveCells(
         self,
     ):
         return self._activeCells.keys()
-
-    def hasChanged(
-        self,
-    ):
-        return True

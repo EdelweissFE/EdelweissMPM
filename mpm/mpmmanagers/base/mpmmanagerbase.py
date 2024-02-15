@@ -41,14 +41,22 @@ class MPMManagerBase(ABC):
     @abstractmethod
     def updateConnectivity(
         self,
-    ):
+    )->bool:
         """
         Update the connectivity between observed cells and material points.
+        Returns the truth value of a change during the last connectivity update.
 
         This method will:
             - assign all observed material points the cells in which they currently reside.
             - assign all active cells the material points which are residing in the cell.
+
+        Returns
+        -------
+        bool
+            The truth value of change.
         """
+
+        pass
 
     @abstractmethod
     def getActiveCells(
@@ -61,16 +69,4 @@ class MPMManagerBase(ABC):
         CellSet
             The set of active cells.
         """
-        pass
-
-    @abstractmethod
-    def hasChanged(
-        self,
-    ) -> bool:
-        """Returns the truth value of a change during the last connectivity update.
-
-        Returns
-        -------
-        bool
-            The truth value of change."""
         pass
