@@ -84,22 +84,26 @@ class MPMConstraintBase(ABC):
         """This is the list of constraint specific scalar variables which are assigned to this constraint.
 
         Parameters
-        -------
+        ----------
         scalarVariables
             The list of ScalarVariable to be assigned.
         """
         pass
 
     @abstractmethod
-    def initializeTimeStep(self, model: MPMModel, timeStep: TimeStep):
-        """This method is called before each new timeStep, after connectivity was updated, but before the global equation system is created.
+    def updateConnectivity(self, model: MPMModel) -> bool:
+        """This method is called before each new timeStep, after material point connectivity was updated, but before the global equation system is created.
+        If the contribution to the global system changes, True is returned.
 
         Parameters
-        -------
+        ----------
         model
             The current model.
-        timeStep
-            The current time increment.
+
+        Returns
+        -------
+        bool
+            The truth value if the connectivity has changed.
         """
         pass
 

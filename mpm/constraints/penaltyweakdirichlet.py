@@ -44,6 +44,7 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         self._prescribedStepDelta = prescribedStepDelta
         self._fieldSize = getFieldSize(self._field, model.domainSize)
         self._penaltyParameter = penaltyParameter
+        self._nodes = dict()
 
     @property
     def name(self) -> str:
@@ -79,10 +80,18 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
     def assignAdditionalScalarVariables(self, scalarVariables: list[ScalarVariable]):
         pass
 
-    def initializeTimeStep(self, model, timeStep):
-        self._nodes = {
+    def updateConnectivity(self, model):
+        nodes = {
             n: i for i, n in enumerate(set(n for mp in self._constrainedMPs for c in mp.assignedCells for n in c.nodes))
         }
+
+        hasChanged = False
+        if nodes != self._nodes:
+            hasChanged = True
+
+        self._nodes = nodes
+
+        return hasChanged
 
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
         for i, prescribedComponent in self._prescribedStepDelta.items():

@@ -70,7 +70,7 @@ class SmartMaterialPointManager(MPMManagerBase):
     def updateConnectivity(
         self,
     ):
-        self._activeCells = defaultdict(list)
+        activeCells = defaultdict(list)
 
         hasChanged = False
 
@@ -80,16 +80,17 @@ class SmartMaterialPointManager(MPMManagerBase):
                 for vertexCoord in mp.getVertexCoordinates()
             ]
 
-            if mpCells != mp.assignedCells:
-                mp.assignCells(mpCells)
-                hasChanged = True
+            mp.assignCells(mpCells)
 
             for cell in mp.assignedCells:
-                self._activeCells[cell].append(mp)
+                activeCells[cell].append(mp)
 
-        if hasChanged:
-            for c, mps in self._activeCells.items():
-                c.assignMaterialPoints(mps)
+        if activeCells.keys() != self._activeCells.keys():
+            hasChanged = True
+
+        self._activeCells = activeCells
+        for c, mps in self._activeCells.items():
+            c.assignMaterialPoints(mps)
 
         return hasChanged
 
