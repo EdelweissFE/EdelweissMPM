@@ -68,7 +68,7 @@ class MPMModel(FEModel):
             for node, nodeFields in zip(cell.nodes, cell.fields):
                 for field in nodeFields:
                     if field not in node.fields:
-                        node.fields[field] = FieldVariable(node)
+                        node.fields[field] = FieldVariable(node, field)
 
     def _prepareVariablesAndFields(self, journal):
         """Prepare all variables and fields for a simulation.

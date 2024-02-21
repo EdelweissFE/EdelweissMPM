@@ -78,7 +78,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
 
             t = np.linspace(0, angle, nPoints, endpoint=True)
 
-            for t_ in t:
+            for k, t_ in enumerate(t):
                 mpCoordinates = np.array([radius * np.cos(t_) + x0, radius * np.sin(t_) + y0, h + z0]).reshape((1, -1))
 
                 mp = MPFactory(mpType, currentMPNumber, mpCoordinates, mpVolume)
@@ -89,14 +89,14 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
                 if i == nCircles - 1:
                     sleeveMPs.append(mp)
 
-                    if j == 0:
-                        frontRightMP.append(mp)
-
                 if j == 0:
                     backMPs.append(mp)
 
                 if j == len(heights) - 1:
                     frontMPs.append(mp)
+
+                    if i == nCircles - 1 and k == 0:
+                        frontRightMP.append(mp)
 
     model.materialPointSets["{:}_sleeve".format(name)] = MaterialPointSet("{:}_sleeve".format(name), sleeveMPs)
     model.materialPointSets["{:}_front".format(name)] = MaterialPointSet("{:}_front".format(name), frontMPs)
