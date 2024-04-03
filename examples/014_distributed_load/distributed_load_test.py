@@ -27,25 +27,25 @@
 import pytest
 import argparse
 
-from fe.journal.journal import Journal
-from mpm.fields.nodefield import MPMNodeField
-from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissfe.journal.journal import Journal
+from edelweissmpm.fields.nodefield import MPMNodeField
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
-from mpm.generators import rectangularbsplinegridgenerator, rectangularmpgenerator
-from mpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from mpm.models.mpmmodel import MPMModel
-from mpm.numerics.dofmanager import MPMDofManager
-from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from mpm.sets.cellset import CellSet
-from fe.sets.nodeset import NodeSet
+from edelweissmpm.generators import rectangularbsplinegridgenerator, rectangularmpgenerator
+from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.numerics.dofmanager import MPMDofManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.sets.cellset import CellSet
+from edelweissfe.sets.nodeset import NodeSet
 
-from fe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from mpm.solvers.nqs import NonlinearQuasistaticSolver
-from fe.linsolve.pardiso.pardiso import pardisoSolve
-from mpm.stepactions.dirichlet import Dirichlet
-from mpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
-from fe.utils.exceptions import StepFailed
-import fe.utils.performancetiming as performancetiming
+from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
+from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
+from edelweissmpm.stepactions.dirichlet import Dirichlet
+from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
+from edelweissfe.utils.exceptions import StepFailed
+import edelweissfe.utils.performancetiming as performancetiming
 
 import numpy as np
 

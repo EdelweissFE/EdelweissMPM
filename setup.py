@@ -63,7 +63,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/cells/marmotcell/marmotcell.pyx",
+            "edelweissmpm/cells/marmotcell/marmotcell.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         libraries=["Marmot"],
@@ -77,7 +77,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/cells/marmotcell/lagrangianmarmotcell.pyx",
+            "edelweissmpm/cells/marmotcell/lagrangianmarmotcell.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         libraries=["Marmot"],
@@ -91,7 +91,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/cells/marmotcell/bsplinemarmotcell.pyx",
+            "edelweissmpm/cells/marmotcell/bsplinemarmotcell.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         libraries=["Marmot"],
@@ -105,7 +105,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/mpmmanagers/utils.pyx",
+            "edelweissmpm/mpmmanagers/utils.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         runtime_library_dirs=[join(marmot_dir, "lib")],
@@ -117,7 +117,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/fieldoutput/mpresultcollector.pyx",
+            "edelweissmpm/fieldoutput/mpresultcollector.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         runtime_library_dirs=[join(marmot_dir, "lib")],
@@ -129,7 +129,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/materialpoints/marmotmaterialpoint/mp.pyx",
+            "edelweissmpm/materialpoints/marmotmaterialpoint/mp.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         libraries=["Marmot"],
@@ -143,7 +143,7 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "mpm/solvers/nqsmarmotparallel.pyx",
+            "edelweissmpm/solvers/nqsmarmotparallel.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
         language="c++",

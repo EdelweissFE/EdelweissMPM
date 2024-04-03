@@ -27,18 +27,18 @@
 import pytest
 import argparse
 
-from fe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
-from fe.journal.journal import Journal
-from mpm.fields.nodefield import MPMNodeField
-from mpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissfe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
+from edelweissfe.journal.journal import Journal
+from edelweissmpm.fields.nodefield import MPMNodeField
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
-from mpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from mpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
-from mpm.models.mpmmodel import MPMModel
-from mpm.numerics.dofmanager import MPMDofManager
-from mpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from mpm.sets.cellset import CellSet
-import fe.utils.performancetiming as performancetiming
+from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
+from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.numerics.dofmanager import MPMDofManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.sets.cellset import CellSet
+import edelweissfe.utils.performancetiming as performancetiming
 
 import numpy as np
 
