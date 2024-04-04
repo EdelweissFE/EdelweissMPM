@@ -20,7 +20,8 @@ jobs:
       - name: Install conda packages
         shell: bash -l {0}
         run: |
-          mamba install --file requirements.txt
+          git clone git@git.uibk.ac.at:c8441141/EdelweissFE.git
+          mamba install --file EdelweissFE/requirements.txt
 
       - name: Install Eigen
         shell: bash -l {0}
@@ -29,7 +30,7 @@ jobs:
           cd eigen 
           mkdir build
           cd build 
-           cmake -DBUILD_TESTING=OFF  -DINCLUDE_INSTALL_DIR=$(python -c "import sys; print(sys.prefix)")/include -DCMAKE_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)") ..
+          cmake -DBUILD_TESTING=OFF  -DINCLUDE_INSTALL_DIR=$(python -c "import sys; print(sys.prefix)")/include -DCMAKE_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)") ..
           make install
           cd ../..
 
@@ -67,7 +68,6 @@ jobs:
       - name: Install EdelweissFE
         shell: bash -l {0}
         run: |
-          git clone git@git.uibk.ac.at:c8441141/EdelweissFE.git
           pip install EdelweissFE
 
       - name: Build EdelweissMPM
