@@ -68,7 +68,9 @@ jobs:
       - name: Install EdelweissFE
         shell: bash -l {0}
         run: |
-          pip install EdelweissFE
+          cd EdelweissFE
+          pip install .
+          cd ..
 
       - name: Build EdelweissMPM
         shell: bash -l {0}
