@@ -5,6 +5,7 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
 
@@ -69,7 +70,7 @@ jobs:
           git clone git@git.uibk.ac.at:c8441141/EdelweissFE.git
           pip install EdelweissFE
 
-      -name: Build EdelweissMPM
+      - name: Build EdelweissMPM
         shell: bash -l {0}
         run: |
           pip install .
