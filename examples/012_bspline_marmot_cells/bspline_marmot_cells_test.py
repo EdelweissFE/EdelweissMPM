@@ -223,7 +223,7 @@ def change_test_dir(request, monkeypatch):
 def test_sim_order1():
     try:
         mpmModel = run_sim(1)
-    except NotImplementedError as e:
+    except ValueError as e:
         pytest.skip(str(e))
         return
 
@@ -238,7 +238,7 @@ def test_sim_order1():
 def test_sim_order2():
     try:
         mpmModel = run_sim(2)
-    except NotImplementedError as e:
+    except ValueError as e:
         pytest.skip(str(e))
         return
 
@@ -253,7 +253,7 @@ def test_sim_order2():
 def test_sim_order3():
     try:
         mpmModel = run_sim(3)
-    except NotImplementedError as e:
+    except ValueError as e:
         pytest.skip(str(e))
         return
 

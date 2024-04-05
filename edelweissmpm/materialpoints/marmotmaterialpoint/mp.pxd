@@ -33,7 +33,7 @@ import numpy as np
 cdef extern from "Marmot/Marmot.h" namespace "MarmotLibrary" nogil:
     cdef cppclass MarmotMaterialFactory:
         @staticmethod
-        int getMaterialCodeFromName(const string& materialName) except +IndexError
+        int getMaterialCodeFromName(const string& materialName) except +ValueError
 
 cdef extern from "Marmot/MarmotUtils.h":
     cdef struct StateView:

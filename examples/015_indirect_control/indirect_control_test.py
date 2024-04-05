@@ -219,7 +219,7 @@ def change_test_dir(request, monkeypatch):
 def test_sim():
     try:
         mpmModel = run_sim()
-    except NotImplementedError as e:
+    except ValueError as e:
         pytest.skip(str(e))
         return
 
