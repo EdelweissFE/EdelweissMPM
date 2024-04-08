@@ -30,7 +30,7 @@ jobs:
           cd eigen 
           mkdir build
           cd build 
-          cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+          cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DINCLUDE_INSTALL_DIR=$CONDA_PREFIX/include ..
           make install
           cd ../..
 
