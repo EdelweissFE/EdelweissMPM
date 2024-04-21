@@ -168,6 +168,8 @@ class NonlinearQuasistaticSolver:
 
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
 
+        elements = model.elements.values()
+
         activeCellsOld = None
         newtonCache = None
         try:
@@ -212,6 +214,13 @@ class NonlinearQuasistaticSolver:
                     theDofManager = self._createDofManager(
                         activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
                     )
+
+                    U = theDofManager.constructDofVector()
+                    if model.elements:
+                        theDofManager.writeNodeFieldToDofVector(
+                            U, model.nodeFields["U"], "U", nodes=model.elementSets["all"]
+                        )
+
                     self.journal.message(
                         "resulting equation system has a size of {:}".format(theDofManager.nDof),
                         self.identification,
@@ -240,6 +249,8 @@ class NonlinearQuasistaticSolver:
                         bodyLoads,
                         distributedLoads,
                         activeNodeSets,
+                        elements,
+                        U,
                         activeCells,
                         materialPoints,
                         constraints,
@@ -262,12 +273,15 @@ class NonlinearQuasistaticSolver:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
+                    U += dU
+
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in activeNodeFields.values():
                         theDofManager.writeDofVectorToNodeField(dU, field, "dU")
+                        theDofManager.writeDofVectorToNodeField(U, field, "U")
                         theDofManager.writeDofVectorToNodeField(P, field, "P")
+                        model.nodeFields[field.name].copyEntriesFromOther(field)
 
-                    model.nodeFields["displacement"].copyEntriesFromOther(activeNodeFields["displacement"])
                     model.advanceToTime(timeStep.totalTime)
 
                     self.journal.message(
@@ -296,6 +310,8 @@ class NonlinearQuasistaticSolver:
         bodyLoads: list,
         distributedLoads: list,
         activeNodeSets: list,
+        elements: list,
+        Un: DofVector,
         activeCells: list,
         materialPoints: list,
         constraints: list,
@@ -318,6 +334,10 @@ class NonlinearQuasistaticSolver:
             The list of distributed load StepActions.
         activeNodeSets
             The list of (reduced) active NodeSets.
+        elements
+            The list of elements.
+        Un
+            The old solution vector.
         activeCells
             The list of active cells.
         materialPoints
@@ -368,8 +388,13 @@ class NonlinearQuasistaticSolver:
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
+
             self._computeCells(
                 activeCells, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            )
+
+            self._computeElements(
+                elements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
 
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
@@ -1011,6 +1036,53 @@ class NonlinearQuasistaticSolver:
             c.computeMaterialPointKernels(dUc, Pc, Kc, time, dT)
             P[c] += Pc
             F[c] += abs(Pc)
+
+    @performancetiming.timeit("computation elements")
+    def _computeElements(
+        self,
+        elements: list,
+        dU: DofVector,
+        Un: DofVector,
+        P: DofVector,
+        F: DofVector,
+        K_VIJ: VIJSystemMatrix,
+        time: float,
+        dT: float,
+        theDofManager: DofManager,
+    ):
+        """Evaluate all cells.
+
+        Parameters
+        ----------
+        elements
+            The list of elements to be evaluated.
+        dU
+            The current global solution increment vector.
+        Un
+            The previous global solution vector.
+        P
+            The current global flux vector.
+        F
+            The accumulated nodal fluxes vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        time
+            The current time.
+        dT
+            The increment of time.
+        theDofManager
+            The DofManager instance.
+        """
+
+        for el in elements:
+            dUEl = dU[el]
+            UEln = Un[el]
+            Uelnp = UEln + dUEl
+            PEl = np.zeros(el.nDof)
+            KEl = K_VIJ[el]
+            el.computeMaterialPointKernels(UElnp, PEl, KEl, time, dT)
+            P[el] += PEl
+            F[el] += abs(PEl)
 
     @performancetiming.timeit("computation constraints")
     def _computeConstraints(

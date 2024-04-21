@@ -34,58 +34,58 @@ import numpy as np
 
 class MPMDofManager(DofManager):
     def __init__(
-        self, nodeFields: list, scalarVariables: list, elements: list, constraints: list, nodeSets: list, cells: list
+        self,
+        nodeFields: list,
+        scalarVariables: list,
+        elements: list,
+        constraints: list,
+        nodeSets: list,
+        cells: list,
+        initializeVIJPattern=True,
     ):
-        # self._nNodalFluxesFieldwiseFromCells = self._countNodalFluxesFieldWise(cells)
 
-        # super().__init__(nodeFields, scalarVariables, elements, constraints, nodeSets)
-
-        (
-            self.nDof,
-            self.idcsOfFieldVariablesInDofVector,
-            self.idcsOfFieldsInDofVector,
-            self.idcsOfScalarVariablesInDofVector,
-        ) = self._initializeDofVectorStructure(nodeFields, scalarVariables)
-
-        self.fields = self.idcsOfFieldsInDofVector.keys()
-
-        self.indexToNodeMapping = self._determineIndexToNodeMap()
-
-        (
-            self.accumulatedElementNDof,
-            self._accumulatedElementVIJSize,
-            self._nAccumulatedNodalFluxesFieldwiseFromElements,
-            self.largestNumberOfElNDof,
-        ) = self._gatherEntitiesInformation(elements)
-
-        (
-            self.accumulatedConstraintNDof,
-            self._accumulatedConstraintVIJSize,
-            self._nAccumulatedNodalFluxesFieldwiseFromConstraints,
-            self.largestNumberOfConstraintNDof,
-        ) = self._gatherEntitiesInformation(constraints)
+        super().__init__(nodeFields, scalarVariables, elements, constraints, nodeSets, initializeVIJPattern=False)
 
         (
             self.accumulatedCellNDof,
-            self.accumulatedCellVIJSize,
-            self._nNodalFluxesFieldwiseFromCells,
+            self._accumulatedCellVIJSize,
+            self._nAccumulatedNodalFluxesFieldwiseFromCells,
             self.largestNumberOfCellNDof,
-        ) = self._gatherEntitiesInformation(cells)
-
-        self.nAccumulatedNodalFluxesFieldwise = self._computeAccumulatedNodalFluxesFieldWise(self.fields)
-
-        self.idcsOfFieldsOnNodeSetsInDofVector = self._locateFieldsOnNodeSetsInDofVector(nodeSets)
-        self.idcsOfElementsInDofVector = self._locateElementsInDofVector(elements)
-        self.idcsOfConstraintsInDofVector = self._locateConstraintsInDofVector(constraints)
-
-        self.idcsOfBasicVariablesInDofVector = self._getIndicesOfBasicVariablesInDofVector()
+        ) = self._gatherCellsInformation(cells)
 
         self.idcsOfCellsInDofVector = self._locateCellsInDofVector(cells)
 
-        self.idcsOfHigherOrderEntitiesInDofVector = self._getIndicesOfAllHigherOrderEntitiesInDofVector()
+        for field in self.nAccumulatedNodalFluxesFieldwise.keys():
+            self.nAccumulatedNodalFluxesFieldwise[field] += self._nAccumulatedNodalFluxesFieldwiseFromCells[field]
 
-        self.sizeVIJ = self._computeSizeVIJ()
-        (self.I, self.J, self.idcsOfHigherOrderEntitiesInVIJ) = self._initializeVIJPattern()
+        self.idcsOfHigherOrderEntitiesInDofVector |= self.idcsOfCellsInDofVector
+
+        self._sizeVIJ = (
+            self._accumulatedElementVIJSize + self._accumulatedConstraintVIJSize + self._accumulatedCellVIJSize
+        )
+        if initializeVIJPattern:
+            (self.I, self.J, self.idcsOfHigherOrderEntitiesInVIJ) = self._initializeVIJPattern()
+
+    def _gatherCellsInformation(self, entities: list) -> tuple[int, int, int, int]:
+        """Generates some auxiliary information,
+        which may be required by some modules of EdelweissFE.
+
+        Parameters
+        ----------
+        entities
+           The list of entities, for which the information is gathered.
+
+        Returns
+        -------
+        tuple[int,int]
+            The tuple of
+                - number of accumulated elemental degrees of freedom.
+                - number of accumulated system matrix sizes.
+                - the number of  acummulated fluxes Σ_entities Σ_nodes ( nDof (field) ) for Abaqus-like convergence tests.
+                - largest occuring number of dofs on any element.
+        """
+
+        return self._gatherElementsInformation(entities)
 
     def _locateCellsInDofVector(self, cells: list) -> dict:
         """Creates a dictionary containing the location (indices) of each cell
@@ -111,82 +111,3 @@ class MPMDofManager(DofManager):
             idcsOfCellsInDofVector[cl] = destList[cl.dofIndicesPermutation]
 
         return idcsOfCellsInDofVector
-
-    def _computeSizeVIJ(
-        self,
-    ):
-        """Determine the required size of the VIJ system matrix.
-
-        Returns
-        -------
-        int
-            The size of the VIJ system.
-        """
-
-        return self.accumulatedCellVIJSize + super()._computeSizeVIJ()
-
-    def _computeAccumulatedNodalFluxesFieldWise(self, fields) -> dict:
-        """For the VIJ (COO) system matrix and the Abaqus like convergence test,
-        the number of dofs 'entity-wise' is needed:
-        = Σ_(elements+constraints) Σ_nodes ( nDof (field) ).
-
-        Returns
-        -------
-        dict
-            Number of accumulated fluxes per field:
-                - Field
-                - Number of accumulated fluxes
-        """
-        accumulatedNumberOfFieldFluxes = super()._computeAccumulatedNodalFluxesFieldWise(fields)
-
-        for field in accumulatedNumberOfFieldFluxes.keys():
-            accumulatedNumberOfFieldFluxes[field] += self._nNodalFluxesFieldwiseFromCells[field]
-
-        return accumulatedNumberOfFieldFluxes
-
-    def _getIndicesOfAllHigherOrderEntitiesInDofVector(self):
-        """
-        Get list of indices of all higher order entitties.
-
-        Returns
-        -------
-        list
-            The indices.
-        """
-
-        return super()._getIndicesOfAllHigherOrderEntitiesInDofVector() | self.idcsOfCellsInDofVector
-
-    # def _locateCellsInVIJ(
-    #     self,
-    # ) -> tuple[np.ndarray, np.ndarray, dict]:
-    #     """Generate the IJ pattern for VIJ (COO) system matrices.
-
-    #     Returns
-    #     -------
-    #     tuple
-    #          - I vector
-    #          - J vector
-    #          - the entities to system matrix entry mapping.
-    #     """
-
-    #     entitiesInVIJ = {}
-    #     entitiesInDofVector = self.idcsOfHigherOrderEntitiesInDofVector
-
-    #     sizeVIJ = self.sizeVIJ
-
-    #     I = np.zeros(sizeVIJ, dtype=int)
-    #     J = np.zeros(sizeVIJ, dtype=int)
-    #     idxInVIJ = 0
-
-    #     for entity, entityIdcsInDofVector in self.idcsOfHigherOrderEntitiesInDofVector.items():
-    #         entitiesInVIJ[entity] = idxInVIJ
-
-    #         nDofEntity = len(entityIdcsInDofVector)
-
-    #         # looks like black magic, but it's an efficient way to generate all indices of Ke in K:
-    #         VIJLocations = np.tile(entityIdcsInDofVector, (nDofEntity, 1))
-    #         I[idxInVIJ : idxInVIJ + nDofEntity**2] = VIJLocations.flatten()
-    #         J[idxInVIJ : idxInVIJ + nDofEntity**2] = VIJLocations.flatten("F")
-    #         idxInVIJ += nDofEntity**2
-
-    #     return I, J, entitiesInVIJ
