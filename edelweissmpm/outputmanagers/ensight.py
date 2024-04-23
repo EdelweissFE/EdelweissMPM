@@ -109,7 +109,7 @@ def createUnstructuredPartFromMaterialPointSet(mpPartName, mps: list, partID: in
             mpNodeIndices.append(nodeCounter)
             nodeCounter += 1
 
-        mpDict[mpShape][mp.label] = mpNodeIndices
+        mpDict[mpShape][mp.number] = mpNodeIndices
 
     return EnsightUnstructuredPart(mpPartName, partID, partNodes, mpDict)
 
@@ -154,13 +154,12 @@ class OutputManager(EnsightOutputManager):
         if "cellSet" in kwargs:
             return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
 
-        try:
-            theSetName = fieldOutput.associatedSet.name
+        theSetName = fieldOutput.associatedSet.name
 
-            if isinstance(fieldOutput.associatedSet, MaterialPointSet):
-                return self.mpSetToEnsightPart[theSetName]
+        if isinstance(fieldOutput.associatedSet, MaterialPointSet):
+            return self.mpSetToEnsightPart[theSetName]
 
-            if isinstance(fieldOutput.associatedSet, CellSet):
-                return self.cellSetToEnsightPart[theSetName]
-        except:
-            return super()._getTargetPartForFieldOutput(fieldOutput, **kwargs)
+        if isinstance(fieldOutput.associatedSet, CellSet):
+            return self.cellSetToEnsightPart[theSetName]
+
+        return super()._getTargetPartForFieldOutput(fieldOutput, **kwargs)

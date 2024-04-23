@@ -162,6 +162,9 @@ cdef class MarmotCellWrapper:
         cdef MarmotMaterialPointWrapper mpWrapper
 
         for mpWrapper in marmotMaterialPointWrappers:
+            print(" - Assigning Material Point with label: ", mpWrapper.number)
+            print(mpWrapper.getVertexCoordinates())
+            print(mpWrapper.getCenterCoordinates())
             mps.push_back(<MarmotMaterialPoint*> mpWrapper._marmotMaterialPoint)
 
         self._marmotCell.assignMaterialPoints(mps)
@@ -192,4 +195,5 @@ cdef class MarmotCellWrapper:
         return N
     
     def __dealloc__(self):
-        del self._marmotCell
+        if type(self == MarmotCellWrapper):
+            del self._marmotCell

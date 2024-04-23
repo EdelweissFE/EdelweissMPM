@@ -31,12 +31,34 @@ from edelweissfe.points.node import Node
 
 
 class MaterialPointBase(ABC):
-    """A basic material point."""
+    """A basic material point.
+
+    Attributes
+    ----------
+    label : int
+        The unique label (ID) of this material point.
+    assignedCells : set
+
+    Parameters
+    ----------
+    formulation : str
+        The string describing the formulation of the material point.
+    number : int
+        The unique number (ID) of this material point.
+    coordinates : np.ndarray
+        The coordinates of the material point.
+    volume : float
+        The volume of the material point.
+    """
+
+    @abstractmethod
+    def __init__(self, formulation: str, number: int, coordinates: np.ndarray, volume: float):
+        pass
 
     @property
     @abstractmethod
-    def label(self) -> int:
-        """The unique label (ID) of thismaterialpoint."""
+    def number(self) -> int:
+        """The unique label (ID) of this material point."""
         pass
 
     @property

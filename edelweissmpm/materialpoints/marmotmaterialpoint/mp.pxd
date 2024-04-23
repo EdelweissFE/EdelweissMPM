@@ -93,7 +93,7 @@ cdef extern from "Marmot/MarmotMaterialPoint.h":
 cdef class MarmotMaterialPointWrapper:
     
     cdef MarmotMaterialPoint* _marmotMaterialPoint
-    cdef int _label, 
+    cdef int _number, 
     cdef str _materialPointType, 
     cdef str _ensightType
     cdef int _nVertices

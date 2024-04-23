@@ -59,7 +59,7 @@ cdef class MarmotMaterialPointWrapper:
             The unique number of the MaterialPoint.
         """
             
-        self._label                 = materialPointNumber
+        self._number                 = materialPointNumber
         self._materialPointType     = materialPointType
         self._ensightType           = self._marmotMaterialPoint.getMaterialPointShape().decode('utf-8')
         self._nVertices             = self._marmotMaterialPoint.getNumberOfVertices()
@@ -100,8 +100,8 @@ cdef class MarmotMaterialPointWrapper:
 
 
     @property
-    def label(self):
-        return self._label
+    def number(self):
+        return self._number
 
     @property
     def assignedCells(self) -> list:

@@ -37,6 +37,7 @@ from libc.stdlib cimport malloc, free
 
 from edelweissmpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotCell
 from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp import MarmotMaterialPointWrapper
     
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotCellElementWrapper(MarmotCellWrapper):
@@ -50,18 +51,22 @@ cdef class MarmotCellElementWrapper(MarmotCellWrapper):
         The Marmot element which should be represented, e.g., CPE4.
     cellElementNumber
         The (unique) label of this CellElement.
-    gridnodes
-        The list of gridnodes for this CellElement.
+    nodes
+        The list of nodes for this CellElement.
         """
-    def __init__(self, cellType, cellNumber, gridnodes):
-        super().__init__(cellType, cellNumber, gridnodes)
+    def __init__(self, cellType, cellNumber, nodes):
+        super().__init__(cellType, cellNumber, nodes)
 
     @property
     def nMaterialPoints(self):
         return self._nMaterialPoints
 
+    @property
+    def elNumber(self):
+        return self._cellNumber
+
     def getRequestedMaterialPointCoordinates(self, ):
-        cdef int dim = self._gridnodeCoordinates.shape[1]
+        cdef int dim = self._nodeCoordinates.shape[1]
         cdef np.ndarray mpCoordinates = np.zeros( (self._nMaterialPoints, dim) )
         cdef double[:,::1] _coordsView = mpCoordinates
         self._marmotCellElement.getRequestedMaterialPointCoordinates(&_coordsView[0, 0])
@@ -73,3 +78,8 @@ cdef class MarmotCellElementWrapper(MarmotCellWrapper):
         self._marmotCellElement.getRequestedMaterialPointVolumes(&_volsView[0])
         return vols
 
+    def getRequestedMaterialPointType(self, ):
+        return MarmotMaterialPointWrapper
+
+    def acceptLastState(self, ):
+        pass

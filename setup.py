@@ -149,6 +149,34 @@ extensions += [
     )
 ]
 
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
 setup(
     name="EdelweissMPM",
     version="v24.04",

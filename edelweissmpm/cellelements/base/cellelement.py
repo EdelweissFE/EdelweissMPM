@@ -31,40 +31,41 @@ the abstract base class :class:`~CellBase`.
 
 from abc import ABC, abstractmethod
 import numpy as np
-from edelweissmpm.points.gridnode import GridNode
+from edelweissfe.points.node import Node
 from edelweissfe.cells.base.cell import CellBase
 
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 
 
 class CellElementBase(CellBase):
+    """MPM cells in EdelweissFE should be derived from this
+    base class in order to follow the general interface.
+
+    EdelweissFE expects the layout of the internal and external load vectors, P, PExt, (and the stiffness)
+    to be of the form
+
+    .. code-block:: console
+
+        [ node 1 - dofs field 1,
+          node 1 - dofs field 2,
+          node 1 - ... ,
+          node 1 - dofs field n,
+          node 2 - dofs field 1,
+          ,
+          node N - dofs field n].
+
+    Parameters
+    ----------
+    cellType
+        A string identifying the requested element formulation.
+    cellNumber
+        A unique integer label used for all kinds of purposes.
+    nodes
+        The list of nodes assigned to this cell.
+    """
+
     @abstractmethod
-    def __init__(self, cellElType: str, cellElNumber: int, gridnodes: list[GridNode]):
-        """MPM cells in EdelweissFE should be derived from this
-        base class in order to follow the general interface.
-
-        EdelweissFE expects the layout of the internal and external load vectors, P, PExt, (and the stiffness)
-        to be of the form
-
-        .. code-block:: console
-
-            [ gridnode 1 - dofs field 1,
-              gridnode 1 - dofs field 2,
-              gridnode 1 - ... ,
-              gridnode 1 - dofs field n,
-              gridnode 2 - dofs field 1,
-              ... ,
-              gridnode N - dofs field n].
-
-        Parameters
-        ----------
-        cellType
-            A string identifying the requested element formulation.
-        cellNumber
-            A unique integer label used for all kinds of purposes.
-        gridnodes
-            The list of GridNodes assigned to this cell.
-        """
+    def __init__(self, cellElType: str, cellElNumber: int, gridnodes: list[Node]):
 
         pass
 
@@ -94,6 +95,27 @@ class CellElementBase(CellBase):
         -------
         np.ndarray
             The material point volumes.
+        """
+
+        pass
+
+    @abstractmethod
+    def getRequestedMaterialPointType(self) -> type:
+        """Get the type of the requested material point.
+
+        Returns
+        -------
+        type
+            The material point type.
+        """
+
+        pass
+
+    @abstractmethod
+    def acceptLastState(self):
+        """Accept the last state of the CellElement.
+
+        This method is called after a time step has been accepted.
         """
 
         pass

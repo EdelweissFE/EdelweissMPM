@@ -39,7 +39,7 @@ cdef extern from "Marmot/MarmotMPMLibrary.h" namespace "MarmotLibrary" nogil:
         @staticmethod
         MarmotCellElement* createCellElement(const string& cellElementName, 
                                int cellElementNumber,
-                               const double* gridnodeCoordinates,
+                               const double* nodeCoordinates,
                                int sizeGridNodeCoordinates) except +ValueError
 
 cdef extern from "Marmot/MarmotMaterialPoint.h" nogil:
@@ -59,4 +59,5 @@ cdef extern from "Marmot/MarmotCellElement.h":
         
 cdef class MarmotCellElementWrapper(MarmotCellWrapper):
     
+    cdef int _nMaterialPoints
     cdef MarmotCellElement* _marmotCellElement

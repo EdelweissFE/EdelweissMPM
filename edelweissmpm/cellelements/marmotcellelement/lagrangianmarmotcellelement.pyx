@@ -47,10 +47,10 @@ from edelweissmpm.cellelements.marmotcellelement.marmotcellelement cimport Marmo
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
 
-    def __init__(self, cellType, cellNumber, gridnodes):
-        super().__init__(cellType, cellNumber, gridnodes)
+    def __init__(self, cellType, cellNumber, nodes):
+        super().__init__(cellType, cellNumber, nodes)
 
-    def __cinit__(self, str cellType, int cellNumber, list gridnodes):
+    def __cinit__(self, str cellType, int cellNumber, list nodes):
         """This C-level method is responsible for actually creating the MarmotCellElement.
 
         Parameters
@@ -61,14 +61,16 @@ cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
             The number of the element."""
 
 
-        self._gridnodes = gridnodes
-        cdef np.ndarray gridnodeCoordinates = np.array([ gridnode.coordinates for gridnode in gridnodes])
-        self._gridnodeCoordinates = gridnodeCoordinates
+        self._nodes = nodes
+        cdef np.ndarray nodeCoordinates = np.array([ node.coordinates for node in nodes])
+        self._nodeCoordinates = nodeCoordinates
 
         try:
-            self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)
+            self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
         except IndexError:
             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
+
+        self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()
     
     def __dealloc__(self):
         if type(self) is LagrangianMarmotCellElementWrapper:

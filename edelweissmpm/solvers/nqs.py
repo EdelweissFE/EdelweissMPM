@@ -58,6 +58,7 @@ from edelweissfe.stepactions.base.dirichletbase import DirichletBase
 from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
 from edelweissfe.sets.nodeset import NodeSet
 from scipy.sparse import csr_matrix
 from numpy import ndarray
@@ -107,7 +108,7 @@ class NonlinearQuasistaticSolver:
         self,
         timeStepper,
         linearSolver,
-        mpmManager,
+        mpmManagers: list[MPMManagerBase],
         dirichlets: list[DirichletBase],
         bodyLoads: list[MPMBodyLoadBase],
         distributedLoads: list[MPMDistributedLoadBase],
@@ -125,8 +126,8 @@ class NonlinearQuasistaticSolver:
             The timeStepper instance.
         linearSolver
             The linear solver instance to be used.
-        mpmManager
-            The MPMManagerBase instance to be used for updating the connectivity.
+        mpmManagers
+            The list of MPMManagerBase instances.
         dirichlets
             The list of dirichlet StepActions.
         bodyLoads
@@ -169,9 +170,12 @@ class NonlinearQuasistaticSolver:
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
 
         elements = model.elements.values()
+        scalarVariables = model.scalarVariables.values()
 
         activeCellsOld = None
         newtonCache = None
+        theDofManager = None
+
         try:
             for timeStep in timeStepper.generateTimeStep():
                 self.journal.printSeperationLine()
@@ -195,13 +199,13 @@ class NonlinearQuasistaticSolver:
 
                 self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
 
-                connectivityHasChanged = self._updateConnectivity(mpmManager)
+                connectivityHasChanged = self._updateConnectivity(mpmManagers)
 
                 for c in constraints:
                     connectivityHasChanged |= c.updateConnectivity(model)
 
-                if connectivityHasChanged:
-                    activeCells = set(mpmManager.getActiveCells())
+                if connectivityHasChanged or not theDofManager:
+                    activeCells = set([mpmManager.getActiveCells() for mpmManager in mpmManagers])
 
                     self.journal.message(
                         "active cells have changed, (re)initializing equation system & clearing cache",
@@ -212,14 +216,20 @@ class NonlinearQuasistaticSolver:
                     activeNodes, activeNodeFields, activeNodeSets = self._assembleActiveDomain(activeCells, model)
 
                     theDofManager = self._createDofManager(
-                        activeNodeFields.values(), [], [], constraints, activeNodeSets.values(), activeCells
+                        activeNodeFields.values(),
+                        scalarVariables,
+                        elements,
+                        constraints,
+                        activeNodeSets.values(),
+                        activeCells,
                     )
 
                     U = theDofManager.constructDofVector()
                     if model.elements:
-                        theDofManager.writeNodeFieldToDofVector(
-                            U, model.nodeFields["U"], "U", nodes=model.elementSets["all"]
-                        )
+                        for field in model.nodeFields.values():
+                            theDofManager.writeNodeFieldToDofVector(
+                                U, field, "U", model.elementSets["all"].extractNodeSet()
+                            )
 
                     self.journal.message(
                         "resulting equation system has a size of {:}".format(theDofManager.nDof),
@@ -911,7 +921,7 @@ class NonlinearQuasistaticSolver:
             action.applyAtIncrementStart(model, timeStep)
 
     def _findDirichletIndices(self, theDofManager, dirichlet):
-        fieldIndices = theDofManager.idcsOfFieldsOnNodeSetsInDofVector[dirichlet.field][dirichlet.nSet.name]
+        fieldIndices = theDofManager.idcsOfFieldsOnNodeSetsInDofVector[dirichlet.field][dirichlet.nSet]
 
         return fieldIndices.reshape((-1, dirichlet.fieldSize))[:, dirichlet.components].flatten()
 
@@ -935,7 +945,10 @@ class NonlinearQuasistaticSolver:
                 - the list of reduced NodeSets on the active Nodes.
         """
 
-        activeNodes = set([n for cell in activeCells for n in cell.nodes])
+        activeNodes = set(n for cell in activeCells for n in cell.nodes) | set(
+            n for element in model.elements.values() for n in element.nodes
+        )
+        activeNodes = NodeSet("activeNodes", activeNodes)
 
         activeNodeFields = {
             nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
@@ -943,7 +956,7 @@ class NonlinearQuasistaticSolver:
         }
 
         activeNodeSets = {
-            nodeSet.name: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
+            nodeSet.name: NodeSet(nodeSet.name, set(activeNodes).intersection(nodeSet))
             for nodeSet in model.nodeSets.values()
         }
 
@@ -1077,7 +1090,7 @@ class NonlinearQuasistaticSolver:
         for el in elements:
             dUEl = dU[el]
             UEln = Un[el]
-            Uelnp = UEln + dUEl
+            UElnp = UEln + dUEl
             PEl = np.zeros(el.nDof)
             KEl = K_VIJ[el]
             el.computeMaterialPointKernels(UElnp, PEl, KEl, time, dT)
@@ -1115,8 +1128,19 @@ class NonlinearQuasistaticSolver:
         return MPMDofManager(*args)
 
     @performancetiming.timeit("update connectivity")
-    def _updateConnectivity(self, mpmManager) -> bool:
-        return mpmManager.updateConnectivity()
+    def _updateConnectivity(self, mpmManagers) -> bool:
+        """Update the connectivity of all MPMManagers.
+
+        Parameters
+        ----------
+        mpmManagers
+            The list of MPMManagerBase instances.
+        """
+        connectivityHasChanged = False
+        for man in mpmManagers:
+            connectivityHasChanged |= man.updateConnectivity()
+
+        return connectivityHasChanged
 
     @performancetiming.timeit("instancing csr generator")
     def _makeCachedCOOToCSRGenerator(self, K_VIJ):

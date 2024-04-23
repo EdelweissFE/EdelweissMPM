@@ -98,10 +98,6 @@ def generateModelData(model, journal, **kwargs):
         The number of elements along the x-axis.
     nY : int
         The number of elements along the y-axis.
-    cellProvider : str
-        The name of the cell provider class.
-    cellType : str
-        The type of the cell.
     firstNodeNumber : int
         The first node number.
     nodesPerCell : int
@@ -130,17 +126,9 @@ def generateModelData(model, journal, **kwargs):
     nY = int(kwargs.get("nY", 10))
     firstNodeNumber = int(kwargs.get("cellNumberStart", 1))
 
-    if "cellProvider" in kwargs:
-        cellClass = kwargs["cellProvider"]
-        cellType = kwargs["cellType"]
-        CellFactory = getCellClass(cellClass)
-
-    elif "cellelementProvider" in kwargs:
-        cellClass = kwargs["cellelementProvider"]
-        cellType = kwargs["cellelementType"]
-        CellFactory = getCellElementClass(cellClass)
-    else:
-        raise Exception("No cell/cellelement provider specified")
+    cellClass = kwargs["cellelementProvider"]
+    cellType = kwargs["cellelementType"]
+    CellFactory = getCellElementClass(cellClass)
 
     nodesPerCell = int(kwargs.get("nodesPerCell", 4))
 
@@ -174,12 +162,12 @@ def generateModelData(model, journal, **kwargs):
 
     currentCellNumber = 1
 
-    cells = []
+    cellElements = []
     for x in range(nX):
         for y in range(nY):
             if nodesPerCell == 4:
                 cellNodes = [nG[x, y], nG[x + 1, y], nG[x + 1, y + 1], nG[x, y + 1]]
-                newCell = CellFactory(cellType, currentCellNumber, cellNodes)
+                newCellElement = CellFactory(cellType, currentCellNumber, cellNodes)
 
             elif nodesPerCell == 8:
                 cellNodes = [
@@ -192,9 +180,9 @@ def generateModelData(model, journal, **kwargs):
                     nG[2 * x + 1, 2 * y + 2],
                     nG[2 * x, 2 * y + 1],
                 ]
-                newCell = CellFactory(cellType, currentCellNumber, cellNodes)
-            cells.append(newCell)
-            model.cells[currentCellNumber] = newCell
+                newCellElement = CellFactory(cellType, currentCellNumber, cellNodes)
+            cellElements.append(newCellElement)
+            model.elements[currentCellNumber] = newCellElement
 
             currentCellNumber += 1
 
@@ -208,28 +196,38 @@ def generateModelData(model, journal, **kwargs):
     model.nodeSets["{:}_rightBottom".format(name)] = NodeSet("{:}_rightBottom".format(name), [nG[-1, 0]])
     model.nodeSets["{:}_rightTop".format(name)] = NodeSet("{:}_rightTop".format(name), [nG[-1, -1]])
 
-    if "cellelementProvider" in kwargs:
+    mpType = kwargs["mpType"]
+    MPFactory = kwargs["mpClass"]
 
-        mpType = kwargs["mpType"]
-        MPFactory = kwargs["mpClass"]
+    mpThickness = float(kwargs.get("thickness", 1.0))
 
-        mpThickness = float(kwargs.get("thickness", 1.0))
+    currentMPNumber = int(kwargs.get("mpNumberStart", len(model.materialPoints) + 1))
+    for cell in cellElements:
 
-        currentMPNumber = int(kwargs.get("mpNumberStart", len(model.materialPoints) + 1))
-        for cell in cells:
+        nMaterialPoints = cell.nMaterialPoints
+        mpCoords = cell.getRequestedMaterialPointCoordinates()
+        mpVolumes = cell.getRequestedMaterialPointVolumes()
 
-            nMaterialPoints = cell.nMaterialPoints
-            mpCoords = cell.getRequestedMaterialPointCoordinates()
-            mpVolumes = cell.getRequestedMaterialPointVolumes()
+        cellMPs = []
+        for coord, vol in zip(mpCoords, mpVolumes):
 
-            for coord, vol in zip(mpCoords, mpVolumes):
-
-                while currentMPNumber in model.materialPoints:
-                    currentMPNumber += 1
-
-                mp = MPFactory(mpType, currentMPNumber, coord.reshape((1, -1)), vol)
+            while currentMPNumber in model.materialPoints:
                 currentMPNumber += 1
 
-                model.materialPoints[currentMPNumber] = mp
+            mp = MPFactory(
+                mpType,
+                currentMPNumber,
+                coord.reshape((1, 2)),
+                vol,
+            )
+            mp.assignMaterial("GMDAMAGEDSHEARNEOHOOKE", np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999]))
+            mp.initializeYourself()
+
+            model.materialPoints[currentMPNumber] = mp
+            cellMPs.append(mp)
+
+            currentMPNumber += 1
+
+        cell.assignMaterialPoints(cellMPs)
 
     return model

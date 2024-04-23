@@ -32,8 +32,8 @@ import numpy as np
 class MaterialPoint(MaterialPointBase):
     shape = "point"
 
-    def __init__(self, formulation: str, label: int, coordinates: np.ndarray, volume: float):
-        self._label = label
+    def __init__(self, formulation: str, number: int, coordinates: np.ndarray, volume: float):
+        self._number = number
         self._coordinates = coordinates
         self._volume = volume
         self._assignedCells = list()
@@ -42,7 +42,7 @@ class MaterialPoint(MaterialPointBase):
 
     @property
     def label(self) -> int:
-        return self._label
+        return self._number
 
     @property
     def assignedCells(self) -> list:

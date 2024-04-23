@@ -1956,7 +1956,7 @@ struct __pyx_obj_12edelweissmpm_14materialpoints_19marmotmaterialpoint_2mp_Marmo
   PyObject_HEAD
   struct __pyx_vtabstruct_12edelweissmpm_14materialpoints_19marmotmaterialpoint_2mp_MarmotMaterialPointWrapper *__pyx_vtab;
   MarmotMaterialPoint *_marmotMaterialPoint;
-  int _label;
+  int _number;
   PyObject *_materialPointType;
   PyObject *_ensightType;
   int _nVertices;
@@ -1985,17 +1985,17 @@ struct __pyx_obj_12edelweissmpm_5cells_10marmotcell_10marmotcell_MarmotCellWrapp
   PyObject_HEAD
   struct __pyx_vtabstruct_12edelweissmpm_5cells_10marmotcell_10marmotcell_MarmotCellWrapper *__pyx_vtab;
   MarmotCell *_marmotCell;
-  PyObject *_gridnodes;
+  PyObject *_nodes;
   int _cellNumber;
   PyObject *_cellType;
-  int _nGridNodes;
+  int _nNodes;
   int _nDof;
   PyObject *_fields;
   PyObject *_ensightType;
   PyArrayObject *_dofIndicesPermutation;
   PyObject *_supportedBodyLoads;
   PyObject *_supportedDistributedLoads;
-  __Pyx_memviewslice _gridnodeCoordinates;
+  __Pyx_memviewslice _nodeCoordinates;
   PyObject *_assignedMaterialPoints;
 };
 
@@ -2005,10 +2005,11 @@ struct __pyx_obj_12edelweissmpm_5cells_10marmotcell_10marmotcell_MarmotCellWrapp
  * 
  * cdef class MarmotCellElementWrapper(MarmotCellWrapper):             # <<<<<<<<<<<<<<
  * 
- *     cdef MarmotCellElement* _marmotCellElement
+ *     cdef int _nMaterialPoints
  */
 struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_17marmotcellelement_MarmotCellElementWrapper {
   struct __pyx_obj_12edelweissmpm_5cells_10marmotcell_10marmotcell_MarmotCellWrapper __pyx_base;
+  int _nMaterialPoints;
   MarmotCellElement *_marmotCellElement;
 };
 
@@ -2018,7 +2019,7 @@ struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_17marmotcelle
  * @cython.final # no subclassing -> cpdef with nogil possible
  * cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):             # <<<<<<<<<<<<<<
  * 
- *     def __init__(self, cellType, cellNumber, gridnodes):
+ *     def __init__(self, cellType, cellNumber, nodes):
  */
 struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper {
   struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_17marmotcellelement_MarmotCellElementWrapper __pyx_base;
@@ -2138,7 +2139,7 @@ static struct __pyx_vtabstruct_12edelweissmpm_5cells_10marmotcell_10marmotcell_M
  * 
  * cdef class MarmotCellElementWrapper(MarmotCellWrapper):             # <<<<<<<<<<<<<<
  * 
- *     cdef MarmotCellElement* _marmotCellElement
+ *     cdef int _nMaterialPoints
  */
 
 struct __pyx_vtabstruct_12edelweissmpm_12cellelements_17marmotcellelement_17marmotcellelement_MarmotCellElementWrapper {
@@ -2152,7 +2153,7 @@ static struct __pyx_vtabstruct_12edelweissmpm_12cellelements_17marmotcellelement
  * @cython.final # no subclassing -> cpdef with nogil possible
  * cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):             # <<<<<<<<<<<<<<
  * 
- *     def __init__(self, cellType, cellNumber, gridnodes):
+ *     def __init__(self, cellType, cellNumber, nodes):
  */
 
 struct __pyx_vtabstruct_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper {
@@ -3492,6 +3493,7 @@ static const char __pyx_k_count[] = "count";
 static const char __pyx_k_error[] = "error";
 static const char __pyx_k_flags[] = "flags";
 static const char __pyx_k_index[] = "index";
+static const char __pyx_k_nodes[] = "nodes";
 static const char __pyx_k_numpy[] = "numpy";
 static const char __pyx_k_range[] = "range";
 static const char __pyx_k_shape[] = "shape";
@@ -3520,7 +3522,6 @@ static const char __pyx_k_register[] = "register";
 static const char __pyx_k_setstate[] = "__setstate__";
 static const char __pyx_k_TypeError[] = "TypeError";
 static const char __pyx_k_enumerate[] = "enumerate";
-static const char __pyx_k_gridnodes[] = "gridnodes";
 static const char __pyx_k_isenabled[] = "isenabled";
 static const char __pyx_k_pyx_state[] = "__pyx_state";
 static const char __pyx_k_reduce_ex[] = "__reduce_ex__";
@@ -3632,8 +3633,8 @@ static void __pyx_memoryviewslice___pyx_pf_15View_dot_MemoryView_16_memoryviewsl
 static PyObject *__pyx_pf___pyx_memoryviewslice___reduce_cython__(CYTHON_UNUSED struct __pyx_memoryviewslice_obj *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf___pyx_memoryviewslice_2__setstate_cython__(CYTHON_UNUSED struct __pyx_memoryviewslice_obj *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_15View_dot_MemoryView___pyx_unpickle_Enum(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
-static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper___init__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, PyObject *__pyx_v_cellNumber, PyObject *__pyx_v_gridnodes); /* proto */
-static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_2__cinit__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, CYTHON_UNUSED int __pyx_v_cellNumber, PyObject *__pyx_v_gridnodes); /* proto */
+static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper___init__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, PyObject *__pyx_v_cellNumber, PyObject *__pyx_v_nodes); /* proto */
+static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_2__cinit__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, CYTHON_UNUSED int __pyx_v_cellNumber, PyObject *__pyx_v_nodes); /* proto */
 static void __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_4__dealloc__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_6__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_8__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
@@ -3825,7 +3826,6 @@ typedef struct {
   PyObject *__pyx_n_s_getstate;
   PyObject *__pyx_kp_u_got;
   PyObject *__pyx_kp_u_got_differing_extents_in_dimensi;
-  PyObject *__pyx_n_s_gridnodes;
   PyObject *__pyx_n_s_id;
   PyObject *__pyx_n_s_import;
   PyObject *__pyx_n_s_index;
@@ -3843,6 +3843,7 @@ typedef struct {
   PyObject *__pyx_n_s_ndim;
   PyObject *__pyx_n_s_new;
   PyObject *__pyx_kp_s_no_default___reduce___due_to_non;
+  PyObject *__pyx_n_s_nodes;
   PyObject *__pyx_n_s_np;
   PyObject *__pyx_n_s_numpy;
   PyObject *__pyx_kp_u_numpy_core_multiarray_failed_to;
@@ -4061,7 +4062,6 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_getstate);
   Py_CLEAR(clear_module_state->__pyx_kp_u_got);
   Py_CLEAR(clear_module_state->__pyx_kp_u_got_differing_extents_in_dimensi);
-  Py_CLEAR(clear_module_state->__pyx_n_s_gridnodes);
   Py_CLEAR(clear_module_state->__pyx_n_s_id);
   Py_CLEAR(clear_module_state->__pyx_n_s_import);
   Py_CLEAR(clear_module_state->__pyx_n_s_index);
@@ -4079,6 +4079,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_ndim);
   Py_CLEAR(clear_module_state->__pyx_n_s_new);
   Py_CLEAR(clear_module_state->__pyx_kp_s_no_default___reduce___due_to_non);
+  Py_CLEAR(clear_module_state->__pyx_n_s_nodes);
   Py_CLEAR(clear_module_state->__pyx_n_s_np);
   Py_CLEAR(clear_module_state->__pyx_n_s_numpy);
   Py_CLEAR(clear_module_state->__pyx_kp_u_numpy_core_multiarray_failed_to);
@@ -4275,7 +4276,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_getstate);
   Py_VISIT(traverse_module_state->__pyx_kp_u_got);
   Py_VISIT(traverse_module_state->__pyx_kp_u_got_differing_extents_in_dimensi);
-  Py_VISIT(traverse_module_state->__pyx_n_s_gridnodes);
   Py_VISIT(traverse_module_state->__pyx_n_s_id);
   Py_VISIT(traverse_module_state->__pyx_n_s_import);
   Py_VISIT(traverse_module_state->__pyx_n_s_index);
@@ -4293,6 +4293,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_ndim);
   Py_VISIT(traverse_module_state->__pyx_n_s_new);
   Py_VISIT(traverse_module_state->__pyx_kp_s_no_default___reduce___due_to_non);
+  Py_VISIT(traverse_module_state->__pyx_n_s_nodes);
   Py_VISIT(traverse_module_state->__pyx_n_s_np);
   Py_VISIT(traverse_module_state->__pyx_n_s_numpy);
   Py_VISIT(traverse_module_state->__pyx_kp_u_numpy_core_multiarray_failed_to);
@@ -4545,7 +4546,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_getstate __pyx_mstate_global->__pyx_n_s_getstate
 #define __pyx_kp_u_got __pyx_mstate_global->__pyx_kp_u_got
 #define __pyx_kp_u_got_differing_extents_in_dimensi __pyx_mstate_global->__pyx_kp_u_got_differing_extents_in_dimensi
-#define __pyx_n_s_gridnodes __pyx_mstate_global->__pyx_n_s_gridnodes
 #define __pyx_n_s_id __pyx_mstate_global->__pyx_n_s_id
 #define __pyx_n_s_import __pyx_mstate_global->__pyx_n_s_import
 #define __pyx_n_s_index __pyx_mstate_global->__pyx_n_s_index
@@ -4563,6 +4563,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_ndim __pyx_mstate_global->__pyx_n_s_ndim
 #define __pyx_n_s_new __pyx_mstate_global->__pyx_n_s_new
 #define __pyx_kp_s_no_default___reduce___due_to_non __pyx_mstate_global->__pyx_kp_s_no_default___reduce___due_to_non
+#define __pyx_n_s_nodes __pyx_mstate_global->__pyx_n_s_nodes
 #define __pyx_n_s_np __pyx_mstate_global->__pyx_n_s_np
 #define __pyx_n_s_numpy __pyx_mstate_global->__pyx_n_s_numpy
 #define __pyx_kp_u_numpy_core_multiarray_failed_to __pyx_mstate_global->__pyx_kp_u_numpy_core_multiarray_failed_to
@@ -19593,8 +19594,8 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
 /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":50
  * cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
  * 
- *     def __init__(self, cellType, cellNumber, gridnodes):             # <<<<<<<<<<<<<<
- *         super().__init__(cellType, cellNumber, gridnodes)
+ *     def __init__(self, cellType, cellNumber, nodes):             # <<<<<<<<<<<<<<
+ *         super().__init__(cellType, cellNumber, nodes)
  * 
  */
 
@@ -19603,7 +19604,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
 static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_cellType = 0;
   PyObject *__pyx_v_cellNumber = 0;
-  PyObject *__pyx_v_gridnodes = 0;
+  PyObject *__pyx_v_nodes = 0;
   CYTHON_UNUSED Py_ssize_t __pyx_nargs;
   CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
   PyObject* values[3] = {0,0,0};
@@ -19620,7 +19621,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   #endif
   __pyx_kwvalues = __Pyx_KwValues_VARARGS(__pyx_args, __pyx_nargs);
   {
-    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_cellType,&__pyx_n_s_cellNumber,&__pyx_n_s_gridnodes,0};
+    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_cellType,&__pyx_n_s_cellNumber,&__pyx_n_s_nodes,0};
     if (__pyx_kwds) {
       Py_ssize_t kw_args;
       switch (__pyx_nargs) {
@@ -19654,7 +19655,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
         }
         CYTHON_FALLTHROUGH;
         case  2:
-        if (likely((values[2] = __Pyx_GetKwValue_VARARGS(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_gridnodes)) != 0)) {
+        if (likely((values[2] = __Pyx_GetKwValue_VARARGS(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_nodes)) != 0)) {
           (void)__Pyx_Arg_NewRef_VARARGS(values[2]);
           kw_args--;
         }
@@ -19676,7 +19677,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
     }
     __pyx_v_cellType = values[0];
     __pyx_v_cellNumber = values[1];
-    __pyx_v_gridnodes = values[2];
+    __pyx_v_nodes = values[2];
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
@@ -19694,7 +19695,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   __Pyx_RefNannyFinishContext();
   return -1;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper___init__(((struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *)__pyx_v_self), __pyx_v_cellType, __pyx_v_cellNumber, __pyx_v_gridnodes);
+  __pyx_r = __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper___init__(((struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *)__pyx_v_self), __pyx_v_cellType, __pyx_v_cellNumber, __pyx_v_nodes);
 
   /* function exit code */
   {
@@ -19707,7 +19708,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   return __pyx_r;
 }
 
-static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper___init__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, PyObject *__pyx_v_cellNumber, PyObject *__pyx_v_gridnodes) {
+static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper___init__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, PyObject *__pyx_v_cellNumber, PyObject *__pyx_v_nodes) {
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -19721,10 +19722,10 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
 
   /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":51
  * 
- *     def __init__(self, cellType, cellNumber, gridnodes):
- *         super().__init__(cellType, cellNumber, gridnodes)             # <<<<<<<<<<<<<<
+ *     def __init__(self, cellType, cellNumber, nodes):
+ *         super().__init__(cellType, cellNumber, nodes)             # <<<<<<<<<<<<<<
  * 
- *     def __cinit__(self, str cellType, int cellNumber, list gridnodes):
+ *     def __cinit__(self, str cellType, int cellNumber, list nodes):
  */
   __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -19755,7 +19756,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   }
   #endif
   {
-    PyObject *__pyx_callargs[4] = {__pyx_t_3, __pyx_v_cellType, __pyx_v_cellNumber, __pyx_v_gridnodes};
+    PyObject *__pyx_callargs[4] = {__pyx_t_3, __pyx_v_cellType, __pyx_v_cellNumber, __pyx_v_nodes};
     __pyx_t_1 = __Pyx_PyObject_FastCall(__pyx_t_2, __pyx_callargs+1-__pyx_t_4, 3+__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
@@ -19767,8 +19768,8 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":50
  * cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
  * 
- *     def __init__(self, cellType, cellNumber, gridnodes):             # <<<<<<<<<<<<<<
- *         super().__init__(cellType, cellNumber, gridnodes)
+ *     def __init__(self, cellType, cellNumber, nodes):             # <<<<<<<<<<<<<<
+ *         super().__init__(cellType, cellNumber, nodes)
  * 
  */
 
@@ -19787,9 +19788,9 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
 }
 
 /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":53
- *         super().__init__(cellType, cellNumber, gridnodes)
+ *         super().__init__(cellType, cellNumber, nodes)
  * 
- *     def __cinit__(self, str cellType, int cellNumber, list gridnodes):             # <<<<<<<<<<<<<<
+ *     def __cinit__(self, str cellType, int cellNumber, list nodes):             # <<<<<<<<<<<<<<
  *         """This C-level method is responsible for actually creating the MarmotCellElement.
  * 
  */
@@ -19799,7 +19800,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
 static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_3__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_cellType = 0;
   CYTHON_UNUSED int __pyx_v_cellNumber;
-  PyObject *__pyx_v_gridnodes = 0;
+  PyObject *__pyx_v_nodes = 0;
   CYTHON_UNUSED Py_ssize_t __pyx_nargs;
   CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
   PyObject* values[3] = {0,0,0};
@@ -19816,7 +19817,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   #endif
   __pyx_kwvalues = __Pyx_KwValues_VARARGS(__pyx_args, __pyx_nargs);
   {
-    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_cellType,&__pyx_n_s_cellNumber,&__pyx_n_s_gridnodes,0};
+    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_cellType,&__pyx_n_s_cellNumber,&__pyx_n_s_nodes,0};
     if (__pyx_kwds) {
       Py_ssize_t kw_args;
       switch (__pyx_nargs) {
@@ -19850,7 +19851,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
         }
         CYTHON_FALLTHROUGH;
         case  2:
-        if (likely((values[2] = __Pyx_GetKwValue_VARARGS(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_gridnodes)) != 0)) {
+        if (likely((values[2] = __Pyx_GetKwValue_VARARGS(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_nodes)) != 0)) {
           (void)__Pyx_Arg_NewRef_VARARGS(values[2]);
           kw_args--;
         }
@@ -19872,7 +19873,7 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
     }
     __pyx_v_cellType = ((PyObject*)values[0]);
     __pyx_v_cellNumber = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_cellNumber == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 53, __pyx_L3_error)
-    __pyx_v_gridnodes = ((PyObject*)values[2]);
+    __pyx_v_nodes = ((PyObject*)values[2]);
   }
   goto __pyx_L6_skip;
   __pyx_L5_argtuple_error:;
@@ -19891,8 +19892,8 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   return -1;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_cellType), (&PyUnicode_Type), 1, "cellType", 1))) __PYX_ERR(0, 53, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_gridnodes), (&PyList_Type), 1, "gridnodes", 1))) __PYX_ERR(0, 53, __pyx_L1_error)
-  __pyx_r = __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_2__cinit__(((struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *)__pyx_v_self), __pyx_v_cellType, __pyx_v_cellNumber, __pyx_v_gridnodes);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_nodes), (&PyList_Type), 1, "nodes", 1))) __PYX_ERR(0, 53, __pyx_L1_error)
+  __pyx_r = __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_2__cinit__(((struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *)__pyx_v_self), __pyx_v_cellType, __pyx_v_cellNumber, __pyx_v_nodes);
 
   /* function exit code */
   goto __pyx_L0;
@@ -19909,9 +19910,9 @@ static int __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   return __pyx_r;
 }
 
-static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_2__cinit__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, CYTHON_UNUSED int __pyx_v_cellNumber, PyObject *__pyx_v_gridnodes) {
-  PyArrayObject *__pyx_v_gridnodeCoordinates = 0;
-  PyObject *__pyx_7genexpr__pyx_v_gridnode = NULL;
+static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_2__cinit__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self, PyObject *__pyx_v_cellType, CYTHON_UNUSED int __pyx_v_cellNumber, PyObject *__pyx_v_nodes) {
+  PyArrayObject *__pyx_v_nodeCoordinates = 0;
+  PyObject *__pyx_7genexpr__pyx_v_node = NULL;
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -19938,21 +19939,21 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":64
  * 
  * 
- *         self._gridnodes = gridnodes             # <<<<<<<<<<<<<<
- *         cdef np.ndarray gridnodeCoordinates = np.array([ gridnode.coordinates for gridnode in gridnodes])
- *         self._gridnodeCoordinates = gridnodeCoordinates
+ *         self._nodes = nodes             # <<<<<<<<<<<<<<
+ *         cdef np.ndarray nodeCoordinates = np.array([ node.coordinates for node in nodes])
+ *         self._nodeCoordinates = nodeCoordinates
  */
-  __Pyx_INCREF(__pyx_v_gridnodes);
-  __Pyx_GIVEREF(__pyx_v_gridnodes);
-  __Pyx_GOTREF(__pyx_v_self->__pyx_base.__pyx_base._gridnodes);
-  __Pyx_DECREF(__pyx_v_self->__pyx_base.__pyx_base._gridnodes);
-  __pyx_v_self->__pyx_base.__pyx_base._gridnodes = __pyx_v_gridnodes;
+  __Pyx_INCREF(__pyx_v_nodes);
+  __Pyx_GIVEREF(__pyx_v_nodes);
+  __Pyx_GOTREF(__pyx_v_self->__pyx_base.__pyx_base._nodes);
+  __Pyx_DECREF(__pyx_v_self->__pyx_base.__pyx_base._nodes);
+  __pyx_v_self->__pyx_base.__pyx_base._nodes = __pyx_v_nodes;
 
   /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":65
  * 
- *         self._gridnodes = gridnodes
- *         cdef np.ndarray gridnodeCoordinates = np.array([ gridnode.coordinates for gridnode in gridnodes])             # <<<<<<<<<<<<<<
- *         self._gridnodeCoordinates = gridnodeCoordinates
+ *         self._nodes = nodes
+ *         cdef np.ndarray nodeCoordinates = np.array([ node.coordinates for node in nodes])             # <<<<<<<<<<<<<<
+ *         self._nodeCoordinates = nodeCoordinates
  * 
  */
   __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
@@ -19963,11 +19964,11 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   { /* enter inner scope */
     __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L5_error)
     __Pyx_GOTREF(__pyx_t_2);
-    if (unlikely(__pyx_v_gridnodes == Py_None)) {
+    if (unlikely(__pyx_v_nodes == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
       __PYX_ERR(0, 65, __pyx_L5_error)
     }
-    __pyx_t_4 = __pyx_v_gridnodes; __Pyx_INCREF(__pyx_t_4);
+    __pyx_t_4 = __pyx_v_nodes; __Pyx_INCREF(__pyx_t_4);
     __pyx_t_5 = 0;
     for (;;) {
       {
@@ -19983,18 +19984,18 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
       __pyx_t_6 = __Pyx_PySequence_ITEM(__pyx_t_4, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 65, __pyx_L5_error)
       __Pyx_GOTREF(__pyx_t_6);
       #endif
-      __Pyx_XDECREF_SET(__pyx_7genexpr__pyx_v_gridnode, __pyx_t_6);
+      __Pyx_XDECREF_SET(__pyx_7genexpr__pyx_v_node, __pyx_t_6);
       __pyx_t_6 = 0;
-      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_7genexpr__pyx_v_gridnode, __pyx_n_s_coordinates); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 65, __pyx_L5_error)
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_7genexpr__pyx_v_node, __pyx_n_s_coordinates); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 65, __pyx_L5_error)
       __Pyx_GOTREF(__pyx_t_6);
       if (unlikely(__Pyx_ListComp_Append(__pyx_t_2, (PyObject*)__pyx_t_6))) __PYX_ERR(0, 65, __pyx_L5_error)
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_XDECREF(__pyx_7genexpr__pyx_v_gridnode); __pyx_7genexpr__pyx_v_gridnode = 0;
+    __Pyx_XDECREF(__pyx_7genexpr__pyx_v_node); __pyx_7genexpr__pyx_v_node = 0;
     goto __pyx_L9_exit_scope;
     __pyx_L5_error:;
-    __Pyx_XDECREF(__pyx_7genexpr__pyx_v_gridnode); __pyx_7genexpr__pyx_v_gridnode = 0;
+    __Pyx_XDECREF(__pyx_7genexpr__pyx_v_node); __pyx_7genexpr__pyx_v_node = 0;
     goto __pyx_L1_error;
     __pyx_L9_exit_scope:;
   } /* exit inner scope */
@@ -20022,27 +20023,27 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   }
   if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 65, __pyx_L1_error)
-  __pyx_v_gridnodeCoordinates = ((PyArrayObject *)__pyx_t_1);
+  __pyx_v_nodeCoordinates = ((PyArrayObject *)__pyx_t_1);
   __pyx_t_1 = 0;
 
   /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":66
- *         self._gridnodes = gridnodes
- *         cdef np.ndarray gridnodeCoordinates = np.array([ gridnode.coordinates for gridnode in gridnodes])
- *         self._gridnodeCoordinates = gridnodeCoordinates             # <<<<<<<<<<<<<<
+ *         self._nodes = nodes
+ *         cdef np.ndarray nodeCoordinates = np.array([ node.coordinates for node in nodes])
+ *         self._nodeCoordinates = nodeCoordinates             # <<<<<<<<<<<<<<
  * 
  *         try:
  */
-  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_d_dc_double(((PyObject *)__pyx_v_gridnodeCoordinates), PyBUF_WRITABLE); if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 66, __pyx_L1_error)
-  __PYX_XCLEAR_MEMVIEW(&__pyx_v_self->__pyx_base.__pyx_base._gridnodeCoordinates, 0);
-  __pyx_v_self->__pyx_base.__pyx_base._gridnodeCoordinates = __pyx_t_8;
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_d_dc_double(((PyObject *)__pyx_v_nodeCoordinates), PyBUF_WRITABLE); if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 66, __pyx_L1_error)
+  __PYX_XCLEAR_MEMVIEW(&__pyx_v_self->__pyx_base.__pyx_base._nodeCoordinates, 0);
+  __pyx_v_self->__pyx_base.__pyx_base._nodeCoordinates = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
   /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":68
- *         self._gridnodeCoordinates = gridnodeCoordinates
+ *         self._nodeCoordinates = nodeCoordinates
  * 
  *         try:             # <<<<<<<<<<<<<<
- *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)
+ *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
  *         except IndexError:
  */
   {
@@ -20057,7 +20058,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
       /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":69
  * 
  *         try:
- *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)             # <<<<<<<<<<<<<<
+ *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)             # <<<<<<<<<<<<<<
  *         except IndexError:
  *             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
  */
@@ -20071,7 +20072,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_13 = 0;
       __pyx_t_14 = 0;
-      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_self->__pyx_base.__pyx_base._gridnodeCoordinates, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L10_error)
+      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_self->__pyx_base.__pyx_base._nodeCoordinates, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L10_error)
       __Pyx_GOTREF(__pyx_t_1);
       __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_size); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 69, __pyx_L10_error)
       __Pyx_GOTREF(__pyx_t_3);
@@ -20079,7 +20080,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
       __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 69, __pyx_L10_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       try {
-        __pyx_t_15 = MarmotLibrary::MarmotCellElementFactory::createCellElement(__pyx_t_12, __pyx_v_self->__pyx_base.__pyx_base._cellNumber, (&(*((double *) ( /* dim=1 */ ((char *) (((double *) ( /* dim=0 */ (__pyx_v_self->__pyx_base.__pyx_base._gridnodeCoordinates.data + __pyx_t_13 * __pyx_v_self->__pyx_base.__pyx_base._gridnodeCoordinates.strides[0]) )) + __pyx_t_14)) )))), __pyx_t_7);
+        __pyx_t_15 = MarmotLibrary::MarmotCellElementFactory::createCellElement(__pyx_t_12, __pyx_v_self->__pyx_base.__pyx_base._cellNumber, (&(*((double *) ( /* dim=1 */ ((char *) (((double *) ( /* dim=0 */ (__pyx_v_self->__pyx_base.__pyx_base._nodeCoordinates.data + __pyx_t_13 * __pyx_v_self->__pyx_base.__pyx_base._nodeCoordinates.strides[0]) )) + __pyx_t_14)) )))), __pyx_t_7);
       } catch(...) {
         try { throw; } catch(const std::exception& exn) {PyErr_SetString(__pyx_builtin_ValueError, exn.what());} catch(...) { PyErr_SetNone(__pyx_builtin_ValueError); }
         __PYX_ERR(0, 69, __pyx_L10_error)
@@ -20088,10 +20089,10 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
       __pyx_v_self->__pyx_base._marmotCellElement = __pyx_t_15;
 
       /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":68
- *         self._gridnodeCoordinates = gridnodeCoordinates
+ *         self._nodeCoordinates = nodeCoordinates
  * 
  *         try:             # <<<<<<<<<<<<<<
- *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)
+ *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
  *         except IndexError:
  */
     }
@@ -20110,7 +20111,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
 
     /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":70
  *         try:
- *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)
+ *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
  *         except IndexError:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
  * 
@@ -20124,11 +20125,11 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
       __Pyx_XGOTREF(__pyx_t_2);
 
       /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":71
- *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)
+ *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
  *         except IndexError:
  *             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))             # <<<<<<<<<<<<<<
  * 
- *     def __dealloc__(self):
+ *         self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()
  */
       __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Marmot_cellelement_not_found_in, __pyx_n_s_format); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 71, __pyx_L12_except_error)
       __Pyx_GOTREF(__pyx_t_6);
@@ -20164,10 +20165,10 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
     goto __pyx_L12_except_error;
 
     /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":68
- *         self._gridnodeCoordinates = gridnodeCoordinates
+ *         self._nodeCoordinates = nodeCoordinates
  * 
  *         try:             # <<<<<<<<<<<<<<
- *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._gridnodeCoordinates[0,0], self._gridnodeCoordinates.size)
+ *             self._marmotCell = self._marmotCellElement = MarmotCellElementFactory.createCellElement( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
  *         except IndexError:
  */
     __pyx_L12_except_error:;
@@ -20179,10 +20180,19 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
     __pyx_L15_try_end:;
   }
 
-  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":53
- *         super().__init__(cellType, cellNumber, gridnodes)
+  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":73
+ *             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
  * 
- *     def __cinit__(self, str cellType, int cellNumber, list gridnodes):             # <<<<<<<<<<<<<<
+ *         self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()             # <<<<<<<<<<<<<<
+ * 
+ *     def __dealloc__(self):
+ */
+  __pyx_v_self->__pyx_base._nMaterialPoints = __pyx_v_self->__pyx_base._marmotCellElement->getNMaterialPoints();
+
+  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":53
+ *         super().__init__(cellType, cellNumber, nodes)
+ * 
+ *     def __cinit__(self, str cellType, int cellNumber, list nodes):             # <<<<<<<<<<<<<<
  *         """This C-level method is responsible for actually creating the MarmotCellElement.
  * 
  */
@@ -20201,14 +20211,14 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangi
   __Pyx_AddTraceback("edelweissmpm.cellelements.marmotcellelement.lagrangianmarmotcellelement.LagrangianMarmotCellElementWrapper.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = -1;
   __pyx_L0:;
-  __Pyx_XDECREF((PyObject *)__pyx_v_gridnodeCoordinates);
-  __Pyx_XDECREF(__pyx_7genexpr__pyx_v_gridnode);
+  __Pyx_XDECREF((PyObject *)__pyx_v_nodeCoordinates);
+  __Pyx_XDECREF(__pyx_7genexpr__pyx_v_node);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":73
- *             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
+/* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":75
+ *         self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
  *         if type(self) is LagrangianMarmotCellElementWrapper:
@@ -20231,7 +20241,7 @@ static void __pyx_pw_12edelweissmpm_12cellelements_17marmotcellelement_27lagrang
 static void __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_34LagrangianMarmotCellElementWrapper_4__dealloc__(struct __pyx_obj_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper *__pyx_v_self) {
   int __pyx_t_1;
 
-  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":74
+  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":76
  * 
  *     def __dealloc__(self):
  *         if type(self) is LagrangianMarmotCellElementWrapper:             # <<<<<<<<<<<<<<
@@ -20240,14 +20250,14 @@ static void __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrang
   __pyx_t_1 = (((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))) == ((PyObject *)__pyx_ptype_12edelweissmpm_12cellelements_17marmotcellelement_27lagrangianmarmotcellelement_LagrangianMarmotCellElementWrapper));
   if (__pyx_t_1) {
 
-    /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":75
+    /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":77
  *     def __dealloc__(self):
  *         if type(self) is LagrangianMarmotCellElementWrapper:
  *             del self._marmotCellElement             # <<<<<<<<<<<<<<
  */
     delete __pyx_v_self->__pyx_base._marmotCellElement;
 
-    /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":74
+    /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":76
  * 
  *     def __dealloc__(self):
  *         if type(self) is LagrangianMarmotCellElementWrapper:             # <<<<<<<<<<<<<<
@@ -20255,8 +20265,8 @@ static void __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_27lagrang
  */
   }
 
-  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":73
- *             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
+  /* "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx":75
+ *         self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
  *         if type(self) is LagrangianMarmotCellElementWrapper:
@@ -21679,7 +21689,6 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_getstate, __pyx_k_getstate, sizeof(__pyx_k_getstate), 0, 0, 1, 1},
     {&__pyx_kp_u_got, __pyx_k_got, sizeof(__pyx_k_got), 0, 1, 0, 0},
     {&__pyx_kp_u_got_differing_extents_in_dimensi, __pyx_k_got_differing_extents_in_dimensi, sizeof(__pyx_k_got_differing_extents_in_dimensi), 0, 1, 0, 0},
-    {&__pyx_n_s_gridnodes, __pyx_k_gridnodes, sizeof(__pyx_k_gridnodes), 0, 0, 1, 1},
     {&__pyx_n_s_id, __pyx_k_id, sizeof(__pyx_k_id), 0, 0, 1, 1},
     {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
     {&__pyx_n_s_index, __pyx_k_index, sizeof(__pyx_k_index), 0, 0, 1, 1},
@@ -21697,6 +21706,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_ndim, __pyx_k_ndim, sizeof(__pyx_k_ndim), 0, 0, 1, 1},
     {&__pyx_n_s_new, __pyx_k_new, sizeof(__pyx_k_new), 0, 0, 1, 1},
     {&__pyx_kp_s_no_default___reduce___due_to_non, __pyx_k_no_default___reduce___due_to_non, sizeof(__pyx_k_no_default___reduce___due_to_non), 0, 0, 1, 0},
+    {&__pyx_n_s_nodes, __pyx_k_nodes, sizeof(__pyx_k_nodes), 0, 0, 1, 1},
     {&__pyx_n_s_np, __pyx_k_np, sizeof(__pyx_k_np), 0, 0, 1, 1},
     {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
     {&__pyx_kp_u_numpy_core_multiarray_failed_to, __pyx_k_numpy_core_multiarray_failed_to, sizeof(__pyx_k_numpy_core_multiarray_failed_to), 0, 1, 0, 0},
