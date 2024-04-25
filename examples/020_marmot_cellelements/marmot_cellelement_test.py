@@ -72,8 +72,8 @@ def run_sim():
         l=100.0,
         y0=0.0,
         h=100.0,
-        nX=3,
-        nY=3,
+        nX=4,
+        nY=4,
         cellelementProvider="LagrangianMarmotCellElement",
         cellelementType="GradientEnhancedMicropolar/Quad4/Gauss2",
         thickness=1.0,
@@ -143,12 +143,12 @@ def run_sim():
         "right",
         mpmModel.nodeSets["rectangular_grid_right"],
         "displacement",
-        {0: 0.0, 1: -10.0},
+        {0: 0.0, 1: -50.0},
         mpmModel,
         journal,
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-1, 1e-1, 1e-3, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 

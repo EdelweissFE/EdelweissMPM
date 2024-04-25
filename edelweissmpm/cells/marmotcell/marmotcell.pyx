@@ -48,7 +48,7 @@ cdef class MarmotCellWrapper:
     cellType
         The Marmot element which should be represented, e.g., CPE4.
     cellNumber
-        The (unique) label of this cell.
+        The (unique) number of this cell.
     nodes
         The list of nodes for this Cell.
         """
@@ -146,7 +146,7 @@ cdef class MarmotCellWrapper:
                          double timeNew, 
                          double dTime):
 
-        cdef int mpNumber = materialPoint.label
+        cdef int mpNumber = materialPoint.number
 
         self._marmotCell.computeDistributedLoad( self._supportedDistributedLoads[loadType.upper()], 
                                                 surfaceID,
@@ -162,9 +162,6 @@ cdef class MarmotCellWrapper:
         cdef MarmotMaterialPointWrapper mpWrapper
 
         for mpWrapper in marmotMaterialPointWrappers:
-            print(" - Assigning Material Point with label: ", mpWrapper.number)
-            print(mpWrapper.getVertexCoordinates())
-            print(mpWrapper.getCenterCoordinates())
             mps.push_back(<MarmotMaterialPoint*> mpWrapper._marmotMaterialPoint)
 
         self._marmotCell.assignMaterialPoints(mps)

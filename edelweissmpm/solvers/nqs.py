@@ -205,7 +205,11 @@ class NonlinearQuasistaticSolver:
                     connectivityHasChanged |= c.updateConnectivity(model)
 
                 if connectivityHasChanged or not theDofManager:
-                    activeCells = set([mpmManager.getActiveCells() for mpmManager in mpmManagers])
+                    activeCells = set()
+                    for man in mpmManagers:
+                        activeCells |= man.getActiveCells()
+
+                    # activeCells |= [mpmManager.getActiveCells() for mpmManager in mpmManagers]
 
                     self.journal.message(
                         "active cells have changed, (re)initializing equation system & clearing cache",
@@ -319,7 +323,7 @@ class NonlinearQuasistaticSolver:
         dirichlets: list[DirichletBase],
         bodyLoads: list,
         distributedLoads: list,
-        activeNodeSets: list,
+        reducedNodeSets: list,
         elements: list,
         Un: DofVector,
         activeCells: list,
@@ -397,6 +401,7 @@ class NonlinearQuasistaticSolver:
 
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
+            self._interpolateFieldsToMaterialPoints(elements, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
 
             self._computeCells(
@@ -416,10 +421,10 @@ class NonlinearQuasistaticSolver:
             Rhs -= PExt
 
             if iterationCounter == 0 and dirichlets:
-                Rhs = self._applyDirichlet(timeStep, Rhs, dirichlets, activeNodeSets, theDofManager)
+                Rhs = self._applyDirichlet(timeStep, Rhs, dirichlets, reducedNodeSets, theDofManager)
             else:
                 for dirichlet in dirichlets:
-                    Rhs[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
+                    Rhs[self._findDirichletIndices(theDofManager, dirichlet, reducedNodeSets[dirichlet.nSet])] = 0.0
 
                 incrementResidualHistory = self._computeResiduals(
                     Rhs, ddU, dU, F, incrementResidualHistory, theDofManager
@@ -439,7 +444,7 @@ class NonlinearQuasistaticSolver:
                     raise ReachedMaxIterations("Reached max. iterations in current increment, cutting back")
 
             K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
-            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager)
+            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
 
             ddU = self._linearSolve(K_CSR, Rhs, linearSolver)
             dU += ddU
@@ -550,7 +555,11 @@ class NonlinearQuasistaticSolver:
 
     @performancetiming.timeit("dirichlet on CSR")
     def _applyDirichletKCsr(
-        self, K: VIJSystemMatrix, dirichlets: list[DirichletBase], theDofManager: DofManager
+        self,
+        K: VIJSystemMatrix,
+        dirichlets: list[DirichletBase],
+        theDofManager: DofManager,
+        reducedNodeSets: dict[NodeSet, NodeSet],
     ) -> VIJSystemMatrix:
         """Apply the dirichlet bcs on the global stiffness matrix
         Is called by solveStep() before solving the global system.
@@ -571,12 +580,17 @@ class NonlinearQuasistaticSolver:
 
         if dirichlets:
             for dirichlet in dirichlets:
-                for row in self._findDirichletIndices(theDofManager, dirichlet):  # dirichlet.indices:
+                reducedNodeSet = reducedNodeSets[dirichlet.nSet]
+                for row in self._findDirichletIndices(theDofManager, dirichlet, reducedNodeSet):  # dirichlet.indices:
                     K.data[K.indptr[row] : K.indptr[row + 1]] = 0.0
 
             # K[row, row] = 1.0 @ once, faster than within the loop above:
             diag = K.diagonal()
-            diag[np.concatenate([self._findDirichletIndices(theDofManager, d) for d in dirichlets])] = 1.0
+            diag[
+                np.concatenate(
+                    [self._findDirichletIndices(theDofManager, d, reducedNodeSets[d.nSet]) for d in dirichlets]
+                )
+            ] = 1.0
             K.setdiag(diag)
 
             K.eliminate_zeros()
@@ -589,7 +603,7 @@ class NonlinearQuasistaticSolver:
         timeStep: TimeStep,
         R: DofVector,
         dirichlets: list[DirichletBase],
-        activeNodeSets,
+        reducedNodeSets,
         theDofManager: DofManager,
     ):
         """Apply the dirichlet bcs on the residual vector
@@ -615,8 +629,8 @@ class NonlinearQuasistaticSolver:
         """
 
         for dirichlet in dirichlets:
-            dirichletNodes = activeNodeSets[dirichlet.nSet.name]
-            R[self._findDirichletIndices(theDofManager, dirichlet)] = dirichlet.getDelta(
+            dirichletNodes = reducedNodeSets[dirichlet.nSet]
+            R[self._findDirichletIndices(theDofManager, dirichlet, dirichletNodes)] = dirichlet.getDelta(
                 timeStep, dirichletNodes
             ).flatten()
 
@@ -920,8 +934,8 @@ class NonlinearQuasistaticSolver:
         for action in actions:
             action.applyAtIncrementStart(model, timeStep)
 
-    def _findDirichletIndices(self, theDofManager, dirichlet):
-        fieldIndices = theDofManager.idcsOfFieldsOnNodeSetsInDofVector[dirichlet.field][dirichlet.nSet]
+    def _findDirichletIndices(self, theDofManager, dirichlet, reducedNodeSet):
+        fieldIndices = theDofManager.idcsOfFieldsOnNodeSetsInDofVector[dirichlet.field][reducedNodeSet]
 
         return fieldIndices.reshape((-1, dirichlet.fieldSize))[:, dirichlet.components].flatten()
 
@@ -955,12 +969,12 @@ class NonlinearQuasistaticSolver:
             for nodeField in model.nodeFields.values()
         }
 
-        activeNodeSets = {
-            nodeSet.name: NodeSet(nodeSet.name, set(activeNodes).intersection(nodeSet))
+        reducedNodeSets = {
+            nodeSet: NodeSet(nodeSet.name, set(activeNodes).intersection(nodeSet))
             for nodeSet in model.nodeSets.values()
         }
 
-        return activeNodes, activeNodeFields, activeNodeSets
+        return activeNodes, activeNodeFields, reducedNodeSets
 
     @performancetiming.timeit("preparation material points")
     def _prepareMaterialPoints(self, materialPoints: list, time: float, dT: float):

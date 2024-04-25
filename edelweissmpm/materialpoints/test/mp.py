@@ -41,7 +41,7 @@ class MaterialPoint(MaterialPointBase):
         self._displacement = np.zeros(2)
 
     @property
-    def label(self) -> int:
+    def number(self) -> int:
         return self._number
 
     @property

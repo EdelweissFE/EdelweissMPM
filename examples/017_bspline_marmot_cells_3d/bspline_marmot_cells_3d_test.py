@@ -203,7 +203,7 @@ def run_sim(logFile=None, order: int = 2):
         nonlinearSolver.solveStep(
             AdaptiveTimeStepper(mpmModel.time, 1.0, 2e-1, 2e-1, 2e-1, 100, journal),
             linearSolver,
-            mpmManager,
+            [mpmManager],
             [dirichletBottom, dirichletLeft, dirichletBack],
             [gravityLoad],
             [],

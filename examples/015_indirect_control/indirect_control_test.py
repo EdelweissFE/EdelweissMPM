@@ -182,7 +182,7 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            mpmManager,
+            [mpmManager],
             [dirichletLeft],
             [],
             [pressureLoad],

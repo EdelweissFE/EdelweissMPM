@@ -155,7 +155,7 @@ def run_sim(bspline_order):
 
     weakDirichlets = [
         PenaltyWeakDirichlet(
-            "weak dirichlet {:}".format(mp.label),
+            "weak dirichlet {:}".format(mp.number),
             mpmModel,
             mpmModel.materialPointSets["planeRect_right"],
             "displacement",
@@ -184,7 +184,7 @@ def run_sim(bspline_order):
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            mpmManager,
+            [mpmManager],
             [
                 dirichletLeft,
             ],

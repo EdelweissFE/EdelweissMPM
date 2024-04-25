@@ -146,6 +146,8 @@ def run_sim():
         journal,
     )
 
+    print(mpmModel.nodeSets["rectangular_grid_bottom"])
+
     dirichletLeft = Dirichlet(
         "left",
         mpmModel.nodeSets["rectangular_grid_left"],
@@ -195,7 +197,7 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            mpmManager,
+            [mpmManager],
             [
                 dirichletBottom,
                 dirichletLeft,

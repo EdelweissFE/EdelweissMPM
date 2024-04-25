@@ -55,17 +55,31 @@ class MPMModel(FEModel):
         self.cellSets = {}  #: The collection of CellSets in the present model.
         self.materialPoints = {}  #: The collection of MaterialPoints in the present model.
         self.materialPointSets = {}  #: The collection of MaterialPointSets in the present model.
+        self.cellElements = {}  #: The collection of CellElements in the present model.
+        self.cellElementSets = {}  #: The collection of CellElementSets in the present model.
 
         super().__init__(dimension)
 
     def _populateNodeFieldVariablesFromCells(
         self,
     ):
-        """Creates FieldVariables on GridNodes depending on the all
+        """Creates FieldVariables on Nodes depending on the all
         MaterialPointCells .
         """
         for cell in self.cells.values():
             for node, nodeFields in zip(cell.nodes, cell.fields):
+                for field in nodeFields:
+                    if field not in node.fields:
+                        node.fields[field] = FieldVariable(node, field)
+
+    def _populateNodeFieldVariablesFromCellElements(
+        self,
+    ):
+        """Creates FieldVariables on Nodes depending on the all
+        MaterialPointCells .
+        """
+        for cellElement in self.cellElements.values():
+            for node, nodeFields in zip(cellElement.nodes, cellElement.fields):
                 for field in nodeFields:
                     if field not in node.fields:
                         node.fields[field] = FieldVariable(node, field)
@@ -81,6 +95,7 @@ class MPMModel(FEModel):
 
         journal.message("Activating fields on Nodes from Cells", self.identification)
         self._populateNodeFieldVariablesFromCells()
+        self._populateNodeFieldVariablesFromCellElements()
 
         return super()._prepareVariablesAndFields(journal)
 
@@ -116,6 +131,7 @@ class MPMModel(FEModel):
         self.elementSets["all"] = ElementSet("all", self.elements.values())
         self.materialPointSets["all"] = MaterialPointSet("all", self.materialPoints.values())
         self.cellSets["all"] = CellSet("all", self.cells.values())
+        # self.cellElementSets["all"] = CellElementSet("all", self.cellElements.values())
 
         self._prepareMaterialPoints(journal)
 
@@ -186,8 +202,10 @@ class MPMModel(FEModel):
         prettytable.add_row(("scalar vars.", len(self.scalarVariables)))
         prettytable.add_row(("material points", len(self.materialPoints)))
         prettytable.add_row(("cells", len(self.cells)))
+        prettytable.add_row(("cell elements", len(self.cellElements)))
         prettytable.add_row(("material point sets", list(self.materialPointSets.keys())))
         prettytable.add_row(("cell sets", list(self.cellSets.keys())))
+        prettytable.add_row(("cell element sets", list(self.cellElementSets.keys())))
 
         prettytable.min_width["model property"] = 80
         prettytable.align = "l"

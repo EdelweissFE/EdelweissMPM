@@ -149,7 +149,7 @@ def run_sim():
                 for c in activeCells:
                     print(
                         "cell {:} hosts material points {:}".format(
-                            c.cellNumber, [mp.label for mp in c.assignedMaterialPoints]
+                            c.cellNumber, [mp.number for mp in c.assignedMaterialPoints]
                         )
                     )
 
@@ -163,12 +163,18 @@ def run_sim():
                 elements = []
                 constraints = []
 
-                activeNodeSets = [
-                    NodeSet(nodeSet.name, activeNodes.intersection(nodeSet)) for nodeSet in mpmModel.nodeSets.values()
-                ]
+                reducedNodeSets = {
+                    nodeSet: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
+                    for nodeSet in mpmModel.nodeSets.values()
+                }
 
                 dofManager = MPMDofManager(
-                    activeNodeFields.values(), scalarVariables, elements, constraints, activeNodeSets, activeCells
+                    activeNodeFields.values(),
+                    scalarVariables,
+                    elements,
+                    constraints,
+                    reducedNodeSets.values(),
+                    activeCells,
                 )
 
                 dUActiveCells = dofManager.constructDofVector()
@@ -178,13 +184,19 @@ def run_sim():
             activeNodeFields["displacement"]["dU"][:] = shift
             dofManager.writeNodeFieldToDofVector(dUActiveCells, activeNodeFields["displacement"], "dU")
 
-            idcsTop = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_top"]
+            idcsTop = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"][
+                reducedNodeSets[mpmModel.nodeSets["rectangular_grid_top"]]
+            ]
             dUActiveCells[idcsTop[1::2]] = 0.0
 
-            idcsBottom = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_bottom"]
+            idcsBottom = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"][
+                reducedNodeSets[mpmModel.nodeSets["rectangular_grid_bottom"]]
+            ]
             dUActiveCells[idcsBottom[1::2]] = 0.0
 
-            idcsRight = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"]["rectangular_grid_right"]
+            idcsRight = dofManager.idcsOfFieldsOnNodeSetsInDofVector["displacement"][
+                reducedNodeSets[mpmModel.nodeSets["rectangular_grid_right"]]
+            ]
             dUActiveCells[idcsRight] = 0.0
 
             dofManager.writeDofVectorToNodeField(dUActiveCells, activeNodeFields["displacement"], "dU")
@@ -209,16 +221,13 @@ def run_sim():
 
             journal.printSeperationLine()
 
-    except Exception as e:
-        raise
-
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "Dirichlet Test")
 
         return mpmModel
 
@@ -232,11 +241,7 @@ def change_test_dir(request, monkeypatch):
 
 
 def test_sim():
-    try:
-        mpmModel = run_sim()
-    except ValueError as e:
-        pytest.skip(str(e))
-        return
+    mpmModel = run_sim()
 
     res = mpmModel.nodeFields["displacement"]["dU"]
 

@@ -115,7 +115,7 @@ def run_sim():
                 for c in activeCells:
                     print(
                         "cell {:} hosts material points {:}".format(
-                            c.cellNumber, [mp.label for mp in c.assignedMaterialPoints]
+                            c.cellNumber, [mp.number for mp in c.assignedMaterialPoints]
                         )
                     )
 
@@ -160,6 +160,7 @@ def run_sim():
             journal.printSeperationLine()
 
     except Exception as e:
+        print(str(e))
         raise
 
     finally:

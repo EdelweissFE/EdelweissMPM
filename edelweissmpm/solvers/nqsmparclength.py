@@ -151,7 +151,9 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         dirichlets: list,
         bodyLoads: list,
         distributedLoads: list,
-        activeNodeSets: list,
+        reducedNodeSets: list,
+        elements: list,
+        Un: DofVector,
         activeCells: list,
         materialPoints: list,
         constraints: list,
@@ -211,7 +213,9 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
                 dirichlets,
                 bodyLoads,
                 distributedLoads,
-                activeNodeSets,
+                reducedNodeSets,
+                elements,
+                Un,
                 activeCells,
                 materialPoints,
                 constraints,
@@ -252,9 +256,13 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
 
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
+            self._interpolateFieldsToMaterialPoints(elements, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._computeCells(
                 activeCells, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            )
+            self._computeElements(
+                elements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
 
@@ -283,12 +291,16 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             K_VIJ[:] += K_VIJ_0
             K_VIJ[:] += (Lambda + dLambda) * K_VIJ_f
 
-            Rhs_f = self._applyDirichlet(referenceTimeStep, Rhs_f, dirichlets, activeNodeSets, theDofManager)
+            Rhs_f = self._applyDirichlet(referenceTimeStep, Rhs_f, dirichlets, reducedNodeSets, theDofManager)
             if iterationCounter == 0 and dirichlets:
-                Rhs_0 = self._applyDirichlet(timeStep, Rhs_0, dirichlets, activeNodeSets, theDofManager)
+                Rhs_0 = self._applyDirichlet(timeStep, Rhs_0, dirichlets, reducedNodeSets, theDofManager)
             else:
                 for dirichlet in dirichlets:
-                    Rhs_0[self._findDirichletIndices(theDofManager, dirichlet)] = 0.0
+                    Rhs_0[
+                        self._findDirichletIndices(
+                            theDofManager, dirichlet, reducedNodeSet=reducedNodeSets[dirichlet.nSet]
+                        )
+                    ] = 0.0
 
                 incrementResidualHistory = self._computeResiduals(
                     Rhs_0, ddU, dU, F, incrementResidualHistory, theDofManager
@@ -308,7 +320,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
                     raise ReachedMaxIterations("Reached max. iterations in current increment, cutting back")
 
             K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
-            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager)
+            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
 
             # solve 2 eq. systems at once:
             ddU_ = self._linearSolve(K_CSR, Rhs_, linearSolver)
