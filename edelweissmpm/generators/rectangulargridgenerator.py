@@ -128,7 +128,8 @@ def generateModelData(model, journal, **kwargs):
     l = float(kwargs.get("l", 1.0))
     nX = int(kwargs.get("nX", 10))
     nY = int(kwargs.get("nY", 10))
-    firstNodeNumber = int(kwargs.get("cellNumberStart", 1))
+    firstCellNumber = int(kwargs.get("firstCellNumber", 1))
+    firstNodeNumber = int(kwargs.get("firstNodeNumber", 1))
 
     if "cellProvider" in kwargs:
         cellClass = kwargs["cellProvider"]
@@ -172,7 +173,7 @@ def generateModelData(model, journal, **kwargs):
 
     nG = np.asarray(nodes).reshape(nNodesX, nNodesY)
 
-    currentCellNumber = 1
+    currentCellNumber = firstCellNumber
 
     cells = []
     for x in range(nX):

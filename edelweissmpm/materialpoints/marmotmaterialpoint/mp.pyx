@@ -40,40 +40,13 @@ from libc.stdlib cimport malloc, free
 cdef class MarmotMaterialPointWrapper:
     # cdef classes cannot subclass. Hence we do not subclass from the BaseMaterialPoint,
     # but still we follow the interface for compatiblity.
-    
-    def __init__(self, 
-                 str materialPointType, 
-                 int materialPointNumber, 
-                 np.ndarray vertices, 
-                 double volume
-                 ):
-        """This MaterialPoint serves as a wrapper for MarmotMaterialPoints.
-
-        For the documentation of MarmotMaterialPoints, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
-
-        Parameters
-        ----------
-        materialPointType 
-            The MarmotMaterialPoint which should be represented.
-        materialPointNumber
-            The unique number of the MaterialPoint.
-        """
-            
-        self._number                 = materialPointNumber
-        self._materialPointType     = materialPointType
-        self._ensightType           = self._marmotMaterialPoint.getMaterialPointShape().decode('utf-8')
-        self._nVertices             = self._marmotMaterialPoint.getNumberOfVertices()
-        self._nDim                  = self._marmotMaterialPoint.getDimension()
-        self._hasMaterial           = False
-        self._assignedCells         = list()
-
-        self._centerCoordinates = np.ndarray(self._nDim)
-        self._centerCoordinatesView = self._centerCoordinates
 
     def __cinit__(self, materialPointType, 
                   int materialPointNumber, 
                   np.ndarray vertexCoordinates, 
-                  double volume
+                  double volume,
+                  str materialName, 
+                  np.ndarray materialProperties
                   ):
         """This C-level method is responsible for actually creating the MarmotMaterialPoint.
 
@@ -97,6 +70,18 @@ cdef class MarmotMaterialPointWrapper:
                                                                                        )
         except IndexError:
             raise NotImplementedError("Failed to create instance of MarmotMaterialPoint {:}.".format(materialPointType))
+
+        self._number                = materialPointNumber
+        self._materialPointType     = materialPointType
+        self._ensightType           = self._marmotMaterialPoint.getMaterialPointShape().decode('utf-8')
+        self._nVertices             = self._marmotMaterialPoint.getNumberOfVertices()
+        self._nDim                  = self._marmotMaterialPoint.getDimension()
+        self._assignedCells         = list()
+
+        self._centerCoordinates = np.ndarray(self._nDim)
+        self._centerCoordinatesView = self._centerCoordinates
+
+        self._assignMaterial(materialName, materialProperties)
 
 
     @property
@@ -140,9 +125,6 @@ cdef class MarmotMaterialPointWrapper:
         """Get the array of a result, possibly as a persistent view which is continiously
         updated by the underlying MarmotMaterialPoint."""
 
-        if not self._hasMaterial:
-            raise Exception("MaterialPoint {:} has no material assigned!".format(self._materialPointNumber))
-
         cdef string result_ =  result.encode('UTF-8')
         return np.array(  self.getStateView(result_ ), copy= not getPersistentView)
             
@@ -177,7 +159,7 @@ cdef class MarmotMaterialPointWrapper:
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         pass
 
-    def assignMaterial(self, materialName: str, materialProperties: np.ndarray):
+    def _assignMaterial(self, materialName: str, materialProperties: np.ndarray):
         """Assign a material and material properties to the underlying MarmotElement.
         Furthermore, create two sets of state vars:
 
@@ -203,8 +185,6 @@ cdef class MarmotMaterialPointWrapper:
         self._stateVarsTemp =        np.zeros(self._nStateVars)
         
         self._marmotMaterialPoint.assignStateVars(&self._stateVarsTemp[0], self._nStateVars)
-
-        self._hasMaterial = True
     
     def __dealloc__(self):
         del self._marmotMaterialPoint

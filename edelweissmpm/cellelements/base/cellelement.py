@@ -32,7 +32,7 @@ the abstract base class :class:`~CellBase`.
 from abc import ABC, abstractmethod
 import numpy as np
 from edelweissfe.points.node import Node
-from edelweissfe.cells.base.cell import CellBase
+from edelweissmpm.cells.base.cell import CellBase
 
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 
@@ -65,8 +65,9 @@ class CellElementBase(CellBase):
     """
 
     @abstractmethod
-    def __init__(self, cellElType: str, cellElNumber: int, gridnodes: list[Node]):
-
+    def __init__(
+        self, cellElType: str, cellElNumber: int, gridnodes: list[Node], quadratureType: str, quadratureOrder: int
+    ):
         pass
 
     @property

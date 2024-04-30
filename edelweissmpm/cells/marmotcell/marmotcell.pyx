@@ -191,6 +191,3 @@ cdef class MarmotCellWrapper:
         self._marmotCell.getInterpolationVector(&Nview_[0], &coords[0])
         return N
     
-    def __dealloc__(self):
-        if type(self == MarmotCellWrapper):
-            del self._marmotCell

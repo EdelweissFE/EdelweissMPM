@@ -30,6 +30,7 @@ from edelweissfe.journal.journal import Journal
 from edelweissfe.variables.fieldvariable import FieldVariable
 from edelweissmpm.sets.materialpointset import MaterialPointSet
 from edelweissmpm.sets.cellset import CellSet
+from edelweissmpm.sets.cellelementset import CellElementSet
 from edelweissfe.sets.elementset import ElementSet
 from edelweissfe.sets.nodeset import NodeSet
 from edelweissmpm.fields.nodefield import MPMNodeField
@@ -131,7 +132,7 @@ class MPMModel(FEModel):
         self.elementSets["all"] = ElementSet("all", self.elements.values())
         self.materialPointSets["all"] = MaterialPointSet("all", self.materialPoints.values())
         self.cellSets["all"] = CellSet("all", self.cells.values())
-        # self.cellElementSets["all"] = CellElementSet("all", self.cellElements.values())
+        self.cellElementSets["all"] = CellElementSet("all", self.cellElements.values())
 
         self._prepareMaterialPoints(journal)
 
@@ -177,6 +178,7 @@ class MPMModel(FEModel):
         for field in phenomena.keys():
             fieldSize = getFieldSize(field, domainSize)
 
+            # TODO: super ugly!
             theNodeField = MPMNodeField(field, getFieldSize(field, domainSize), nodes)
 
             if theNodeField.nodes:

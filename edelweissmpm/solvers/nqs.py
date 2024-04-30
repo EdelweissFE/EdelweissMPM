@@ -209,30 +209,33 @@ class NonlinearQuasistaticSolver:
                     for man in mpmManagers:
                         activeCells |= man.getActiveCells()
 
-                    # activeCells |= [mpmManager.getActiveCells() for mpmManager in mpmManagers]
-
                     self.journal.message(
-                        "active cells have changed, (re)initializing equation system & clearing cache",
+                        "active domain has changed, (re)initializing equation system & clearing cache",
                         self.identification,
                         level=1,
                     )
 
-                    activeNodes, activeNodeFields, activeNodeSets = self._assembleActiveDomain(activeCells, model)
+                    activeNodes, activeNodeFields, reducedNodeSets = self._assembleActiveDomain(activeCells, model)
 
                     theDofManager = self._createDofManager(
                         activeNodeFields.values(),
                         scalarVariables,
                         elements,
                         constraints,
-                        activeNodeSets.values(),
+                        reducedNodeSets.values(),
                         activeCells,
+                        model.cellElements.values(),
                     )
 
                     U = theDofManager.constructDofVector()
-                    if model.elements:
+                    if model.cellElements:
                         for field in model.nodeFields.values():
                             theDofManager.writeNodeFieldToDofVector(
-                                U, field, "U", model.elementSets["all"].extractNodeSet()
+                                U,
+                                field,
+                                "U",
+                                # TODO: This is a hack to access the nodes with persistent data
+                                reducedNodeSets[model.nodeSets["fem_all"]],
                             )
 
                     self.journal.message(
@@ -262,10 +265,11 @@ class NonlinearQuasistaticSolver:
                         dirichlets,
                         bodyLoads,
                         distributedLoads,
-                        activeNodeSets,
+                        reducedNodeSets,
                         elements,
                         U,
                         activeCells,
+                        model.cellElements.values(),
                         materialPoints,
                         constraints,
                         theDofManager,
@@ -327,6 +331,7 @@ class NonlinearQuasistaticSolver:
         elements: list,
         Un: DofVector,
         activeCells: list,
+        cellElements: list,
         materialPoints: list,
         constraints: list,
         theDofManager: DofManager,
@@ -354,6 +359,8 @@ class NonlinearQuasistaticSolver:
             The old solution vector.
         activeCells
             The list of active cells.
+        cellElements
+            The list of cell elements.
         materialPoints
             The list of material points.
         constraints
@@ -401,7 +408,7 @@ class NonlinearQuasistaticSolver:
 
             self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU)
-            self._interpolateFieldsToMaterialPoints(elements, dU)
+            self._interpolateFieldsToMaterialPoints(cellElements, dU)
             self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
 
             self._computeCells(
@@ -410,6 +417,10 @@ class NonlinearQuasistaticSolver:
 
             self._computeElements(
                 elements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            )
+
+            self._computeCellElements(
+                cellElements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
 
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
@@ -959,8 +970,10 @@ class NonlinearQuasistaticSolver:
                 - the list of reduced NodeSets on the active Nodes.
         """
 
-        activeNodes = set(n for cell in activeCells for n in cell.nodes) | set(
-            n for element in model.elements.values() for n in element.nodes
+        activeNodes = (
+            set(n for cell in activeCells for n in cell.nodes)
+            | set(n for element in model.elements.values() for n in element.nodes)
+            | set(n for element in model.cellElements.values() for n in element.nodes)
         )
         activeNodes = NodeSet("activeNodes", activeNodes)
 
@@ -1066,6 +1079,53 @@ class NonlinearQuasistaticSolver:
 
     @performancetiming.timeit("computation elements")
     def _computeElements(
+        self,
+        elements: list,
+        dU: DofVector,
+        Un: DofVector,
+        P: DofVector,
+        F: DofVector,
+        K_VIJ: VIJSystemMatrix,
+        time: float,
+        dT: float,
+        theDofManager: DofManager,
+    ):
+        """Evaluate all cells.
+
+        Parameters
+        ----------
+        elements
+            The list of elements to be evaluated.
+        dU
+            The current global solution increment vector.
+        Un
+            The previous global solution vector.
+        P
+            The current global flux vector.
+        F
+            The accumulated nodal fluxes vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        time
+            The current time.
+        dT
+            The increment of time.
+        theDofManager
+            The DofManager instance.
+        """
+
+        for el in elements:
+            dUEl = dU[el]
+            UEln = Un[el]
+            UElnp = UEln + dUEl
+            PEl = np.zeros(el.nDof)
+            KEl = K_VIJ[el]
+            el.computeMaterialPointKernels(UElnp, PEl, KEl, time, dT)
+            P[el] += PEl
+            F[el] += abs(PEl)
+
+    @performancetiming.timeit("computation elements")
+    def _computeCellElements(
         self,
         elements: list,
         dU: DofVector,

@@ -33,7 +33,9 @@ from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
 from edelweissmpm.generators import rectangularcellelementgridgenerator
-from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
+from edelweissmpm.generators import rectangulargridgenerator
+from edelweissmpm.generators import rectangularbsplinegridgenerator
+from edelweissmpm.generators import rectangularmpgenerator
 from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.numerics.dofmanager import MPMDofManager
@@ -46,6 +48,7 @@ from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissmpm.stepactions.dirichlet import Dirichlet
 from edelweissmpm.stepactions.bodyload import BodyLoad
+from edelweissmpm.constraints.penaltyconstrainmp2node import PenaltyConstrainMP2Node
 from edelweissfe.utils.exceptions import StepFailed
 import edelweissfe.utils.performancetiming as performancetiming
 
@@ -73,37 +76,76 @@ def run_sim():
     rectangularcellelementgridgenerator.generateModelData(
         mpmModel,
         journal,
+        name="fem",
         x0=0.0,
         l=100.0,
         y0=0.0,
-        h=100.0,
-        nX=12,
-        nY=12,
+        h=50.0,
+        nX=10,
+        nY=10,
         cellelementProvider="LagrangianMarmotCellElement",
         cellelementType="GradientEnhancedMicropolar/Quad4",
-        quadratureType="QGAUSS",
+        quadratureType="QGAUSS_LOBATTO",
         quadratureOrder=2,
         thickness=1.0,
         mpClass=MarmotMaterialPointWrapper,
         mpType="GradientEnhancedMicropolar/PlaneStrain",
         material=gmNeoHookean,
+        firstCellElementNumber=1,
+        firstNodeNumber=1,
     )
 
-    # for mp in mpmModel.materialPoints.values():
-    #     mp.assignMaterial(material, materialProperties)
+    bspline_order = 2
+    rectangularbsplinegridgenerator.generateModelData(
+        mpmModel,
+        journal,
+        name="mpm",
+        x0=90.0,
+        l=110.0,
+        y0=-1.0,
+        h=200.0,
+        nX=10,
+        nY=20,
+        cellProvider="BSplineMarmotCell",
+        cellType="GradientEnhancedMicropolar/BSpline/{:}".format(bspline_order),
+        order=bspline_order,
+        firstCellNumber=1,
+        firstNodeNumber=1000,
+    )
+
+    rectangularmpgenerator.generateModelData(
+        mpmModel,
+        journal,
+        name="mpmPoints",
+        x0=101.00,
+        l=98.0,
+        y0=0.001,
+        h=50,
+        nX=24,
+        nY=11,
+        mpProvider="marmot",
+        mpType="GradientEnhancedMicropolar/PlaneStrain",
+        material=gmNeoHookean,
+        firstMPNumber=1000,
+    )
 
     mpmModel.prepareYourself(journal)
+
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
     mpmModel.nodeFields["displacement"].createFieldValueEntry("U")
 
-    allCellElements = mpmModel.cellElementSets["all"]
+    cellElements = mpmModel.cellElementSets["all"]
+    mpmCells = mpmModel.cellSets["all"]
+    cellMPs = mpmModel.materialPointSets["mpmPoints_all"]
     allMPs = mpmModel.materialPointSets["all"]
+
+    mpmManager = SmartMaterialPointManager(mpmCells, cellMPs, dimension, options={"KDTreeLevels": 10})
 
     journal.printSeperationLine()
 
     fieldOutputController = MPMFieldOutputController(mpmModel, journal)
 
-    nodeFieldOnAllCellElements = mpmModel.nodeFields["displacement"].subset(allCellElements)
+    nodeFieldOnAllCellElements = mpmModel.nodeFields["displacement"].subset(cellElements)
 
     fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCellElements, "dU")
     fieldOutputController.addPerNodeFieldOutput("U", nodeFieldOnAllCellElements, "U")
@@ -121,7 +163,9 @@ def run_sim():
 
     fieldOutputController.initializeJob()
 
-    ensightOutput = EnsightOutputManager("ensight", mpmModel, fieldOutputController, journal, None)
+    ensightOutput = EnsightOutputManager(
+        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
+    )
 
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["U"], create="perNode")
@@ -137,22 +181,39 @@ def run_sim():
     ]
 
     dirichletLeft = Dirichlet(
-        "left",
-        mpmModel.nodeSets["rectangular_grid_left"],
+        "left_fem",
+        mpmModel.nodeSets["fem_left"],
+        "displacement",
+        {0: 00.0, 1: 200.0},
+        mpmModel,
+        journal,
+    )
+
+    dirichletRightMPM = Dirichlet(
+        "right_mpm",
+        mpmModel.nodeSets["mpm_right"],
         "displacement",
         {0: 0.0, 1: 0.0},
         mpmModel,
         journal,
     )
 
-    dirichletRight = Dirichlet(
-        "right",
-        mpmModel.nodeSets["rectangular_grid_right"],
-        "displacement",
-        {0: 50.0, 1: -50.0},
-        mpmModel,
-        journal,
-    )
+    constraints = []
+
+    vertCoords = np.array([mp.getCenterCoordinates()[1] for mp in mpmModel.materialPointSets["mpmPoints_left"]])
+    sortedMPsLeft = [mp for _, mp in sorted(zip(vertCoords, mpmModel.materialPointSets["mpmPoints_left"]))]
+
+    for masterNode, slaveMP in zip(mpmModel.nodeSets["fem_right"], sortedMPsLeft):
+        constraints.append(
+            PenaltyConstrainMP2Node(
+                "PenaltyConstrainMP2Node", mpmModel, slaveMP, masterNode, "displacement", [0, 1], 1e7
+            )
+        )
+        constraints.append(
+            PenaltyConstrainMP2Node(
+                "PenaltyConstrainMP2Node", mpmModel, slaveMP, masterNode, "micro rotation", [0], 1e7
+            )
+        )
 
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
 
@@ -160,9 +221,10 @@ def run_sim():
 
     iterationOptions = dict()
 
-    iterationOptions["max. iterations"] = 5
-    iterationOptions["critical iterations"] = 3
+    iterationOptions["max. iterations"] = 15
+    iterationOptions["critical iterations"] = 5
     iterationOptions["allowed residual growths"] = 3
+    iterationOptions["default absolute field correction tolerance"] = 1e-10
 
     linearSolver = pardisoSolve
 
@@ -170,14 +232,11 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [],
-            [
-                dirichletLeft,
-                dirichletRight,
-            ],
+            [mpmManager],
+            [dirichletLeft, dirichletRightMPM],
             [],
             [],
-            [],
+            constraints,
             mpmModel,
             fieldOutputController,
             outputManagers,

@@ -44,6 +44,7 @@ from edelweissfe.utils.math import evalModelAccessibleExpression
 from io import TextIOBase
 from edelweissmpm.sets.materialpointset import MaterialPointSet
 from edelweissmpm.sets.cellset import CellSet
+from edelweissmpm.sets.cellelementset import CellElementSet
 
 
 def createUnstructuredPartFromCellSet(cellPartName, cells: list, partID: int):
@@ -119,6 +120,7 @@ class OutputManager(EnsightOutputManager):
 
     def __init__(self, name, model, fieldOutputController, journal, plotter, **kwargs):
         self._exportCellSetParts = kwargs.get("exportCellSetParts", True)
+        self._exportCellElementSetParts = kwargs.get("exportCellElementSetParts", True)
         self._exportMPSetParts = kwargs.get("exportMPSetParts", True)
 
         self.mpSetToEnsightPart = dict()
@@ -138,6 +140,14 @@ class OutputManager(EnsightOutputManager):
                 feModelParts.append(self.cellSetToEnsightPart[setName])
                 partCounter += 1
 
+        if self._exportCellElementSetParts:
+            for setName, cellSet in self.model.cellElementSets.items():
+                self.cellSetToEnsightPart[setName] = createUnstructuredPartFromCellSet(
+                    "CELLELEMENTSET_{:}".format(setName), cellSet, partCounter
+                )
+                feModelParts.append(self.cellSetToEnsightPart[setName])
+                partCounter += 1
+
         if self._exportMPSetParts:
             for setName, mpSet in self.model.materialPointSets.items():
                 self.mpSetToEnsightPart[setName] = createUnstructuredPartFromMaterialPointSet(
@@ -153,6 +163,8 @@ class OutputManager(EnsightOutputManager):
             return self.mpSetToEnsightPart[kwargs.pop("mpSet")]
         if "cellSet" in kwargs:
             return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
+        if "cellElementSet" in kwargs:
+            return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
 
         theSetName = fieldOutput.associatedSet.name
 
@@ -160,6 +172,9 @@ class OutputManager(EnsightOutputManager):
             return self.mpSetToEnsightPart[theSetName]
 
         if isinstance(fieldOutput.associatedSet, CellSet):
+            return self.cellSetToEnsightPart[theSetName]
+
+        if isinstance(fieldOutput.associatedSet, CellElementSet):
             return self.cellSetToEnsightPart[theSetName]
 
         return super()._getTargetPartForFieldOutput(fieldOutput, **kwargs)

@@ -54,7 +54,7 @@ cdef class MarmotCellElementWrapper(MarmotCellWrapper):
     nodes
         The list of nodes for this CellElement.
         """
-    def __init__(self, cellType, cellNumber, nodes):
+    def __init__(self, cellType, cellNumber, nodes ):
         super().__init__(cellType, cellNumber, nodes)
 
     @property

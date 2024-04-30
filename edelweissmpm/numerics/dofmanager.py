@@ -41,6 +41,7 @@ class MPMDofManager(DofManager):
         constraints: list,
         nodeSets: list,
         cells: list,
+        cellElements: list,
         initializeVIJPattern=True,
     ):
 
@@ -53,15 +54,30 @@ class MPMDofManager(DofManager):
             self.largestNumberOfCellNDof,
         ) = self._gatherCellsInformation(cells)
 
+        (
+            self.accumulatedCellElementNDof,
+            self._accumulatedCellElementVIJSize,
+            self._nAccumulatedNodalFluxesFieldwiseFromCellElements,
+            self.largestNumberOfCellElementNDof,
+        ) = self._gatherCellsInformation(cellElements)
+
         self.idcsOfCellsInDofVector = self._locateCellsInDofVector(cells)
+        self.idcsOfCellElementsInDofVector = self._locateCellsInDofVector(cellElements)
 
         for field in self.nAccumulatedNodalFluxesFieldwise.keys():
             self.nAccumulatedNodalFluxesFieldwise[field] += self._nAccumulatedNodalFluxesFieldwiseFromCells[field]
+            self.nAccumulatedNodalFluxesFieldwise[field] += self._nAccumulatedNodalFluxesFieldwiseFromCellElements[
+                field
+            ]
 
         self.idcsOfHigherOrderEntitiesInDofVector |= self.idcsOfCellsInDofVector
+        self.idcsOfHigherOrderEntitiesInDofVector |= self.idcsOfCellElementsInDofVector
 
         self._sizeVIJ = (
-            self._accumulatedElementVIJSize + self._accumulatedConstraintVIJSize + self._accumulatedCellVIJSize
+            self._accumulatedElementVIJSize
+            + self._accumulatedConstraintVIJSize
+            + self._accumulatedCellVIJSize
+            + self._accumulatedCellElementVIJSize
         )
         if initializeVIJPattern:
             (self.I, self.J, self.idcsOfHigherOrderEntitiesInVIJ) = self._initializeVIJPattern()

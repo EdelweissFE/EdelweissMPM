@@ -84,3 +84,7 @@ cdef class BSplineMarmotCellWrapper(MarmotCellWrapper):
 
         except IndexError:
             raise NotImplementedError("Marmot cell {:} not found in library.".format(cellType))
+
+    def __dealloc__(self):
+        if isinstance(self, BSplineMarmotCellWrapper):
+            del self._marmotCell

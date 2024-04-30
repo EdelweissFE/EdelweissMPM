@@ -1985,7 +1985,6 @@ struct __pyx_obj_12edelweissmpm_14materialpoints_19marmotmaterialpoint_2mp_Marmo
   PyObject *_materialPointType;
   PyObject *_ensightType;
   int _nVertices;
-  int _hasMaterial;
   __Pyx_memviewslice _stateVars;
   __Pyx_memviewslice _stateVarsTemp;
   int _nStateVars;
@@ -1999,7 +1998,7 @@ struct __pyx_obj_12edelweissmpm_14materialpoints_19marmotmaterialpoint_2mp_Marmo
 };
 
 
-/* "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pxd":60
+/* "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pxd":62
  * 
  * 
  * cdef class MarmotCellElementWrapper(MarmotCellWrapper):             # <<<<<<<<<<<<<<
@@ -19556,7 +19555,7 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
 /* "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pyx":57
  *         The list of nodes for this CellElement.
  *         """
- *     def __init__(self, cellType, cellNumber, nodes):             # <<<<<<<<<<<<<<
+ *     def __init__(self, cellType, cellNumber, nodes ):             # <<<<<<<<<<<<<<
  *         super().__init__(cellType, cellNumber, nodes)
  * 
  */
@@ -19684,7 +19683,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_17marmotce
 
   /* "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pyx":58
  *         """
- *     def __init__(self, cellType, cellNumber, nodes):
+ *     def __init__(self, cellType, cellNumber, nodes ):
  *         super().__init__(cellType, cellNumber, nodes)             # <<<<<<<<<<<<<<
  * 
  *     @property
@@ -19730,7 +19729,7 @@ static int __pyx_pf_12edelweissmpm_12cellelements_17marmotcellelement_17marmotce
   /* "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pyx":57
  *         The list of nodes for this CellElement.
  *         """
- *     def __init__(self, cellType, cellNumber, nodes):             # <<<<<<<<<<<<<<
+ *     def __init__(self, cellType, cellNumber, nodes ):             # <<<<<<<<<<<<<<
  *         super().__init__(cellType, cellNumber, nodes)
  * 
  */
@@ -21858,7 +21857,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
 }
 /* #### Code section: cached_builtins ### */
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 43, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 45, __pyx_L1_error)
   __pyx_builtin_super = __Pyx_GetBuiltinName(__pyx_n_s_super); if (!__pyx_builtin_super) __PYX_ERR(1, 58, __pyx_L1_error)
   __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(2, 2, __pyx_L1_error)
   __pyx_builtin___import__ = __Pyx_GetBuiltinName(__pyx_n_s_import); if (!__pyx_builtin___import__) __PYX_ERR(2, 100, __pyx_L1_error)

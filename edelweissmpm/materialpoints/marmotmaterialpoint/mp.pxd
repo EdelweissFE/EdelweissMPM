@@ -98,7 +98,6 @@ cdef class MarmotMaterialPointWrapper:
     cdef str _ensightType
     cdef int _nVertices
     
-    cdef int _hasMaterial
     cdef public double[::1] _stateVars
     cdef public double[::1] _stateVarsTemp  
     cdef int _nStateVars
