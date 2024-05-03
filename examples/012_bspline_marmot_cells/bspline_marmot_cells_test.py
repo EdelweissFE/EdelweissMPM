@@ -77,6 +77,10 @@ def run_sim(bspline_order):
         cellType="GradientEnhancedMicropolar/BSpline/{:}".format(bspline_order),
         order=bspline_order,
     )
+    gmDamagedShearNeoHooke = {
+        "material": "GMDamagedShearNeoHooke",
+        "properties": np.array([300.0, 0.3, 1, 2, 4, 1.4999]),
+    }
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
@@ -88,12 +92,8 @@ def run_sim(bspline_order):
         nY=30,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
+        material=gmDamagedShearNeoHooke,
     )
-
-    material = "gmdamagedshearneohooke"
-    materialProperties = np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
@@ -155,7 +155,7 @@ def run_sim(bspline_order):
 
     weakDirichlets = [
         PenaltyWeakDirichlet(
-            "weak dirichlet {:}".format(mp.number),
+            "weak dirichlet",
             mpmModel,
             mpmModel.materialPointSets["planeRect_right"],
             "displacement",

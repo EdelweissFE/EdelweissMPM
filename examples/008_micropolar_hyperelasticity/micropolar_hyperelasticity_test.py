@@ -70,6 +70,12 @@ def run_sim():
         cellProvider="LagrangianMarmotCell",
         cellType="GradientEnhancedMicropolar/Quad4",
     )
+
+    gmDamagedShearNeoHooke = {
+        "material": "GMDamagedShearNeoHooke",
+        "properties": np.array([30000.0, 0.3, 1, 1, 2, 1.4999]),
+    }
+
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
@@ -81,12 +87,8 @@ def run_sim():
         nY=40,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
+        material=gmDamagedShearNeoHooke,
     )
-
-    material = "GMDamagedShearNeoHooke"
-    materialProperties = np.array([30000.0, 0.3, 1, 1, 2, 1.4999])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")

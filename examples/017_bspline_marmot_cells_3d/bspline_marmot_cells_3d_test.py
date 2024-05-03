@@ -83,6 +83,8 @@ def run_sim(logFile=None, order: int = 2):
         order=order,
     )
 
+    gmNeoHooke = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 0.1, 0.2, 1.4999])}
+
     boxmpgenerator.generateModelData(
         mpmModel,
         journal,
@@ -97,12 +99,8 @@ def run_sim(logFile=None, order: int = 2):
         nZ=8,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/3D",
+        material=gmNeoHooke,
     )
-
-    material = "GMDamagedShearNeoHooke"
-    materialProperties = np.array([300.0, 0.3, 1, 0.1, 0.2, 1.4999])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")

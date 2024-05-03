@@ -83,6 +83,7 @@ def run_sim():
     center = np.array([50.0 + 1e-3, 1e-3, 1e-3])
     cylinderHeight = 100.0
     cylinderRadius = 50.0
+    gmNeoHookean = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])}
 
     cylindermpgenerator.generateModelData(
         mpmModel,
@@ -96,12 +97,8 @@ def run_sim():
         H=cylinderHeight,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/3D",
+        material=gmNeoHookean,
     )
-
-    material = "GMDAMAGEDSHEARNEOHOOKE"
-    materialProperties = np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")

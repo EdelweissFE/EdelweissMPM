@@ -52,6 +52,8 @@ def run_sim():
 
     mpmModel = MPMModel(dimension)
 
+    linearElastic = {"material": "LINEARELASTIC", "properties": np.array([30000.0, 0.3])}
+
     rectangulargridgenerator.generateModelData(
         mpmModel,
         journal,
@@ -75,12 +77,8 @@ def run_sim():
         nY=3,
         mpProvider="marmot",
         mpType="Displacement/SmallStrain/PlaneStrain",
+        material=linearElastic,
     )
-
-    material = "LINEARELASTIC"
-    materialProperties = np.array([30000.0, 0.3])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
@@ -162,6 +160,7 @@ def run_sim():
                 scalarVariables = []
                 elements = []
                 constraints = []
+                cellElements = []
 
                 reducedNodeSets = {
                     nodeSet: NodeSet(nodeSet.name, activeNodes.intersection(nodeSet))
@@ -175,6 +174,7 @@ def run_sim():
                     constraints,
                     reducedNodeSets.values(),
                     activeCells,
+                    cellElements,
                 )
 
                 dUActiveCells = dofManager.constructDofVector()
@@ -220,6 +220,8 @@ def run_sim():
             ensightOutput.finalizeIncrement()
 
             journal.printSeperationLine()
+    except Exception as e:
+        print("An exception occurred: {:}".format(e))
 
     finally:
         fieldOutputController.finalizeJob()

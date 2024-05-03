@@ -77,7 +77,6 @@ def createUnstructuredPartFromCellSet(cellPartName, cells: list, partID: int):
                 # the node was just inserted, so increase the counter of inserted nodes
                 nodeCounter += 1
         cellDict[cellShape][cell.cellNumber] = cellNodeIndices
-
     return EnsightUnstructuredPart(cellPartName, partID, partNodes.keys(), cellDict)
 
 
@@ -125,6 +124,7 @@ class OutputManager(EnsightOutputManager):
 
         self.mpSetToEnsightPart = dict()
         self.cellSetToEnsightPart = dict()
+        self.cellElementSetToEnsightPart = dict()
         return super().__init__(name, model, fieldOutputController, journal, plotter)
 
     def _createGeometryParts(self, firstPartID: int):
@@ -142,10 +142,10 @@ class OutputManager(EnsightOutputManager):
 
         if self._exportCellElementSetParts:
             for setName, cellSet in self.model.cellElementSets.items():
-                self.cellSetToEnsightPart[setName] = createUnstructuredPartFromCellSet(
+                self.cellElementSetToEnsightPart[setName] = createUnstructuredPartFromCellSet(
                     "CELLELEMENTSET_{:}".format(setName), cellSet, partCounter
                 )
-                feModelParts.append(self.cellSetToEnsightPart[setName])
+                feModelParts.append(self.cellElementSetToEnsightPart[setName])
                 partCounter += 1
 
         if self._exportMPSetParts:
@@ -164,7 +164,7 @@ class OutputManager(EnsightOutputManager):
         if "cellSet" in kwargs:
             return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
         if "cellElementSet" in kwargs:
-            return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
+            return self.cellElementSetToEnsightPart[kwargs.pop("cellSet")]
 
         theSetName = fieldOutput.associatedSet.name
 
@@ -175,6 +175,6 @@ class OutputManager(EnsightOutputManager):
             return self.cellSetToEnsightPart[theSetName]
 
         if isinstance(fieldOutput.associatedSet, CellElementSet):
-            return self.cellSetToEnsightPart[theSetName]
+            return self.cellElementSetToEnsightPart[theSetName]
 
         return super()._getTargetPartForFieldOutput(fieldOutput, **kwargs)

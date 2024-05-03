@@ -52,7 +52,7 @@ class MaterialPointBase(ABC):
     """
 
     @abstractmethod
-    def __init__(self, formulation: str, number: int, coordinates: np.ndarray, volume: float):
+    def __init__(self, formulation: str, number: int, coordinates: np.ndarray, volume: float, material):
         pass
 
     @property

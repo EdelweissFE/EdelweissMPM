@@ -102,14 +102,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     for x in range(nX):
         for y in range(nY):
             mpCoordinates = grid[:, x, y].reshape(-1, 2)
-            mp = MPFactory(
-                mpType,
-                currentMPNumber,
-                mpCoordinates,
-                mpVolume,
-                material["material"],
-                material["materialProperties"],
-            )
+            mp = MPFactory(mpType, currentMPNumber, mpCoordinates, mpVolume, material)
             model.materialPoints[currentMPNumber] = mp
             mps.append(mp)
             currentMPNumber += 1

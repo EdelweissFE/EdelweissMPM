@@ -50,6 +50,8 @@ def run_sim():
 
     mpmModel = MPMModel(dimension)
 
+    linearElasticMaterial = {"material": "LINEARELASTIC", "properties": np.array([30000.0, 0.3])}
+
     rectangulargridgenerator.generateModelData(
         mpmModel,
         journal,
@@ -73,12 +75,8 @@ def run_sim():
         nY=3,
         mpProvider="marmot",
         mpType="Displacement/SmallStrain/PlaneStrain",
+        material=linearElasticMaterial,
     )
-
-    material = "LINEARELASTIC"
-    materialProperties = np.array([30000.0, 0.3])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
@@ -155,16 +153,12 @@ def run_sim():
 
             scalarVariables = []
             elements = []
+            cellElements = []
             constraints = []
             nodeSets = []
 
             dofManager = MPMDofManager(
-                activeNodeFields.values(),
-                scalarVariables,
-                elements,
-                constraints,
-                nodeSets,
-                activeCells,
+                activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells, cellElements
             )
 
             dofVector = dofManager.constructDofVector()

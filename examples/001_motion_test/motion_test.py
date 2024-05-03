@@ -56,7 +56,17 @@ def run_sim():
         mpmModel, journal, x0=0.0, l=200.0, y0=0.0, h=100.0, nX=20, nY=10, cellProvider="test", cellType="a dummy cell"
     )
     rectangularmpgenerator.generateModelData(
-        mpmModel, journal, x0=5.0, l=20.0, y0=40.0, h=20.0, nX=3, nY=3, mpProvider="test", mpType="a dummy mp"
+        mpmModel,
+        journal,
+        x0=5.0,
+        l=20.0,
+        y0=40.0,
+        h=20.0,
+        nX=3,
+        nY=3,
+        mpProvider="test",
+        mpType="a dummy mp",
+        material={},
     )
 
     mpmModel.prepareYourself(journal)
@@ -126,12 +136,19 @@ def run_sim():
                 activeNodeFields["displacement"].createFieldValueEntry("dU")
 
                 scalarVariables = []
+                cellElements = []
                 elements = []
                 constraints = []
                 nodeSets = []
 
                 dofManager = MPMDofManager(
-                    activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells
+                    activeNodeFields.values(),
+                    scalarVariables,
+                    elements,
+                    constraints,
+                    nodeSets,
+                    activeCells,
+                    cellElements,
                 )
 
                 dofVector = dofManager.constructDofVector()

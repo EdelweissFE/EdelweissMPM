@@ -215,28 +215,25 @@ class NonlinearQuasistaticSolver:
                         level=1,
                     )
 
-                    activeNodes, activeNodeFields, reducedNodeSets = self._assembleActiveDomain(activeCells, model)
+                    (activeNodesWithPersistentData, activeNodesWithVolatileData, reducedNodeFields, reducedNodeSets) = (
+                        self._assembleActiveDomain(activeCells, model)
+                    )
 
                     theDofManager = self._createDofManager(
-                        activeNodeFields.values(),
+                        reducedNodeFields.values(),
                         scalarVariables,
                         elements,
                         constraints,
-                        reducedNodeSets.values(),
+                        # TODO : Check how to make next line more elegant
+                        list(reducedNodeSets.values()) + [activeNodesWithPersistentData],
                         activeCells,
                         model.cellElements.values(),
                     )
 
                     U = theDofManager.constructDofVector()
-                    if model.cellElements:
+                    if len(activeNodesWithPersistentData) > 0:
                         for field in model.nodeFields.values():
-                            theDofManager.writeNodeFieldToDofVector(
-                                U,
-                                field,
-                                "U",
-                                # TODO: This is a hack to access the nodes with persistent data
-                                reducedNodeSets[model.nodeSets["fem_all"]],
-                            )
+                            theDofManager.writeNodeFieldToDofVector(U, field, "U", activeNodesWithPersistentData)
 
                     self.journal.message(
                         "resulting equation system has a size of {:}".format(theDofManager.nDof),
@@ -294,7 +291,7 @@ class NonlinearQuasistaticSolver:
                     U += dU
 
                     # TODO: Make this optional/flexibel via function arguments (?)
-                    for field in activeNodeFields.values():
+                    for field in reducedNodeFields.values():
                         theDofManager.writeDofVectorToNodeField(dU, field, "dU")
                         theDofManager.writeDofVectorToNodeField(U, field, "U")
                         theDofManager.writeDofVectorToNodeField(P, field, "P")
@@ -951,7 +948,7 @@ class NonlinearQuasistaticSolver:
         return fieldIndices.reshape((-1, dirichlet.fieldSize))[:, dirichlet.components].flatten()
 
     @performancetiming.timeit("assembly active domain")
-    def _assembleActiveDomain(self, activeCells, model: MPMModel) -> tuple[list, list, list]:
+    def _assembleActiveDomain(self, activeCells, model: MPMModel) -> tuple[NodeSet, NodeSet, list, list]:
         """Gather the Nodes, active NodeFields and NodeSets.
 
         Parameters
@@ -965,19 +962,29 @@ class NonlinearQuasistaticSolver:
         -------
         tuple
             The tuple containing:
-                - the list of active Nodes.
+                - The set of active Nodes with persistent field values (FEM).
+                - The set of active Nodes with volatile field values (MPM).
                 - the list of NodeFields on the active Nodes.
                 - the list of reduced NodeSets on the active Nodes.
         """
 
-        activeNodes = (
-            set(n for cell in activeCells for n in cell.nodes)
-            | set(n for element in model.elements.values() for n in element.nodes)
-            | set(n for element in model.cellElements.values() for n in element.nodes)
-        )
-        activeNodes = NodeSet("activeNodes", activeNodes)
+        activeNodesWithPersistentFieldValues = set(
+            n for element in model.elements.values() for n in element.nodes
+        ) | set(n for element in model.cellElements.values() for n in element.nodes)
 
-        activeNodeFields = {
+        activeNodesWithVolatileFieldValues = set(n for cell in activeCells for n in cell.nodes)
+
+        activeNodes = activeNodesWithVolatileFieldValues | activeNodesWithPersistentFieldValues
+
+        activeNodes = NodeSet("activeNodes", activeNodes)
+        activeNodesWithPersistentFieldValues = NodeSet(
+            "activeNodesWithPersistentFieldvalues", activeNodesWithPersistentFieldValues
+        )
+        activeNodesWithVolatileFieldValues = NodeSet(
+            "activeNodesWithVolatileFieldValues", activeNodesWithVolatileFieldValues
+        )
+
+        reducedNodeFields = {
             nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
             for nodeField in model.nodeFields.values()
         }
@@ -987,7 +994,12 @@ class NonlinearQuasistaticSolver:
             for nodeSet in model.nodeSets.values()
         }
 
-        return activeNodes, activeNodeFields, reducedNodeSets
+        return (
+            activeNodesWithPersistentFieldValues,
+            activeNodesWithVolatileFieldValues,
+            reducedNodeFields,
+            reducedNodeSets,
+        )
 
     @performancetiming.timeit("preparation material points")
     def _prepareMaterialPoints(self, materialPoints: list, time: float, dT: float):

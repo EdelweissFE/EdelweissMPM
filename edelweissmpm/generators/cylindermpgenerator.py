@@ -49,6 +49,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     firstMaterialPointNumber = int(kwargs.get("mpNumberStart", 1))
     mpClass = kwargs["mpProvider"]
     mpType = kwargs["mpType"]
+    material = kwargs["material"]
 
     MPFactory = getMaterialPointClass(mpClass)
 
@@ -81,7 +82,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
             for k, t_ in enumerate(t):
                 mpCoordinates = np.array([radius * np.cos(t_) + x0, radius * np.sin(t_) + y0, h + z0]).reshape((1, -1))
 
-                mp = MPFactory(mpType, currentMPNumber, mpCoordinates, mpVolume)
+                mp = MPFactory(mpType, currentMPNumber, mpCoordinates, mpVolume, material)
                 model.materialPoints[currentMPNumber] = mp
                 mps.append(mp)
                 currentMPNumber += 1

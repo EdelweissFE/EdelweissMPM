@@ -70,7 +70,7 @@ def run_sim():
 
     gmNeoHookean = {
         "material": "GMDAMAGEDSHEARNEOHOOKE",
-        "materialProperties": np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999]),
+        "properties": np.array([300.0, 0.2, 1.0, 1, 2, 1.4999]),
     }
 
     rectangularcellelementgridgenerator.generateModelData(
@@ -80,7 +80,7 @@ def run_sim():
         x0=0.0,
         l=100.0,
         y0=0.0,
-        h=50.0,
+        h=25.0,
         nX=10,
         nY=10,
         cellelementProvider="LagrangianMarmotCellElement",
@@ -100,12 +100,12 @@ def run_sim():
         mpmModel,
         journal,
         name="mpm",
-        x0=90.0,
-        l=110.0,
+        x0=0.0,
+        l=200.0,
         y0=-1.0,
         h=200.0,
-        nX=10,
-        nY=20,
+        nX=14,
+        nY=14,
         cellProvider="BSplineMarmotCell",
         cellType="GradientEnhancedMicropolar/BSpline/{:}".format(bspline_order),
         order=bspline_order,
@@ -120,8 +120,8 @@ def run_sim():
         x0=101.00,
         l=98.0,
         y0=0.001,
-        h=50,
-        nX=24,
+        h=25,
+        nX=48,
         nY=11,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
@@ -183,8 +183,8 @@ def run_sim():
     dirichletLeft = Dirichlet(
         "left_fem",
         mpmModel.nodeSets["fem_left"],
-        "displacement",
-        {0: 00.0, 1: 200.0},
+        "micro rotation",
+        {0: -1 * np.pi},
         mpmModel,
         journal,
     )
@@ -206,16 +206,16 @@ def run_sim():
     for masterNode, slaveMP in zip(mpmModel.nodeSets["fem_right"], sortedMPsLeft):
         constraints.append(
             PenaltyConstrainMP2Node(
-                "PenaltyConstrainMP2Node", mpmModel, slaveMP, masterNode, "displacement", [0, 1], 1e7
+                "PenaltyConstrainMP2Node", mpmModel, slaveMP, masterNode, "displacement", [0, 1], 1e6
             )
         )
         constraints.append(
             PenaltyConstrainMP2Node(
-                "PenaltyConstrainMP2Node", mpmModel, slaveMP, masterNode, "micro rotation", [0], 1e7
+                "PenaltyConstrainMP2Node", mpmModel, slaveMP, masterNode, "micro rotation", [0], 1e6
             )
         )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 5e-2, 5e-2, 1e-3, 1000, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 

@@ -71,6 +71,9 @@ def run_sim():
         cellProvider="LagrangianMarmotCell",
         cellType="Displacement/SmallStrain/Quad4",
     )
+
+    linearElastic = {"material": "LinearElastic", "properties": np.array([30000.0, 0.3])}
+
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
@@ -82,12 +85,8 @@ def run_sim():
         nY=20,
         mpProvider="marmot",
         mpType="Displacement/SmallStrain/PlaneStrain",
+        material=linearElastic,
     )
-
-    material = "LinearElastic"
-    materialProperties = np.array([30000.0, 0.3])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")

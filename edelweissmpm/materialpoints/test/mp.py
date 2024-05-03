@@ -32,7 +32,7 @@ import numpy as np
 class MaterialPoint(MaterialPointBase):
     shape = "point"
 
-    def __init__(self, formulation: str, number: int, coordinates: np.ndarray, volume: float):
+    def __init__(self, formulation: str, number: int, coordinates: np.ndarray, volume: float, material):
         self._number = number
         self._coordinates = coordinates
         self._volume = volume

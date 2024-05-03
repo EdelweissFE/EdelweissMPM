@@ -78,6 +78,7 @@ def run_sim():
 
     center = np.array([50.0, 0.0])
 
+    gmNeoHooke = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])}
     circlempgenerator.generateModelData(
         mpmModel,
         journal,
@@ -88,12 +89,8 @@ def run_sim():
         angle=np.pi,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
+        material=gmNeoHooke,
     )
-
-    material = "GMDAMAGEDSHEARNEOHOOKE"
-    materialProperties = np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")

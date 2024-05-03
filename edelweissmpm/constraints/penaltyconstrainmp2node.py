@@ -85,7 +85,7 @@ class PenaltyConstrainMP2Node(MPMConstraintBase):
         pass
 
     def updateConnectivity(self, model: MPMModel):
-        """ Update the connectivity of the constraint.
+        """Update the connectivity of the constraint.
 
         Parameters
         ----------
@@ -109,7 +109,7 @@ class PenaltyConstrainMP2Node(MPMConstraintBase):
         return hasChanged
 
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
-        """ Apply the penalty constraint to the residual and stiffness matrix.
+        """Apply the penalty constraint to the residual and stiffness matrix.
 
         Parameters
         ----------

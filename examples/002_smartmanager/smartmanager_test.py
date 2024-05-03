@@ -74,6 +74,7 @@ def run_sim():
         nY=3,
         mpProvider="test",
         mpType="a dummy mp",
+        material=None,
     )
 
     mpmModel.prepareYourself(journal)
@@ -140,11 +141,18 @@ def run_sim():
 
                 scalarVariables = []
                 elements = []
+                cellElements = []
                 constraints = []
                 nodeSets = []
 
                 dofManager = MPMDofManager(
-                    activeNodeFields.values(), scalarVariables, elements, constraints, nodeSets, activeCells
+                    activeNodeFields.values(),
+                    scalarVariables,
+                    elements,
+                    constraints,
+                    nodeSets,
+                    activeCells,
+                    cellElements,
                 )
 
                 dofVector = dofManager.constructDofVector()

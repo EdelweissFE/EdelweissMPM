@@ -74,6 +74,10 @@ def run_sim():
         cellProvider="LagrangianMarmotCell",
         cellType="GradientEnhancedMicropolar/Quad4",
     )
+    gmDamagedShearNeoHooke = {
+        "material": "GMDamagedShearNeoHooke",
+        "properties": np.array([30000.0, 0.3, 1, 2, 4, 1.4999]),
+    }
     rectangularmpgenerator.generateModelData(
         mpmModel,
         journal,
@@ -85,12 +89,8 @@ def run_sim():
         nY=15,
         mpProvider="marmot",
         mpType="GradientEnhancedMicropolar/PlaneStrain",
+        material=gmDamagedShearNeoHooke,
     )
-
-    material = "gmdamagedshearneohooke"
-    materialProperties = np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999])
-    for mp in mpmModel.materialPoints.values():
-        mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
@@ -148,7 +148,7 @@ def run_sim():
 
     weakDirichlets = [
         PenaltyWeakDirichlet(
-            "weak dirichlet {:}".format(mp.number),
+            "weak dirichlet",
             mpmModel,
             mpmModel.materialPointSets["planeRect_right"],
             "displacement",
@@ -190,7 +190,10 @@ def run_sim():
         )
 
     except StepFailed as e:
-        raise
+        journal.printSeperationLine()
+        print("Step failed: {:}".format(e))
+        journal.printSeperationLine()
+        raise ValueError("Step failed")
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()

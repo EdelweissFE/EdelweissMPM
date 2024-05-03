@@ -45,8 +45,7 @@ cdef class MarmotMaterialPointWrapper:
                   int materialPointNumber, 
                   np.ndarray vertexCoordinates, 
                   double volume,
-                  str materialName, 
-                  np.ndarray materialProperties
+                  material
                   ):
         """This C-level method is responsible for actually creating the MarmotMaterialPoint.
 
@@ -80,6 +79,9 @@ cdef class MarmotMaterialPointWrapper:
 
         self._centerCoordinates = np.ndarray(self._nDim)
         self._centerCoordinatesView = self._centerCoordinates
+
+        cdef str materialName = material['material']
+        cdef np.ndarray materialProperties = material['properties']
 
         self._assignMaterial(materialName, materialProperties)
 

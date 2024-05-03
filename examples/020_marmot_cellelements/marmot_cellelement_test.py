@@ -67,7 +67,7 @@ def run_sim():
 
     gmNeoHookean = {
         "material": "GMDAMAGEDSHEARNEOHOOKE",
-        "materialProperties": np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999]),
+        "properties": np.array([30000.0, 0.3, 1.0, 2, 4, 1.4999]),
     }
 
     rectangularcellelementgridgenerator.generateModelData(
@@ -77,20 +77,17 @@ def run_sim():
         l=100.0,
         y0=0.0,
         h=100.0,
-        nX=12,
-        nY=12,
+        nX=3,
+        nY=3,
         cellelementProvider="LagrangianMarmotCellElement",
         cellelementType="GradientEnhancedMicropolar/Quad4",
-        quadratureType="QGAUSS",
+        quadratureType="QGAUSS_LOBATTO",
         quadratureOrder=2,
         thickness=1.0,
         mpClass=MarmotMaterialPointWrapper,
         mpType="GradientEnhancedMicropolar/PlaneStrain",
         material=gmNeoHookean,
     )
-
-    # for mp in mpmModel.materialPoints.values():
-    #     mp.assignMaterial(material, materialProperties)
 
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
@@ -160,8 +157,8 @@ def run_sim():
 
     iterationOptions = dict()
 
-    iterationOptions["max. iterations"] = 5
-    iterationOptions["critical iterations"] = 3
+    iterationOptions["max. iterations"] = 15
+    iterationOptions["critical iterations"] = 10
     iterationOptions["allowed residual growths"] = 3
 
     linearSolver = pardisoSolve
