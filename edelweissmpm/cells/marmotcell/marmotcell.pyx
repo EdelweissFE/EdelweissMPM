@@ -40,6 +40,8 @@ from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPo
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotCellWrapper:
     """This cell as a wrapper for MarmotCells.
+    It is an abstract class and cannot be used directly.
+    Rather, it is used as a base class for the specific cell types, such as LagrangianMarmotCell and BSplineMarmotCell.
 
     For the documentation of MarmotCells, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
 

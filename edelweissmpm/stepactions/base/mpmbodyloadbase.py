@@ -24,6 +24,9 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
+"""Body loads are loads that act on the entire body of the model.
+"""
+
 
 from edelweissfe.stepactions.base.stepactionbase import StepActionBase
 from edelweissfe.timesteppers.timestep import TimeStep
@@ -35,6 +38,11 @@ from abc import ABC, abstractmethod
 
 
 class MPMBodyLoadBase(StepActionBase):
+    """Base class for body loads.
+
+    If you want to implement a new body load, you should derive from this class.
+    """
+
     @property
     @abstractmethod
     def cellSet(self) -> CellSet:

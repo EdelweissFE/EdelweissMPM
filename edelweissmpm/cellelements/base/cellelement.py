@@ -24,9 +24,10 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
-Implementing your own cells can be done easily by subclassing from 
-the abstract base class :class:`~CellBase`.
+"""CellElements are a mixture of classical finite elements and cells of the MPM:
+They work (and deform) like Elements, but the quadrature points are material points (MaterialPointBase).
+To this end, they provide an interface to get the number and locations of the material points, and the
+material point type, following a specific quadrature rule and order.
 """
 
 from abc import ABC, abstractmethod
@@ -38,21 +39,8 @@ from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 
 
 class CellElementBase(CellBase):
-    """MPM cells in EdelweissFE should be derived from this
-    base class in order to follow the general interface.
-
-    EdelweissFE expects the layout of the internal and external load vectors, P, PExt, (and the stiffness)
-    to be of the form
-
-    .. code-block:: console
-
-        [ node 1 - dofs field 1,
-          node 1 - dofs field 2,
-          node 1 - ... ,
-          node 1 - dofs field n,
-          node 2 - dofs field 1,
-          ,
-          node N - dofs field n].
+    """The base class for all CellElements.
+    If you want to implement a new CellElement, you have to inherit from this class.
 
     Parameters
     ----------
@@ -62,11 +50,15 @@ class CellElementBase(CellBase):
         A unique integer label used for all kinds of purposes.
     nodes
         The list of nodes assigned to this cell.
+    quadratureType
+        A string identifying the requested quadrature type.
+    quadratureOrder
+        The order of the quadrature rule.
     """
 
     @abstractmethod
     def __init__(
-        self, cellElType: str, cellElNumber: int, gridnodes: list[Node], quadratureType: str, quadratureOrder: int
+        self, cellElType: str, cellElNumber: int, nodes: list[Node], quadratureType: str, quadratureOrder: int
     ):
         pass
 

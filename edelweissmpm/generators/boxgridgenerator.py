@@ -24,40 +24,6 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
-
-A mesh generator, for rectangular geometries and structured quad meshes:
-
-
-.. code-block:: console
-
-        <-----l----->
-         nX elements
-         __ __ __ __
-        |__|__|__|__|  A
-        |__|__|__|__|  |
-        |__|__|__|__|  | h
-        |__|__|__|__|  | nY elements
-      | |__|__|__|__|  |
-      | |__|__|__|__|  V
-    x0|_____
-      y0
-  
-nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
-are automatically generated
-
-Datalines:
-"""
-
-documentation = {
-    "x0": "(optional) origin at x axis",
-    "y0": "(optional) origin at y axis",
-    "h": "(optional) height of the body",
-    "l": "(optional) length of the body",
-    "nX": "(optional) number of elements along x",
-    "nY": "(optional) number of elements along y",
-    "elType": "type of element",
-}
 
 from edelweissfe.points.node import Node
 from edelweissfe.sets.nodeset import NodeSet
@@ -69,22 +35,64 @@ from edelweissmpm.config.celllibrary import getCellClass
 import numpy as np
 
 
-def generateModelData(model: MPMModel, journal: Journal, **kwargs):
-    name = kwargs.get("name", "boxgrid")
+def generateModelData(
+    model: MPMModel,
+    journal: Journal,
+    name: str = "box_grid",
+    x0: float = 0.0,
+    y0: float = 0.0,
+    z0: float = 0.0,
+    h: float = 1.0,
+    l: float = 1.0,
+    d: float = 1.0,
+    nX: int = 10,
+    nY: int = 10,
+    nZ: int = 10,
+    firstNodeNumber: int = 1,
+    cellClass: str = None,
+    cellType: str = None,
+    nodesPerCell: int = 8,
+):
+    """Generate a structured box grid of material points.
 
-    x0 = float(kwargs.get("x0", 0.0))
-    y0 = float(kwargs.get("y0", 0.0))
-    z0 = float(kwargs.get("z0", 0.0))
-    h = float(kwargs.get("h", 1.0))
-    l = float(kwargs.get("l", 1.0))
-    d = float(kwargs.get("d", 1.0))
-    nX = int(kwargs.get("nX", 10))
-    nY = int(kwargs.get("nY", 10))
-    nZ = int(kwargs.get("nZ", 10))
-    firstNodeNumber = int(kwargs.get("cellNumberStart", 1))
-    cellClass = kwargs["cellProvider"]
-    cellType = kwargs["cellType"]
-    nodesPerCell = int(kwargs.get("nodesPerCell", 8))
+    Parameters
+    ----------
+    model
+        The model instance.
+    journal
+        The Journal instance for logging purposes.
+    name
+        The name of the mesh.
+    x0
+        The origin at x axis.
+    y0
+        The origin at y axis.
+    z0
+        The origin at z axis.
+    h
+        The height of the body.
+    l
+        The length of the body.
+    d
+        The depth of the body.
+    nX
+        The number of material points along x.
+    nY
+        The number of material points along y.
+    nZ
+        The number of material points along z.
+    firstNodeNumber
+        The first node number.
+    cellClass
+        The providing class for the Cell.
+    cellType
+        The type of Cell.
+
+    Returns
+    -------
+    MPMModel
+        The updated model.
+    """
 
     CellFactory = getCellClass(cellClass)
 

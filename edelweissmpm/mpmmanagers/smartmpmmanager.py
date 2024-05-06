@@ -42,11 +42,13 @@ class SmartMaterialPointManager(MPMManagerBase):
     Parameters
     ----------
     materialPointCells
-        The list of CellBases
+        The list of cells.
     materialPoints
-        The list of Materialpoints
+        The list of material points.
+    dimension
+        The dimension of the problem.
     options
-        A dictionary containing options
+        A dictionary containing options.
     """
 
     def __init__(

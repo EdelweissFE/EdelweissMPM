@@ -176,7 +176,7 @@ def run_sim():
 
     constraints = [
         PenaltyEqualValue(
-            "PenaltyEqualValue", mpmModel, mpmModel.materialPointSets["planeRect_right"], "displacement", 0, 1e6
+            "PenaltyEqualValue", mpmModel, mpmModel.materialPointSets["rectangular_grid_right"], "displacement", 0, 1e6
         ),
     ]
 

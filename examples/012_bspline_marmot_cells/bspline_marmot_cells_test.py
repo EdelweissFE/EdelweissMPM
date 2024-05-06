@@ -157,7 +157,7 @@ def run_sim(bspline_order):
         PenaltyWeakDirichlet(
             "weak dirichlet",
             mpmModel,
-            mpmModel.materialPointSets["planeRect_right"],
+            mpmModel.materialPointSets["rectangular_grid_right"],
             "displacement",
             {
                 0: -0,

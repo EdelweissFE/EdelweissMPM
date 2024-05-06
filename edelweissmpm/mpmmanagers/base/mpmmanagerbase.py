@@ -25,6 +25,10 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
+"""
+Material Point Managers are responsible for the connectivity between material points and cells.
+They track the material points and cells and update the connectivity between them.
+Furthermore, they provide the active cells, which are the cells that contain material points."""
 
 from edelweissmpm.sets.cellset import CellSet
 from edelweissmpm.cells.base.cell import CellBase
@@ -38,6 +42,10 @@ from abc import ABC, abstractmethod
 
 
 class MPMManagerBase(ABC):
+    """
+    The MPMManagerBase class is an abstract base class for all material point managers.
+    If you want to implement a new material point manager, you have to inherit from this class."""
+
     @abstractmethod
     def updateConnectivity(
         self,

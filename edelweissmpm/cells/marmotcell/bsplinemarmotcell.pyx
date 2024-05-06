@@ -1,34 +1,29 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #  ---------------------------------------------------------------------
 #
-#  _____    _      _              _         _____ _____ 
-# | ____|__| | ___| |_      _____(_)___ ___|  ___| ____|
-# |  _| / _` |/ _ \ \ \ /\ / / _ \ / __/ __| |_  |  _|  
-# | |__| (_| |  __/ |\ V  V /  __/ \__ \__ \  _| | |___ 
-# |_____\__,_|\___|_| \_/\_/ \___|_|___/___/_|   |_____|
-#                                                       
-# 
+#  _____    _      _              _         __  __ ____  __  __
+# | ____|__| | ___| |_      _____(_)___ ___|  \/  |  _ \|  \/  |
+# |  _| / _` |/ _ \ \ \ /\ / / _ \ / __/ __| |\/| | |_) | |\/| |
+# | |__| (_| |  __/ |\ V  V /  __/ \__ \__ \ |  | |  __/| |  | |
+# |_____\__,_|\___|_| \_/\_/ \___|_|___/___/_|  |_|_|   |_|  |_|
+#
+#
 #  Unit of Strength of Materials and Structural Analysis
 #  University of Innsbruck,
-#  2017 - today
-# 
+#  2023 - today
+#
 #  Matthias Neuner matthias.neuner@uibk.ac.at
-# 
-#  This file is part of EdelweissFE.
-# 
+#
+#  This file is part of EdelweissMPM.
+#
 #  This library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public
 #  License as published by the Free Software Foundation; either
 #  version 2.1 of the License, or (at your option) any later version.
-# 
+#
 #  The full text of the license can be found in the file LICENSE.md at
-#  the top level directory of EdelweissFE.
+#  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-# Created on Thu Apr 27 08:35:06 2017
-
-# @author: matthias
-
 import numpy as np
 cimport numpy as np
 cimport libcpp.cast
@@ -46,6 +41,11 @@ from edelweissmpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotC
     
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class BSplineMarmotCellWrapper(MarmotCellWrapper):
+    """This class is a wrapper for the MarmotCell class. It is used
+    to create a BSpline-MarmotCell object from a set of nodes and knot vectors.
+    The MarmotCell object is then used to evaluate the shape functions
+    and their derivatives at a given point."""
+
 
     def __init__(self, cellType, cellNumber, nodes, knotVectors):
         super().__init__(cellType, cellNumber, nodes)
@@ -69,7 +69,6 @@ cdef class BSplineMarmotCellWrapper(MarmotCellWrapper):
         cdef np.ndarray nodeCoordinates = np.array([ node.coordinates for node in nodes])
         self._nodeCoordinates = nodeCoordinates
 
-        # cdef np.ndarray knotVectors_ = np.array([ knotVector for knotVector in knotVectors])
         cdef np.ndarray knotVectors_ = knotVectors__
         cdef double[:, ::1] knotVectorsView
         knotVectorsView = knotVectors_

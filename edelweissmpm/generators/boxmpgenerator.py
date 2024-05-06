@@ -34,26 +34,68 @@ from edelweissmpm.sets.materialpointset import MaterialPointSet
 import numpy as np
 
 
-def generateModelData(model: MPMModel, journal: Journal, **kwargs):
-    name = kwargs.get("name", "planeRect")
+def generateModelData(
+    model: MPMModel,
+    journal: Journal,
+    name: str = "box_grid",
+    x0: float = 0.0,
+    y0: float = 0.0,
+    z0: float = 0.0,
+    l: float = 1.0,
+    h: float = 1.0,
+    d: float = 1.0,
+    nX: int = 10,
+    nY: int = 10,
+    nZ: int = 10,
+    firstMaterialPointNumber: int = 1,
+    mpProvider: str = None,
+    mpType: str = None,
+    material: str = None,
+):
+    """Generate a structured box grid of material points.
 
-    x0 = float(kwargs.get("x0", 0.0))
-    y0 = float(kwargs.get("y0", 0.0))
-    z0 = float(kwargs.get("z0", 0.0))
-    l = float(kwargs.get("l", 1.0))
-    h = float(kwargs.get("h", 1.0))
-    d = float(kwargs.get("d", 1.0))
-    nX = int(kwargs.get("nX", 10))
-    nY = int(kwargs.get("nY", 10))
-    nZ = int(kwargs.get("nZ", 10))
-    firstMaterialPointNumber = int(kwargs.get("mpNumberStart", 1))
-    mpClass = kwargs["mpProvider"]
-    mpType = kwargs["mpType"]
-    material = kwargs["material"]
+    Parameters
+    ----------
+    model
+        The model instance.
+    journal
+        The Journal instance for logging purposes.
+    name
+        The name of the mesh.
+    x0
+        The origin at x axis.
+    y0
+        The origin at y axis.
+    z0
+        The origin at z axis.
+    h
+        The height of the body.
+    l
+        The length of the body.
+    nX
+        The number of material points along x.
+    nY
+        The number of material points along y.
+    nZ
+        The number of material points along z.
+    firstMaterialPointNumber
+        The first material point number.
+    mpProvider
+        The providing class for the MaterialPoint.
+    mpType
+        The type of MaterialPoint.
+    material
+        The material of the material point.
+
+    Returns
+    -------
+    MPMModel
+        The updated model.
+    """
 
     mpVolume = l * h * d / (nX * nY * nZ)
 
-    MPFactory = getMaterialPointClass(mpClass)
+    MPFactory = getMaterialPointClass(mpProvider)
 
     grid = np.mgrid[
         x0 : x0 + l : nX * 1j,

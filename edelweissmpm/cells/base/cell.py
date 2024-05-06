@@ -25,6 +25,11 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 """
+Cells represent the basic building blocks of the MPM grid. They are used to
+compute the material point kernels and to interpolate the field solutions back
+to the material points. Cells are used to compute the residual and stiffness
+matrices for the global system of equations.
+
 Implementing your own cells can be done easily by subclassing from 
 the abstract base class :class:`~CellBase`.
 """
@@ -39,10 +44,10 @@ from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 class CellBase(ABC):
     @abstractmethod
     def __init__(self, cellType: str, cellNumber: int, nodes: list[Node]):
-        """MPM cells in EdelweissFE should be derived from this
+        """MPM cells in EdelweissMPM should be derived from this
         base class in order to follow the general interface.
 
-        EdelweissFE expects the layout of the internal and external load vectors, P, PExt, (and the stiffness)
+        EdelweissMPM expects the layout of the internal and external load vectors, P, PExt, (and the stiffness)
         to be of the form
 
         .. code-block:: console

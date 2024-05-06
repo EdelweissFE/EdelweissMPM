@@ -1,3 +1,10 @@
+"""
+Constraints are used to enforce certain conditions on the system. They are used to enforce boundary conditions, contact conditions, etc.
+Technically, constraints are implemented as a set of kernels, which are applied to the system matrix and the external load vector.
+In this regard, constraints are similar to elements, but they mey also use additional scalar variables to enforce the conditions.
+Unlike elements, they are not subject to external loads.
+"""
+
 from edelweissfe.points.node import Node
 from edelweissfe.variables.scalarvariable import ScalarVariable
 from edelweissfe.timesteppers.timestep import TimeStep
@@ -7,6 +14,9 @@ import numpy as np
 
 
 class MPMConstraintBase(ABC):
+    """The MPMConstraintBase class is an abstract base class for all constraints.
+    If you want to implement a new constraint, you have to inherit from this class."""
+
     @property
     @abstractmethod
     def name(self) -> str:

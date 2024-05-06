@@ -154,7 +154,7 @@ def run_sim():
         "theSurfacePressure",
         mpmModel,
         journal,
-        mpmModel.materialPointSets["planeRect_top"],
+        mpmModel.materialPointSets["rectangular_grid_top"],
         "Pressure",
         np.array([0.0, -20.0 * 100.0 / 100]),
     )

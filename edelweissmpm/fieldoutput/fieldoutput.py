@@ -34,8 +34,7 @@ import numpy as np
 
 class MaterialPointFieldOutput(_FieldOutputBase):
     """
-    This is a Element based FieldOutput.
-    It operates on ElementSets.
+    A FieldOutput for material points.
 
     Parameters
     ----------

@@ -24,72 +24,82 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
-
-A mesh generator, for rectangular geometries and structured quad meshes:
-
-
-.. code-block:: console
-
-        <-----l----->
-         nX elements
-         __ __ __ __
-        |__|__|__|__|  A
-        |__|__|__|__|  |
-        |__|__|__|__|  | h
-        |__|__|__|__|  | nY elements
-      | |__|__|__|__|  |
-      | |__|__|__|__|  V
-    x0|_____
-      y0
-  
-nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
-are automatically generated
-
-Datalines:
-"""
-
-documentation = {
-    "x0": "(optional) origin at x axis",
-    "y0": "(optional) origin at y axis",
-    "h": "(optional) height of the body",
-    "l": "(optional) length of the body",
-    "nX": "(optional) number of elements along x",
-    "nY": "(optional) number of elements along y",
-    "elType": "type of element",
-}
 
 from edelweissfe.points.node import Node
 from edelweissfe.sets.nodeset import NodeSet
 from edelweissfe.utils.misc import convertLinesToStringDictionary
-from edelweissfe.models.femodel import FEModel
 from edelweissfe.journal.journal import Journal
 from edelweissfe.variables.fieldvariable import FieldVariable
 
+from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.config.celllibrary import getCellClass
 
 import numpy as np
 
 
-def generateModelData(model, journal, **kwargs):
-    name = kwargs.get("name", "boxgrid")
+def generateModelData(
+    model: MPMModel,
+    journal: Journal,
+    name: str = "boxgrid",
+    x0: float = 0.0,
+    y0: float = 0.0,
+    z0: float = 0.0,
+    l: float = 1.0,
+    h: float = 1.0,
+    d: float = 1.0,
+    nX: int = 10,
+    nY: int = 10,
+    nZ: int = 10,
+    order: int = 1,
+    firstNodeNumber: int = 1,
+    cellProvider: type = None,
+    cellType: str = None,
+):
+    """
+    Generates a B-Spline grid of cells in a box.
 
-    x0 = float(kwargs.get("x0", 0.0))
-    y0 = float(kwargs.get("y0", 0.0))
-    z0 = float(kwargs.get("z0", 0.0))
-    l = float(kwargs.get("l", 1.0))
-    h = float(kwargs.get("h", 1.0))
-    d = float(kwargs.get("d", 1.0))
-    nX = int(kwargs.get("nX", 10))
-    nY = int(kwargs.get("nY", 10))
-    nZ = int(kwargs.get("nZ", 10))
-    order = int(kwargs["order"])
+    Parameters
+    ----------
+    model : MPMModel
+        The model to which the grid will be added.
+    journal : Journal
+        The journal instance for logging purposes.
+    name : str
+        The name of the grid.
+    x0 : float
+        The origin at x axis.
+    y0 : float
+        The origin at y axis.
+    z0 : float
+        The origin at z axis.
+    l : float
+        The length of the box.
+    h : float
+        The height of the box.
+    d : float
+        The depth of the box.
+    nX : int
+        The number of cells in x direction.
+    nY : int
+        The number of cells in y direction.
+    nZ : int
+        The number of cells in z direction.
+    order : int
+        The order of the B-Spline basis functions.
+    firstNodeNumber : int
+        The first node number.
+    cellProvider : type
+        The providing class for the Cell.
+    cellType : str
+        The type of Cell.
 
-    firstNodeNumber = int(kwargs.get("cellNumberStart", 1))
-    cellClass = kwargs["cellProvider"]
-    cellType = kwargs["cellType"]
+    Returns
+    -------
+    MPMModel
+        The model with the added grid.
+    """
 
-    CellFactory = getCellClass(cellClass)
+    CellFactory = getCellClass(cellProvider)
 
     nShapeFunctionsPerCellDirection = order + 1
     nKnotsPerCellDirection = (order + 2) + (nShapeFunctionsPerCellDirection - 1)

@@ -33,6 +33,30 @@ import numpy as np
 
 
 class MPMDofManager(DofManager):
+    """A DofManager class for the Material Point Method.
+    Derived from DofManager, it is used to manage the degrees of freedom of the model
+    and to provide the necessary information for the assembly of the global system matrix.
+
+    Parameters
+    ----------
+    nodeFields : list
+        A list of node fields.
+    scalarVariables : list
+        A list of scalar variables.
+    elements : list
+        A list of elements.
+    constraints : list
+        A list of constraints.
+    nodeSets : list
+        A list of node sets.
+    cells : list
+        A list of cells.
+    cellElements : list
+        A list of cell elements.
+    initializeVIJPattern : bool
+        A flag indicating whether the VIJ pattern should be initialized.
+    """
+
     def __init__(
         self,
         nodeFields: list,

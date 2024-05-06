@@ -187,6 +187,7 @@ class MPMModel(FEModel):
         return theNodeFields
 
     def makePrettyTableSummary(self):
+        """Create a pretty table with a summary of the model properties."""
         prettytable = PrettyTable(("model property", ""))
 
         prettytable.add_row(("domain dim.", self.domainSize))

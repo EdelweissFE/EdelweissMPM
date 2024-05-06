@@ -24,40 +24,6 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
-
-A mesh generator, for rectangular geometries and structured quad meshes:
-
-
-.. code-block:: console
-
-        <-----l----->
-         nX elements
-         __ __ __ __
-        |__|__|__|__|  A
-        |__|__|__|__|  |
-        |__|__|__|__|  | h
-        |__|__|__|__|  | nY elements
-      | |__|__|__|__|  |
-      | |__|__|__|__|  V
-    x0|_____
-      y0
-  
-nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
-are automatically generated
-
-Datalines:
-"""
-
-documentation = {
-    "x0": "(optional) origin at x axis",
-    "y0": "(optional) origin at y axis",
-    "h": "(optional) height of the body",
-    "l": "(optional) length of the body",
-    "nX": "(optional) number of elements along x",
-    "nY": "(optional) number of elements along y",
-    "elType": "type of element",
-}
 
 from edelweissfe.points.node import Node
 from edelweissfe.sets.nodeset import NodeSet
@@ -72,7 +38,22 @@ from edelweissmpm.config.cellelementlibrary import getCellElementClass
 import numpy as np
 
 
-def generateModelData(model, journal, **kwargs):
+def generateModelData(
+    model,
+    journal,
+    name="rectangular_grid",
+    x0=0.0,
+    y0=0.0,
+    h=1.0,
+    l=1.0,
+    nX=10,
+    nY=10,
+    firstCellNumber=1,
+    firstNodeNumber=1,
+    cellProvider=str,
+    cellType=str,
+    nodesPerCell=4,
+):
     """Generate a structured grid of nodes and cells.
 
     Parameters
@@ -81,9 +62,6 @@ def generateModelData(model, journal, **kwargs):
         The model to which the grid should be added.
     journal : Journal
         The journal instance for logging purposes.
-
-    Other Parameters
-    ----------------
     name : str
         The name of the grid.
     x0 : float
@@ -106,44 +84,9 @@ def generateModelData(model, journal, **kwargs):
         The first node number.
     nodesPerCell : int
         The number of nodes per cell.
-    mpType : str
-        The type of the material point.
-    mpClass : str
-        The name of the material point class.
-    thickness : float
-        The thickness of the material point.
-    mpNumberStart : int
-        The first material point number.
-    cellelementProvider : str
-        The name of the cell element provider class.
-    cellelementType : str
-        The type of the cell element.
     """
 
-    name = kwargs.get("name", "rectangular_grid")
-
-    x0 = float(kwargs.get("x0", 0.0))
-    y0 = float(kwargs.get("y0", 0.0))
-    h = float(kwargs.get("h", 1.0))
-    l = float(kwargs.get("l", 1.0))
-    nX = int(kwargs.get("nX", 10))
-    nY = int(kwargs.get("nY", 10))
-    firstCellNumber = int(kwargs.get("firstCellNumber", 1))
-    firstNodeNumber = int(kwargs.get("firstNodeNumber", 1))
-
-    if "cellProvider" in kwargs:
-        cellClass = kwargs["cellProvider"]
-        cellType = kwargs["cellType"]
-        CellFactory = getCellClass(cellClass)
-
-    elif "cellelementProvider" in kwargs:
-        cellClass = kwargs["cellelementProvider"]
-        cellType = kwargs["cellelementType"]
-        CellFactory = getCellElementClass(cellClass)
-    else:
-        raise Exception("No cell/cellelement provider specified")
-
-    nodesPerCell = int(kwargs.get("nodesPerCell", 4))
+    CellFactory = getCellClass(cellProvider)
 
     if nodesPerCell == 4:
         nNodesX = nX + 1
@@ -209,28 +152,28 @@ def generateModelData(model, journal, **kwargs):
     model.nodeSets["{:}_rightBottom".format(name)] = NodeSet("{:}_rightBottom".format(name), [nG[-1, 0]])
     model.nodeSets["{:}_rightTop".format(name)] = NodeSet("{:}_rightTop".format(name), [nG[-1, -1]])
 
-    if "cellelementProvider" in kwargs:
+    # if "cellelementProvider" in kwargs:
 
-        mpType = kwargs["mpType"]
-        MPFactory = kwargs["mpClass"]
+    #     mpType = kwargs["mpType"]
+    #     MPFactory = kwargs["mpClass"]
 
-        mpThickness = float(kwargs.get("thickness", 1.0))
+    #     mpThickness = float(kwargs.get("thickness", 1.0))
 
-        currentMPNumber = int(kwargs.get("mpNumberStart", len(model.materialPoints) + 1))
-        for cell in cells:
+    #     currentMPNumber = int(kwargs.get("mpNumberStart", len(model.materialPoints) + 1))
+    #     for cell in cells:
 
-            nMaterialPoints = cell.nMaterialPoints
-            mpCoords = cell.getRequestedMaterialPointCoordinates()
-            mpVolumes = cell.getRequestedMaterialPointVolumes()
+    #         nMaterialPoints = cell.nMaterialPoints
+    #         mpCoords = cell.getRequestedMaterialPointCoordinates()
+    #         mpVolumes = cell.getRequestedMaterialPointVolumes()
 
-            for coord, vol in zip(mpCoords, mpVolumes):
+    #         for coord, vol in zip(mpCoords, mpVolumes):
 
-                while currentMPNumber in model.materialPoints:
-                    currentMPNumber += 1
+    #             while currentMPNumber in model.materialPoints:
+    #                 currentMPNumber += 1
 
-                mp = MPFactory(mpType, currentMPNumber, coord.reshape((1, -1)), vol)
-                currentMPNumber += 1
+    #             mp = MPFactory(mpType, currentMPNumber, coord.reshape((1, -1)), vol)
+    #             currentMPNumber += 1
 
-                model.materialPoints[currentMPNumber] = mp
+    #             model.materialPoints[currentMPNumber] = mp
 
     return model

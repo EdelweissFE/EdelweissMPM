@@ -145,7 +145,7 @@ def run_sim():
         "theSurfacePressure",
         mpmModel,
         journal,
-        mpmModel.materialPointSets["planeRect_top"],
+        mpmModel.materialPointSets["rectangular_grid_top"],
         "Pressure",
         np.array([0.0, -1.0e-3 * 80 / 80]),
     )
@@ -162,8 +162,8 @@ def run_sim():
 
     linearSolver = pardisoSolve
 
-    mprightTop = list(mpmModel.materialPointSets["planeRect_rightTop"])[0]
-    mpleftTop = list(mpmModel.materialPointSets["planeRect_leftTop"])[0]
+    mprightTop = list(mpmModel.materialPointSets["rectangular_grid_rightTop"])[0]
+    mpleftTop = list(mpmModel.materialPointSets["rectangular_grid_leftTop"])[0]
 
     indirectcontrol = IndirectControl(
         "IndirectController",

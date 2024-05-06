@@ -149,7 +149,7 @@ def run_sim(logFile=None):
 
     constraints = [
         PenaltyEqualValue(
-            "PenaltyEqualValue", mpmModel, mpmModel.materialPointSets["planeRect_right"], "displacement", 0, 1e6
+            "PenaltyEqualValue", mpmModel, mpmModel.materialPointSets["rectangular_grid_right"], "displacement", 0, 1e6
         ),
     ]
 
@@ -167,7 +167,7 @@ def run_sim(logFile=None):
             "consolidationPressureTop",
             mpmModel,
             journal,
-            mpmModel.materialPointSets["planeRect_top"],
+            mpmModel.materialPointSets["rectangular_grid_top"],
             "Pressure",
             np.array([0.0, -1 * 100.0 / 80]),
         ),
@@ -175,7 +175,7 @@ def run_sim(logFile=None):
             "consolidationPressureBottom",
             mpmModel,
             journal,
-            mpmModel.materialPointSets["planeRect_bottom"],
+            mpmModel.materialPointSets["rectangular_grid_bottom"],
             "Pressure",
             np.array([0.0, +1 * 100.0 / 80]),
         ),
@@ -187,8 +187,8 @@ def run_sim(logFile=None):
 
     linearSolver = pardisoSolve
 
-    mprightTop = list(mpmModel.materialPointSets["planeRect_rightTop"])[0]
-    mpleftTop = list(mpmModel.materialPointSets["planeRect_leftTop"])[0]
+    mprightTop = list(mpmModel.materialPointSets["rectangular_grid_rightTop"])[0]
+    mpleftTop = list(mpmModel.materialPointSets["rectangular_grid_leftTop"])[0]
 
     try:
         journal.printSeperationLine()
@@ -228,7 +228,7 @@ def run_sim(logFile=None):
             "theSurfacePressure",
             mpmModel,
             journal,
-            mpmModel.materialPointSets["planeRect_bottom"],
+            mpmModel.materialPointSets["rectangular_grid_bottom"],
             "Pressure",
             np.array([0.0, 1.0e-3 * 80 / 80]),
         )

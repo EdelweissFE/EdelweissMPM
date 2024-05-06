@@ -24,72 +24,72 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
 
-A mesh generator, for rectangular geometries and structured quad meshes:
-
-
-.. code-block:: console
-
-        <-----l----->
-         nX elements
-         __ __ __ __
-        |__|__|__|__|  A
-        |__|__|__|__|  |
-        |__|__|__|__|  | h
-        |__|__|__|__|  | nY elements
-      | |__|__|__|__|  |
-      | |__|__|__|__|  V
-    x0|_____
-      y0
-  
-nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
-are automatically generated
-
-Datalines:
-"""
-
-documentation = {
-    "x0": "(optional) origin at x axis",
-    "y0": "(optional) origin at y axis",
-    "h": "(optional) height of the body",
-    "l": "(optional) length of the body",
-    "nX": "(optional) number of elements along x",
-    "nY": "(optional) number of elements along y",
-    "provider": "The providing class for the MaterialPoint",
-    "type": "type of MaterialPoint",
-}
-
-# from edelweissfe.points.node import MaterialPoint
-# from edelweissfe.sets.nodeset import MaterialPointSet
-# from edelweissfe.utils.misc import convertLinesToStringDictionary
 from edelweissfe.journal.journal import Journal
-
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.config.mplibrary import getMaterialPointClass
 from edelweissmpm.sets.materialpointset import MaterialPointSet
-
 import numpy as np
 
 
-def generateModelData(model: MPMModel, journal: Journal, **kwargs):
-    name = kwargs.get("name", "planeRect")
+def generateModelData(
+    model: MPMModel,
+    journal: Journal,
+    name: str = "rectangular_grid",
+    x0: float = 0.0,
+    y0: float = 0.0,
+    h: float = 1.0,
+    l: float = 1.0,
+    nX: int = 10,
+    nY: int = 10,
+    firstMPNumber: int = 1,
+    mpProvider: str = None,
+    mpType: str = None,
+    thickness: float = 1.0,
+    material: str = None,
+):
+    """Generate a structured rectangular grid of material points.
 
-    x0 = float(kwargs.get("x0", 0.0))
-    y0 = float(kwargs.get("y0", 0.0))
-    h = float(kwargs.get("h", 1.0))
-    l = float(kwargs.get("l", 1.0))
-    nX = int(kwargs.get("nX", 10))
-    nY = int(kwargs.get("nY", 10))
-    firstMaterialPointNumber = int(kwargs.get("firstMPNumber", 1))
-    mpClass = kwargs["mpProvider"]
-    mpType = kwargs["mpType"]
-    mpThickness = float(kwargs.get("thickness", 1.0))
-    material = kwargs["material"]
+    Parameters
+    ----------
+    model
+        The model instance.
+    journal
+        The Journal instance for logging purposes.
+    name
+        The name of the mesh.
+    x0
+        The origin at x axis.
+    y0
+        The origin at y axis.
+    h
+        The height of the body.
+    l
+        The length of the body.
+    nX
+        The number of material points along x.
+    nY
+        The number of material points along y.
+    firstMPNumber
+        The first material point number.
+    mpProvider
+        The providing class for the MaterialPoint.
+    mpType
+        The type of MaterialPoint.
+    thickness
+        The thickness of the material point.
+    material
+        The material of the material point.
 
-    mpVolume = l * h / (nX * nY) * mpThickness
+    Returns
+    -------
+    MPMModel
+        The updated model.
+    """
 
-    MPFactory = getMaterialPointClass(mpClass)
+    mpVolume = l * h / (nX * nY) * thickness
+
+    MPFactory = getMaterialPointClass(mpProvider)
 
     grid = np.mgrid[
         x0 : x0 + l : nX * 1j,
@@ -97,7 +97,7 @@ def generateModelData(model: MPMModel, journal: Journal, **kwargs):
     ]
 
     mps = []
-    currentMPNumber = firstMaterialPointNumber
+    currentMPNumber = firstMPNumber
 
     for x in range(nX):
         for y in range(nY):

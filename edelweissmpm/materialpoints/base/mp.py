@@ -24,6 +24,12 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
+"""
+Material points are the basic building blocks of the material point method. They are used to represent the material
+properties of a continuum. Furthermore, material points are used to store the material properties and state variables of a continuum
+at a specific location in space and time. Material points are used to compute the material response of the continuum
+and to transfer the material properties to the grid. 
+"""
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -31,7 +37,7 @@ from edelweissfe.points.node import Node
 
 
 class MaterialPointBase(ABC):
-    """A basic material point.
+    """A basic material point class. If you want to implement a new material point, you should inherit from this class.
 
     Attributes
     ----------

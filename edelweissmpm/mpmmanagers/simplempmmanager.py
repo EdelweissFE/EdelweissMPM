@@ -36,9 +36,9 @@ class SimpleMaterialPointManager:
     Parameters
     ----------
     materialPointCells
-        The list of CellBases
+        The list of cells.
     materialPoints
-        The list of Materialpoints
+        The list of material points.
     """
 
     def __init__(self, materialPointCells: list[CellBase], materialPoints: list[MaterialPointBase]):

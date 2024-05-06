@@ -42,6 +42,7 @@ from edelweissmpm.materialpoints.marmotmaterialpoint.mp import MarmotMaterialPoi
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotCellElementWrapper(MarmotCellWrapper):
     """This cell as a wrapper for MarmotCellElements.
+    This class is not intended to be used directly, but to be subclassed by the actual cell element classes, such as LagrangianMarkerCellElement.
 
     For the documentation of MarmotCellElements, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
 
@@ -53,8 +54,11 @@ cdef class MarmotCellElementWrapper(MarmotCellWrapper):
         The (unique) label of this CellElement.
     nodes
         The list of nodes for this CellElement.
-        """
-    def __init__(self, cellType, cellNumber, nodes ):
+    quadratureType
+        The type of quadrature to be used.
+    quadratureOrder
+        The order of the quadrature to be used."""
+    def __init__(self, cellType, cellNumber, nodes, quadratureType, quadratureOrder):
         super().__init__(cellType, cellNumber, nodes)
 
     @property
@@ -66,6 +70,7 @@ cdef class MarmotCellElementWrapper(MarmotCellWrapper):
         return self._cellNumber
 
     def getRequestedMaterialPointCoordinates(self, ):
+        """Get the coordinates of the material points in the cell."""
         cdef int dim = self._nodeCoordinates.shape[1]
         cdef np.ndarray mpCoordinates = np.zeros( (self._nMaterialPoints, dim) )
         cdef double[:,::1] _coordsView = mpCoordinates
@@ -73,12 +78,14 @@ cdef class MarmotCellElementWrapper(MarmotCellWrapper):
         return mpCoordinates
 
     def getRequestedMaterialPointVolumes(self, ):
+        """Get the volumes of the material points in the cell."""
         cdef np.ndarray vols = np.zeros(self._nMaterialPoints)
         cdef double[::1] _volsView = vols
         self._marmotCellElement.getRequestedMaterialPointVolumes(&_volsView[0])
         return vols
 
     def getRequestedMaterialPointType(self, ):
+        """Get the type of the material points in the cell."""
         return MarmotMaterialPointWrapper
 
     def acceptLastState(self, ):
