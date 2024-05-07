@@ -14,8 +14,6 @@ release = "v24.04"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-import os
-import sys
 
 # sys.path.insert(0, os.path.abspath("../../"))
 
@@ -63,21 +61,14 @@ html_css_files = [
 ]
 
 # for execution python code in text
-import sys
-from os.path import basename
 
 try:
-    from StringIO import StringIO
+    pass
 except ImportError:
-    from io import StringIO
+    pass
 
-from importlib import import_module
-from pprint import pformat
 
 from docutils import nodes
-from docutils.parsers.rst import Directive
-from sphinx import addnodes
-from sphinx.directives.code import CodeBlock, container_wrapper, dedent_lines
 
 
 def doi_role(name, rawtext, text, lineno, inliner, options={}, content=[]):

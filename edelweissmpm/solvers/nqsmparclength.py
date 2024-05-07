@@ -25,38 +25,19 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-import traceback
-from collections import defaultdict
 
 import edelweissfe.utils.performancetiming as performancetiming
 import numpy as np
-from edelweissfe.config.linsolve import getDefaultLinSolver, getLinSolverByName
-from edelweissfe.config.phenomena import getFieldSize
-from edelweissfe.config.timing import createTimingDict
-from edelweissfe.constraints.base.constraintbase import ConstraintBase
-from edelweissfe.journal.journal import Journal
-from edelweissfe.numerics.csrgenerator import CSRGenerator
-from edelweissfe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatrix
+from edelweissfe.numerics.dofmanager import DofManager, DofVector
 from edelweissfe.outputmanagers.base.outputmanagerbase import OutputManagerBase
-from edelweissfe.sets.nodeset import NodeSet
-from edelweissfe.stepactions.base.dirichletbase import DirichletBase
-from edelweissfe.stepactions.base.stepactionbase import StepActionBase
 from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.utils.exceptions import (
-    ConditionalStop,
     DivergingSolution,
-    ReachedMaxIncrements,
     ReachedMaxIterations,
-    ReachedMinIncrementSize,
-    StepFailed,
 )
 from edelweissfe.utils.fieldoutput import FieldOutputController
-from numpy import ndarray
-from scipy.sparse import csr_matrix
 
-from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.solvers.nqsmarmotparallel import NQSParallelForMarmot
 from edelweissmpm.stepactions.base.arclengthcontrollerbase import ArcLengthControllerBase
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase

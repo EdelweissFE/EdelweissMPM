@@ -25,10 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from edelweissfe.sets.orderedset import OrderedSet
 from edelweissfe.utils.meshtools import extractNodesFromElementSet
-
-from edelweissmpm.cells.base.cell import CellBase
 
 
 class CellSet(list):

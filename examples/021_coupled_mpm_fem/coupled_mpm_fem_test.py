@@ -25,33 +25,25 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import argparse
-from datetime import datetime
 
 import edelweissfe.utils.performancetiming as performancetiming
 import numpy as np
 import pytest
 from edelweissfe.journal.journal import Journal
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissfe.sets.nodeset import NodeSet
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.constraints.penaltyconstrainmp2node import PenaltyConstrainMP2Node
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.generators import (
     rectangularbsplinegridgenerator,
     rectangularcellelementgridgenerator,
-    rectangulargridgenerator,
     rectangularmpgenerator,
 )
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-from edelweissmpm.stepactions.bodyload import BodyLoad
 from edelweissmpm.stepactions.dirichlet import Dirichlet
 
 

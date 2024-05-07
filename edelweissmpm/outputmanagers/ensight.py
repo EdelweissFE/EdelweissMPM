@@ -24,20 +24,10 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import datetime
-import os
-from collections import OrderedDict, defaultdict
-from distutils.util import strtobool
-from io import TextIOBase
 
-import edelweissfe.config.phenomena
-import numpy as np
-from edelweissfe.outputmanagers.ensight import EnsightChunkWiseCase, EnsightGeometry, EnsightUnstructuredPart
+from edelweissfe.outputmanagers.ensight import EnsightUnstructuredPart
 from edelweissfe.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissfe.outputmanagers.ensight import createUnstructuredPartFromElementSet
 from edelweissfe.points.node import Node
-from edelweissfe.utils.math import evalModelAccessibleExpression
-from edelweissfe.utils.meshtools import disassembleElsetToEnsightShapes
 
 from edelweissmpm.sets.cellelementset import CellElementSet
 from edelweissmpm.sets.cellset import CellSet

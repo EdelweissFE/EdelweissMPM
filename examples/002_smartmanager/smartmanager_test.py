@@ -30,17 +30,14 @@ import edelweissfe.utils.performancetiming as performancetiming
 import numpy as np
 import pytest
 from edelweissfe.journal.journal import Journal
-from edelweissfe.steps.stepmanager import StepActionDefinition, StepManager
 
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
 from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
-from edelweissmpm.mpmmanagers.smartmpmmanager import KDTree, SmartMaterialPointManager
+from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
 
 
 def run_sim():

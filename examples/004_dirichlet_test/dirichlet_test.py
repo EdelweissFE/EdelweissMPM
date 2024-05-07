@@ -39,7 +39,6 @@ from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
 
 
 def run_sim():

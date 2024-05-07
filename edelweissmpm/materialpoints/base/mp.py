@@ -34,7 +34,6 @@ and to transfer the material properties to the grid.
 from abc import ABC, abstractmethod
 
 import numpy as np
-from edelweissfe.points.node import Node
 
 
 class MaterialPointBase(ABC):
@@ -60,24 +59,20 @@ class MaterialPointBase(ABC):
     @abstractmethod
     def number(self) -> int:
         """The unique label (ID) of this material point."""
-        pass
 
     @property
     @abstractmethod
     def assignedCells(self) -> set:
         """The list of currently assigned cells."""
-        pass
 
     @abstractmethod
     def assignCells(self, cells: set):
         """Assign the list of cells in which the material point is currently residing."""
-        pass
 
     @property
     @abstractmethod
     def ensightType(self) -> str:
         """The shape of the materialpoint in Ensight Gold notation."""
-        pass
 
     @abstractmethod
     def getVertexCoordinates(
@@ -89,7 +84,6 @@ class MaterialPointBase(ABC):
         -------
         np.ndarray
             All coordinates for all bounding vertices."""
-        pass
 
     @abstractmethod
     def getCenterCoordinates(
@@ -101,7 +95,6 @@ class MaterialPointBase(ABC):
         -------
         np.ndarray
             The coordinates of the material point's center of mass."""
-        pass
 
     @abstractmethod
     def getVolume(
@@ -113,13 +106,10 @@ class MaterialPointBase(ABC):
         -------
         float
             The current volume occupied by this material point."""
-        pass
 
     @abstractmethod
     def computeYourself(self, timeTotal: float, dT: float):
         """Compute the current material response."""
-
-        pass
 
     @abstractmethod
     def acceptStateAndPosition(
@@ -127,13 +117,9 @@ class MaterialPointBase(ABC):
     ):
         """Accept the computed state (in nonlinear iteration schemes) and the position."""
 
-        pass
-
     @abstractmethod
     def prepareTimestep(self, timeTotal: float, dT: float):
         """Prepare a new time step, i.e., before interpolation from the grid takes place."""
-
-        pass
 
     @abstractmethod
     def getResultArray(self, result: str, getPersistentView: bool = True) -> np.ndarray:
@@ -153,8 +139,6 @@ class MaterialPointBase(ABC):
             The result.
         """
 
-        pass
-
     @abstractmethod
     def setProperties(self, propertyName: str, elementProperties: np.ndarray):
         """Assign a set of properties to the element.
@@ -167,14 +151,11 @@ class MaterialPointBase(ABC):
             A numpy array containing the element properties.
         """
 
-        pass
-
     @abstractmethod
     def initializeYourself(
         self,
     ):
         """Initalize the mateiral point to be ready for computing."""
-        pass
 
     @abstractmethod
     def setMaterial(self, materialName: str, materialProperties: np.ndarray):
@@ -187,7 +168,6 @@ class MaterialPointBase(ABC):
         materialProperties
             The numpy array containing the material properties.
         """
-        pass
 
     @abstractmethod
     def setInitialCondition(self, stateType: str, values: np.ndarray):
@@ -200,5 +180,3 @@ class MaterialPointBase(ABC):
         values
             The numpy array describing the initial state.
         """
-
-        pass

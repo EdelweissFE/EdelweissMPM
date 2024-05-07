@@ -31,24 +31,17 @@ import numpy as np
 import pytest
 from edelweissfe.journal.journal import Journal
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissfe.sets.nodeset import NodeSet
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from edelweissfe.utils.exceptions import StepFailed
 
-from edelweissmpm.constraints.penaltyequalvalue import PenaltyEqualValue
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.generators import boxbsplinegridgenerator, boxgridgenerator, boxmpgenerator
+from edelweissmpm.generators import boxbsplinegridgenerator, boxmpgenerator
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
 from edelweissmpm.solvers.nqsmarmotparallel import NQSParallelForMarmot
 from edelweissmpm.stepactions.bodyload import BodyLoad
 from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
-from edelweissmpm.stepactions.indirectcontrol import IndirectControl
 
 
 def run_sim(logFile=None, order: int = 2):

@@ -28,12 +28,11 @@
 
 from collections import defaultdict
 
-import numpy as np
 
 from edelweissmpm.cells.base.cell import CellBase
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
-from edelweissmpm.mpmmanagers.utils import BoundingBox, KDTree, buildBoundingBoxFromCells
+from edelweissmpm.mpmmanagers.utils import KDTree, buildBoundingBoxFromCells
 
 
 class SmartMaterialPointManager(MPMManagerBase):

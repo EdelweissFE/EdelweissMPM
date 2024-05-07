@@ -28,8 +28,6 @@
 import numpy as np
 from edelweissfe.numerics.dofmanager import DofManager
 
-from edelweissmpm.models.mpmmodel import MPMModel
-
 
 class MPMDofManager(DofManager):
     """A DofManager class for the Material Point Method.

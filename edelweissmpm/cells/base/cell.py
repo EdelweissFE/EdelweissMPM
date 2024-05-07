@@ -71,35 +71,25 @@ class CellBase(ABC):
             The list of Nodes assigned to this cell.
         """
 
-        pass
-
     @property
     @abstractmethod
     def cellNumber(self) -> int:
         """The unique number of this cell"""
-
-        pass
 
     @property
     @abstractmethod
     def nNodes(self) -> int:
         """The list of nodes this cell holds"""
 
-        pass
-
     @property
     @abstractmethod
     def nDof(self) -> int:
         """The total number of degrees of freedom this cell has"""
 
-        pass
-
     @property
     @abstractmethod
     def fields(self) -> list[list[str]]:
         """The list of fields per grid nodes."""
-
-        pass
 
     @property
     @abstractmethod
@@ -107,19 +97,15 @@ class CellBase(ABC):
         """The permutation pattern for the residual vector and the stiffness matrix to
         aggregate all entries in order to resemble the defined fields nodewise."""
 
-        pass
-
     @property
     @abstractmethod
     def ensightType(self) -> str:
         """The shape of the element in Ensight Gold notation."""
-        pass
 
     @property
     @abstractmethod
     def assignedMaterialPoints(self) -> list[MaterialPointBase]:
         """The shape of the element in Ensight Gold notation."""
-        pass
 
     @abstractmethod
     def assignMaterialPoints(self, materialPoints: list[MaterialPointBase]):
@@ -130,7 +116,6 @@ class CellBase(ABC):
         materialPoints
             The list of material points to be assigned.
         """
-        pass
 
     @abstractmethod
     def interpolateSolutionContributionToMaterialPoints(
@@ -145,8 +130,6 @@ class CellBase(ABC):
             The current solution vector contribution increment for all fields.
 
         """
-
-        pass
 
     @abstractmethod
     def computeMaterialPointKernels(
@@ -172,8 +155,6 @@ class CellBase(ABC):
         dTime
             The time increment.
         """
-
-        pass
 
     @abstractmethod
     def computeBodyLoad(
@@ -202,8 +183,6 @@ class CellBase(ABC):
         dTime
             The time increment.
         """
-
-        pass
 
     @abstractmethod
     def computeDistributedLoad(
@@ -239,8 +218,6 @@ class CellBase(ABC):
             The time increment.
         """
 
-        pass
-
     @abstractmethod
     def getCoordinatesAtCenter(self) -> np.ndarray:
         """Compute the underlying MarmotElement centroid coordinates.
@@ -251,8 +228,6 @@ class CellBase(ABC):
             The cells's central coordinates.
         """
 
-        pass
-
     @abstractmethod
     def isCoordinateInCell(self, coordinate: np.ndarray) -> bool:
         """Check if a given coordinate is located within this cell.
@@ -262,7 +237,6 @@ class CellBase(ABC):
         bool
             The truth value if this coordinate is located in the cell.
         """
-        pass
 
     @abstractmethod
     def getBoundingBox(
@@ -275,7 +249,6 @@ class CellBase(ABC):
         tuple
                 The tuple containing the min. and max. coordinates of the bounding box.
         """
-        pass
 
     @abstractmethod
     def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
@@ -286,5 +259,3 @@ class CellBase(ABC):
         np.ndarray
             The interpolation vector for all nodes.
         """
-
-        pass

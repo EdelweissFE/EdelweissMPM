@@ -25,9 +25,8 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
-import numpy as np
 from edelweissfe.numerics.dofmanager import DofVector
 from edelweissfe.stepactions.base.stepactionbase import StepActionBase
 from edelweissfe.timesteppers.timestep import TimeStep
@@ -60,4 +59,3 @@ class ArcLengthControllerBase(StepActionBase):
         float
             The correction ddLambda to dLambda.
         """
-        pass

@@ -25,14 +25,9 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-import traceback
-from collections import defaultdict
 
 import edelweissfe.utils.performancetiming as performancetiming
 import numpy as np
-from edelweissfe.config.linsolve import getDefaultLinSolver, getLinSolverByName
-from edelweissfe.config.phenomena import getFieldSize
-from edelweissfe.config.timing import createTimingDict
 from edelweissfe.constraints.base.constraintbase import ConstraintBase
 from edelweissfe.journal.journal import Journal
 from edelweissfe.numerics.csrgenerator import CSRGenerator

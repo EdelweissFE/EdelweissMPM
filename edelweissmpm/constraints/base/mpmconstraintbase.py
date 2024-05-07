@@ -28,7 +28,6 @@ class MPMConstraintBase(ABC):
         -------
         str
             The name."""
-        pass
 
     @property
     @abstractmethod
@@ -40,7 +39,6 @@ class MPMConstraintBase(ABC):
         -------
         list[Node]
             The list of nodes."""
-        pass
 
     @property
     @abstractmethod
@@ -51,7 +49,6 @@ class MPMConstraintBase(ABC):
         -------
         list[list[str]]
             The node-wise list of fields."""
-        pass
 
     @property
     @abstractmethod
@@ -62,7 +59,6 @@ class MPMConstraintBase(ABC):
         -------
         int
             The total number of degrees of freedom."""
-        pass
 
     @property
     @abstractmethod
@@ -75,7 +71,6 @@ class MPMConstraintBase(ABC):
         -------
         list[ScalarVariable]
             The list of scalar variables."""
-        pass
 
     @abstractmethod
     def getNumberOfAdditionalNeededScalarVariables(
@@ -89,7 +84,6 @@ class MPMConstraintBase(ABC):
         int
             The number of requested ScalarVariable
         """
-        pass
 
     @abstractmethod
     def assignAdditionalScalarVariables(self, scalarVariables: list[ScalarVariable]):
@@ -100,7 +94,6 @@ class MPMConstraintBase(ABC):
         scalarVariables
             The list of ScalarVariable to be assigned.
         """
-        pass
 
     @abstractmethod
     def updateConnectivity(self, model: MPMModel) -> bool:
@@ -117,7 +110,6 @@ class MPMConstraintBase(ABC):
         bool
             The truth value if the connectivity has changed.
         """
-        pass
 
     @abstractmethod
     def applyConstraint(self, dU: np.ndarray, PExt: np.ndarray, V: np.ndarray, timeStep: TimeStep):
@@ -134,4 +126,3 @@ class MPMConstraintBase(ABC):
         timeStep
             The current step and total time.
         """
-        pass

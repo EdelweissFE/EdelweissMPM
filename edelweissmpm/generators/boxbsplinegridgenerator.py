@@ -29,8 +29,6 @@ import numpy as np
 from edelweissfe.journal.journal import Journal
 from edelweissfe.points.node import Node
 from edelweissfe.sets.nodeset import NodeSet
-from edelweissfe.utils.misc import convertLinesToStringDictionary
-from edelweissfe.variables.fieldvariable import FieldVariable
 
 from edelweissmpm.config.celllibrary import getCellClass
 from edelweissmpm.models.mpmmodel import MPMModel

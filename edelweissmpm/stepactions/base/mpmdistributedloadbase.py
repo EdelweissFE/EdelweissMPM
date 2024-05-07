@@ -25,11 +25,9 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 import numpy as np
-import sympy as sp
-from edelweissfe.config.phenomena import getFieldSize
 from edelweissfe.stepactions.base.stepactionbase import StepActionBase
 from edelweissfe.timesteppers.timestep import TimeStep
 
@@ -48,7 +46,6 @@ class MPMDistributedLoadBase(StepActionBase):
         MaterialPointSet
             The list of cells.
         """
-        pass
 
     @property
     @abstractmethod
@@ -60,7 +57,6 @@ class MPMDistributedLoadBase(StepActionBase):
         str
             The load type.
         """
-        pass
 
     @abstractmethod
     def getCurrentMaterialPointLoad(self, materialPoint: MaterialPointBase, timeStep: TimeStep) -> [int, np.ndarray]:
@@ -80,4 +76,3 @@ class MPMDistributedLoadBase(StepActionBase):
                 - the surface ID.
                 - the load vector.
         """
-        pass

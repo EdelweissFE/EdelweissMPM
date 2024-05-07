@@ -24,7 +24,6 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import numpy as np
 from edelweissfe.journal.journal import Journal
 from edelweissfe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
 
