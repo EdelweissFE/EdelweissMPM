@@ -25,8 +25,9 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 import numpy as np
+
+from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 
 
 class MaterialPoint(MaterialPointBase):

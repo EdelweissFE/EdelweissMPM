@@ -25,12 +25,14 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+from abc import ABC, abstractmethod
+
+import numpy as np
+from edelweissfe.numerics.dofmanager import DofVector
 from edelweissfe.stepactions.base.stepactionbase import StepActionBase
 from edelweissfe.timesteppers.timestep import TimeStep
+
 from edelweissmpm.numerics.dofmanager import DofManager
-from edelweissfe.numerics.dofmanager import DofVector
-import numpy as np
-from abc import ABC, abstractmethod
 
 
 class ArcLengthControllerBase(StepActionBase):

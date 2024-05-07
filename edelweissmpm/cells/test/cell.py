@@ -30,8 +30,10 @@ the abstract base class :class:`~CellBase`.
 """
 
 from abc import ABC, abstractmethod
+
 import numpy as np
 from edelweissfe.points.node import Node
+
 from edelweissmpm.cells.base.cell import CellBase
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 

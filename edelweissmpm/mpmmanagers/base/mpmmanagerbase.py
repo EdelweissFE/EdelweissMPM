@@ -30,15 +30,14 @@ Material Point Managers are responsible for the connectivity between material po
 They track the material points and cells and update the connectivity between them.
 Furthermore, they provide the active cells, which are the cells that contain material points."""
 
-from edelweissmpm.sets.cellset import CellSet
-from edelweissmpm.cells.base.cell import CellBase
-from edelweissmpm.materialpoints.base.mp import MaterialPointBase
-
+from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import numpy as np
 
-from abc import ABC, abstractmethod
+from edelweissmpm.cells.base.cell import CellBase
+from edelweissmpm.materialpoints.base.mp import MaterialPointBase
+from edelweissmpm.sets.cellset import CellSet
 
 
 class MPMManagerBase(ABC):

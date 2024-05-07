@@ -26,17 +26,22 @@
 #  ---------------------------------------------------------------------
 
 import numpy as np
-cimport numpy as np
-cimport edelweissmpm.cells.marmotcell.marmotcell
-cimport libcpp.cast
+
 cimport cython
+cimport libcpp.cast
+cimport numpy as np
+
+cimport edelweissmpm.cells.marmotcell.marmotcell
 
 from edelweissfe.utils.exceptions import CutbackRequest
-from libcpp.memory cimport unique_ptr, allocator, make_unique
-from libc.stdlib cimport malloc, free
 
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper
-    
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport \
+    MarmotMaterialPointWrapper
+
+
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotCellWrapper:
     """This cell as a wrapper for MarmotCells.

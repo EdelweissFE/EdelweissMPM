@@ -25,14 +25,13 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+import numpy as np
+from edelweissfe.journal.journal import Journal
 from edelweissfe.points.node import Node
 from edelweissfe.sets.nodeset import NodeSet
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissfe.journal.journal import Journal
 
 from edelweissmpm.config.celllibrary import getCellClass
-
-import numpy as np
+from edelweissmpm.models.mpmmodel import MPMModel
 
 
 def generateModelData(

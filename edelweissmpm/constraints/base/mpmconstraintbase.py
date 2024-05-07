@@ -5,12 +5,14 @@ In this regard, constraints are similar to elements, but they mey also use addit
 Unlike elements, they are not subject to external loads.
 """
 
-from edelweissfe.points.node import Node
-from edelweissfe.variables.scalarvariable import ScalarVariable
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissmpm.models.mpmmodel import MPMModel
 from abc import ABC, abstractmethod
+
 import numpy as np
+from edelweissfe.points.node import Node
+from edelweissfe.timesteppers.timestep import TimeStep
+from edelweissfe.variables.scalarvariable import ScalarVariable
+
+from edelweissmpm.models.mpmmodel import MPMModel
 
 
 class MPMConstraintBase(ABC):

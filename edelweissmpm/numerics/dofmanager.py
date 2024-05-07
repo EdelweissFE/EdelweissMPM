@@ -25,11 +25,10 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+import numpy as np
 from edelweissfe.numerics.dofmanager import DofManager
 
 from edelweissmpm.models.mpmmodel import MPMModel
-
-import numpy as np
 
 
 class MPMDofManager(DofManager):

@@ -32,18 +32,13 @@ and to transfer the material properties to the grid.
 """
 
 from abc import ABC, abstractmethod
+
 import numpy as np
 from edelweissfe.points.node import Node
 
 
 class MaterialPointBase(ABC):
     """A basic material point class. If you want to implement a new material point, you should inherit from this class.
-
-    Attributes
-    ----------
-    label : int
-        The unique label (ID) of this material point.
-    assignedCells : set
 
     Parameters
     ----------
@@ -68,6 +63,7 @@ class MaterialPointBase(ABC):
         pass
 
     @property
+    @abstractmethod
     def assignedCells(self) -> set:
         """The list of currently assigned cells."""
         pass

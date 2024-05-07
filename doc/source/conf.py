@@ -73,10 +73,11 @@ except ImportError:
 
 from importlib import import_module
 from pprint import pformat
-from docutils.parsers.rst import Directive
+
 from docutils import nodes
+from docutils.parsers.rst import Directive
 from sphinx import addnodes
-from sphinx.directives.code import CodeBlock, dedent_lines, container_wrapper
+from sphinx.directives.code import CodeBlock, container_wrapper, dedent_lines
 
 
 def doi_role(name, rawtext, text, lineno, inliner, options={}, content=[]):

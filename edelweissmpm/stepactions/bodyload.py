@@ -24,11 +24,12 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissmpm.sets.cellset import CellSet
 import numpy as np
 import sympy as sp
+from edelweissfe.timesteppers.timestep import TimeStep
+
+from edelweissmpm.sets.cellset import CellSet
+from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 
 
 class BodyLoad(MPMBodyLoadBase):

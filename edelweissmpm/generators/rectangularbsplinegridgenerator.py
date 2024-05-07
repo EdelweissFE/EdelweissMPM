@@ -59,16 +59,15 @@ documentation = {
     "elType": "type of element",
 }
 
+import numpy as np
+from edelweissfe.journal.journal import Journal
+from edelweissfe.models.femodel import FEModel
 from edelweissfe.points.node import Node
 from edelweissfe.sets.nodeset import NodeSet
 from edelweissfe.utils.misc import convertLinesToStringDictionary
-from edelweissfe.models.femodel import FEModel
-from edelweissfe.journal.journal import Journal
 from edelweissfe.variables.fieldvariable import FieldVariable
 
 from edelweissmpm.config.celllibrary import getCellClass
-
-import numpy as np
 
 
 def generateModelData(model, journal, **kwargs):

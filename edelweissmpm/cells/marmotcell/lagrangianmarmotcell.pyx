@@ -25,20 +25,26 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import numpy as np
-cimport numpy as np
-cimport libcpp.cast
+
 cimport cython
+cimport libcpp.cast
+cimport numpy as np
 from libcpp.string cimport string
-from libcpp.vector cimport vector
 from libcpp.unordered_map cimport unordered_map
+from libcpp.vector cimport vector
 
 from edelweissfe.utils.exceptions import CutbackRequest
-from libcpp.memory cimport unique_ptr, allocator, make_unique
-from libc.stdlib cimport malloc, free
 
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper
-from edelweissmpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotCellFactory, MarmotMaterialPoint
-    
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+
+from edelweissmpm.cells.marmotcell.marmotcell cimport (MarmotCellFactory,
+                                                       MarmotCellWrapper,
+                                                       MarmotMaterialPoint)
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport \
+    MarmotMaterialPointWrapper
+
+
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class LagrangianMarmotCellWrapper(MarmotCellWrapper):
     """This class is a wrapper for Lagrangian Marmot cells. It is responsible for creating the Marmot cell and

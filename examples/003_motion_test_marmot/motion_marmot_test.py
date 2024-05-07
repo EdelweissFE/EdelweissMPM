@@ -24,23 +24,22 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import pytest
 import argparse
 
-from edelweissfe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
+import edelweissfe.utils.performancetiming as performancetiming
+import numpy as np
+import pytest
 from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissfe.steps.stepmanager import StepActionDefinition, StepManager
 
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from edelweissmpm.sets.cellset import CellSet
-import edelweissfe.utils.performancetiming as performancetiming
-
-import numpy as np
 
 
 def run_sim():

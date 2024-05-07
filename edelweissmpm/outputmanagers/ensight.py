@@ -24,27 +24,24 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissfe.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissfe.outputmanagers.ensight import (
-    createUnstructuredPartFromElementSet,
-    EnsightChunkWiseCase,
-    EnsightGeometry,
-    EnsightUnstructuredPart,
-)
-
-import os
 import datetime
-import numpy as np
-from collections import defaultdict, OrderedDict
+import os
+from collections import OrderedDict, defaultdict
 from distutils.util import strtobool
-from edelweissfe.points.node import Node
-from edelweissfe.utils.meshtools import disassembleElsetToEnsightShapes
-import edelweissfe.config.phenomena
-from edelweissfe.utils.math import evalModelAccessibleExpression
 from io import TextIOBase
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissmpm.sets.cellset import CellSet
+
+import edelweissfe.config.phenomena
+import numpy as np
+from edelweissfe.outputmanagers.ensight import EnsightChunkWiseCase, EnsightGeometry, EnsightUnstructuredPart
+from edelweissfe.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissfe.outputmanagers.ensight import createUnstructuredPartFromElementSet
+from edelweissfe.points.node import Node
+from edelweissfe.utils.math import evalModelAccessibleExpression
+from edelweissfe.utils.meshtools import disassembleElsetToEnsightShapes
+
 from edelweissmpm.sets.cellelementset import CellElementSet
+from edelweissmpm.sets.cellset import CellSet
+from edelweissmpm.sets.materialpointset import MaterialPointSet
 
 
 def createUnstructuredPartFromCellSet(cellPartName, cells: list, partID: int):

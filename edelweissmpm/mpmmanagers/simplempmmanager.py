@@ -25,9 +25,10 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+from collections import defaultdict
+
 from edelweissmpm.cells.base.cell import CellBase
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
-from collections import defaultdict
 
 
 class SimpleMaterialPointManager:

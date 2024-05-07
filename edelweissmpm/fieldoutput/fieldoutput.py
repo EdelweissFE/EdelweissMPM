@@ -24,12 +24,13 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissfe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
-from edelweissmpm.fieldoutput.mpresultcollector import MaterialPointResultCollector
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissfe.journal.journal import Journal
 import numpy as np
+from edelweissfe.journal.journal import Journal
+from edelweissfe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
+
+from edelweissmpm.fieldoutput.mpresultcollector import MaterialPointResultCollector
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.sets.materialpointset import MaterialPointSet
 
 
 class MaterialPointFieldOutput(_FieldOutputBase):

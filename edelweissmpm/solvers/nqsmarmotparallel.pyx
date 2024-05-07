@@ -24,20 +24,26 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissfe.journal.journal import Journal
 import edelweissfe.utils.performancetiming as performancetiming
+import numpy as np
+from edelweissfe.journal.journal import Journal
+
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
 
-import numpy as np
-from cython.parallel cimport parallel, threadid, prange
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper, MarmotMaterialPoint
-from edelweissmpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotCell
-from libc.stdlib cimport malloc, free
+from cython.parallel cimport parallel, prange, threadid
+from libc.stdlib cimport free, malloc
 from libcpp.string cimport string
-from time import time as getCurrentTime
-from multiprocessing import cpu_count
+
+from edelweissmpm.cells.marmotcell.marmotcell cimport (MarmotCell,
+                                                       MarmotCellWrapper)
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPoint, MarmotMaterialPointWrapper)
+
 # from edelweissfe.utils.exceptions import CutbackRequest
 import os
+from multiprocessing import cpu_count
+from time import time as getCurrentTime
+
 
 class NQSParallelForMarmot(NonlinearQuasistaticSolver):
     """This is a parallel implemenntation of the NonlinearQuasistaticSolver.

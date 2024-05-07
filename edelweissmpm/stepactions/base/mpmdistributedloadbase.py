@@ -25,14 +25,16 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from edelweissfe.stepactions.base.stepactionbase import StepActionBase
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissmpm.materialpoints.base.mp import MaterialPointBase
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissfe.config.phenomena import getFieldSize
+from abc import ABC, abstractmethod
+
 import numpy as np
 import sympy as sp
-from abc import ABC, abstractmethod
+from edelweissfe.config.phenomena import getFieldSize
+from edelweissfe.stepactions.base.stepactionbase import StepActionBase
+from edelweissfe.timesteppers.timestep import TimeStep
+
+from edelweissmpm.materialpoints.base.mp import MaterialPointBase
+from edelweissmpm.sets.materialpointset import MaterialPointSet
 
 
 class MPMDistributedLoadBase(StepActionBase):

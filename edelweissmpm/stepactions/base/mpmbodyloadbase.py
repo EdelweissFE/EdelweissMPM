@@ -28,13 +28,15 @@
 """
 
 
-from edelweissfe.stepactions.base.stepactionbase import StepActionBase
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissmpm.sets.cellset import CellSet
-from edelweissfe.config.phenomena import getFieldSize
+from abc import ABC, abstractmethod
+
 import numpy as np
 import sympy as sp
-from abc import ABC, abstractmethod
+from edelweissfe.config.phenomena import getFieldSize
+from edelweissfe.stepactions.base.stepactionbase import StepActionBase
+from edelweissfe.timesteppers.timestep import TimeStep
+
+from edelweissmpm.sets.cellset import CellSet
 
 
 class MPMBodyLoadBase(StepActionBase):
