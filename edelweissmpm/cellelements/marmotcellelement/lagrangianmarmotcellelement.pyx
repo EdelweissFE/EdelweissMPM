@@ -25,20 +25,31 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import numpy as np
-cimport numpy as np
-cimport libcpp.cast
+
 cimport cython
+cimport libcpp.cast
+cimport numpy as np
 from libcpp.string cimport string
-from libcpp.vector cimport vector
 from libcpp.unordered_map cimport unordered_map
+from libcpp.vector cimport vector
 
 from edelweissfe.utils.exceptions import CutbackRequest
-from libcpp.memory cimport unique_ptr, allocator, make_unique
-from libc.stdlib cimport malloc, free
 
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper
-from edelweissmpm.cellelements.marmotcellelement.marmotcellelement cimport MarmotCellElementWrapper, MarmotCellElementFactory, MarmotMaterialPoint, MarmotCell, MarmotCellElement
-    
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+
+from edelweissmpm.cellelements.marmotcellelement.marmotcellelement cimport (
+    MarmotCell,
+    MarmotCellElement,
+    MarmotCellElementFactory,
+    MarmotCellElementWrapper,
+    MarmotMaterialPoint,
+)
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPointWrapper,
+)
+
+
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
     """This class is a wrapper for Lagrangian MarmotCellElements. It is used to create a MarmotCellElement from a list of nodes and to store the nodes of the cell element. It also provides a method to update the material points of the cell element."""
@@ -73,7 +84,7 @@ cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
 
         self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()
-    
+
     def __dealloc__(self):
         """This method is called when the object is deleted. It is responsible for freeing the memory of the MarmotCellElement."""
         if isinstance(self, LagrangianMarmotCellElementWrapper):

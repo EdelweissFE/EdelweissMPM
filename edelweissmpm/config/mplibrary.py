@@ -32,7 +32,7 @@ In future, elements by other providers or elements directly implemented in Edelw
     :caption: Example:
 
     *element, type=C3D8, provider=marmot
-        ** el_label, node1, node2, node3, node4, ... 
+        ** el_label, node1, node2, node3, node4, ...
         1000,        1,     2,     3,     4,     ...
 """
 
@@ -57,6 +57,8 @@ def getMaterialPointClass(provider: str) -> type:
         return MaterialPoint
 
     if provider.lower() == "marmot":
-        from edelweissmpm.materialpoints.marmotmaterialpoint.mp import MarmotMaterialPointWrapper
+        from edelweissmpm.materialpoints.marmotmaterialpoint.mp import (
+            MarmotMaterialPointWrapper,
+        )
 
         return MarmotMaterialPointWrapper

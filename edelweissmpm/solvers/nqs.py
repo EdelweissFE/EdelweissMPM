@@ -25,47 +25,37 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+
+import edelweissfe.utils.performancetiming as performancetiming
 import numpy as np
+from edelweissfe.constraints.base.constraintbase import ConstraintBase
+from edelweissfe.journal.journal import Journal
+from edelweissfe.numerics.csrgenerator import CSRGenerator
+from edelweissfe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatrix
+from edelweissfe.outputmanagers.base.outputmanagerbase import OutputManagerBase
+from edelweissfe.sets.nodeset import NodeSet
+from edelweissfe.stepactions.base.dirichletbase import DirichletBase
+from edelweissfe.stepactions.base.stepactionbase import StepActionBase
+from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.utils.exceptions import (
+    ConditionalStop,
+    DivergingSolution,
     ReachedMaxIncrements,
     ReachedMaxIterations,
     ReachedMinIncrementSize,
-    DivergingSolution,
-    ConditionalStop,
     StepFailed,
 )
-
-from collections import defaultdict
-from edelweissfe.journal.journal import Journal
-from edelweissfe.config.linsolve import getLinSolverByName, getDefaultLinSolver
-from edelweissfe.config.timing import createTimingDict
-from edelweissfe.config.phenomena import getFieldSize
-from edelweissfe.numerics.csrgenerator import CSRGenerator
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissfe.stepactions.base.stepactionbase import StepActionBase
-from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
-from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissfe.outputmanagers.base.outputmanagerbase import OutputManagerBase
-from edelweissfe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatrix
 from edelweissfe.utils.fieldoutput import FieldOutputController
-from edelweissfe.constraints.base.constraintbase import ConstraintBase
-
-from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
-from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
-from edelweissfe.stepactions.base.dirichletbase import DirichletBase
+from numpy import ndarray
+from prettytable import PrettyTable
+from scipy.sparse import csr_matrix
 
 from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
-from edelweissfe.sets.nodeset import NodeSet
-from scipy.sparse import csr_matrix
-from numpy import ndarray
-import edelweissfe.utils.performancetiming as performancetiming
-import traceback
-
-from prettytable import PrettyTable
+from edelweissmpm.numerics.dofmanager import MPMDofManager
+from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
+from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 
 
 class NonlinearQuasistaticSolver:
@@ -162,9 +152,6 @@ class NonlinearQuasistaticSolver:
         table.align = "l"
         self.journal.printPrettyTable(table, self.identification)
 
-        nMaximumIterations = iterationOptions["max. iterations"]
-        nCrititicalIterations = iterationOptions["critical iterations"]
-
         materialPoints = model.materialPoints.values()
 
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
@@ -172,7 +159,6 @@ class NonlinearQuasistaticSolver:
         elements = model.elements.values()
         scalarVariables = model.scalarVariables.values()
 
-        activeCellsOld = None
         newtonCache = None
         theDofManager = None
 
@@ -1125,6 +1111,7 @@ class NonlinearQuasistaticSolver:
         theDofManager
             The DofManager instance.
         """
+        time_ = np.array([time, time])
 
         for el in elements:
             dUEl = dU[el]
@@ -1132,11 +1119,11 @@ class NonlinearQuasistaticSolver:
             UElnp = UEln + dUEl
             PEl = np.zeros(el.nDof)
             KEl = K_VIJ[el]
-            el.computeMaterialPointKernels(UElnp, PEl, KEl, time, dT)
-            P[el] += PEl
+            el.computeYourself(KEl, PEl, UElnp, dUEl, time_, dT)
+            P[el] -= PEl
             F[el] += abs(PEl)
 
-    @performancetiming.timeit("computation elements")
+    @performancetiming.timeit("computation cell elements")
     def _computeCellElements(
         self,
         elements: list,

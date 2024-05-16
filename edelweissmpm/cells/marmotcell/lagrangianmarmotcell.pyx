@@ -25,20 +25,29 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import numpy as np
-cimport numpy as np
-cimport libcpp.cast
+
 cimport cython
+cimport libcpp.cast
+cimport numpy as np
 from libcpp.string cimport string
-from libcpp.vector cimport vector
 from libcpp.unordered_map cimport unordered_map
+from libcpp.vector cimport vector
 
 from edelweissfe.utils.exceptions import CutbackRequest
-from libcpp.memory cimport unique_ptr, allocator, make_unique
-from libc.stdlib cimport malloc, free
 
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper
-from edelweissmpm.cells.marmotcell.marmotcell cimport MarmotCellWrapper, MarmotCellFactory, MarmotMaterialPoint
-    
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+
+from edelweissmpm.cells.marmotcell.marmotcell cimport (
+    MarmotCellFactory,
+    MarmotCellWrapper,
+    MarmotMaterialPoint,
+)
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPointWrapper,
+)
+
+
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class LagrangianMarmotCellWrapper(MarmotCellWrapper):
     """This class is a wrapper for Lagrangian Marmot cells. It is responsible for creating the Marmot cell and
@@ -46,11 +55,11 @@ cdef class LagrangianMarmotCellWrapper(MarmotCellWrapper):
 
     Parameters
     ----------
-    cellType 
+    cellType
         The type of the cell, e.g., CPE4.
-    cellNumber 
+    cellNumber
         The number of the cell.
-    nodes 
+    nodes
         The nodes of the cell.
     """
 
@@ -63,7 +72,7 @@ cdef class LagrangianMarmotCellWrapper(MarmotCellWrapper):
 
         Parameters
         ----------
-        elementType 
+        elementType
             The Marmot cell which should be represented, e.g., Quad4/Displacement.
         elNumber
             The number of the cell.
@@ -80,7 +89,7 @@ cdef class LagrangianMarmotCellWrapper(MarmotCellWrapper):
             self._marmotCell = MarmotCellFactory.createCell( cellType.encode('utf-8'), self._cellNumber, &self._nodeCoordinates[0,0], self._nodeCoordinates.size)
         except IndexError:
             raise NotImplementedError("Marmot cell {:} not found in library.".format(cellType))
-    
+
     def __dealloc__(self):
         if isinstance(self, LagrangianMarmotCellWrapper):
             del self._marmotCell

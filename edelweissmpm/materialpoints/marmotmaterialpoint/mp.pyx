@@ -27,15 +27,19 @@
 
 
 import numpy as np
-cimport numpy as np
-cimport edelweissmpm.materialpoints.marmotmaterialpoint.mp
-cimport libcpp.cast
+
 cimport cython
+cimport libcpp.cast
+cimport numpy as np
+
+cimport edelweissmpm.materialpoints.marmotmaterialpoint.mp
 
 from edelweissfe.utils.exceptions import CutbackRequest
-from libcpp.memory cimport unique_ptr, allocator, make_unique
-from libc.stdlib cimport malloc, free
-    
+
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+
+
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotMaterialPointWrapper:
     # cdef classes cannot subclass. Hence we do not subclass from the BaseMaterialPoint,
@@ -91,7 +95,7 @@ cdef class MarmotMaterialPointWrapper:
         return self._number
 
     @property
-    def assignedCells(self) -> list:
+    def assignedCells(self) -> set:
         """The list of currently attached cells."""
         return self._assignedCells
 

@@ -25,17 +25,18 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from edelweissfe.models.femodel import FEModel
+from edelweissfe.config.phenomena import getFieldSize, phenomena
 from edelweissfe.journal.journal import Journal
-from edelweissfe.variables.fieldvariable import FieldVariable
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissmpm.sets.cellset import CellSet
-from edelweissmpm.sets.cellelementset import CellElementSet
+from edelweissfe.models.femodel import FEModel
 from edelweissfe.sets.elementset import ElementSet
 from edelweissfe.sets.nodeset import NodeSet
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissfe.config.phenomena import phenomena, getFieldSize
+from edelweissfe.variables.fieldvariable import FieldVariable
 from prettytable import PrettyTable
+
+from edelweissmpm.fields.nodefield import MPMNodeField
+from edelweissmpm.sets.cellelementset import CellElementSet
+from edelweissmpm.sets.cellset import CellSet
+from edelweissmpm.sets.materialpointset import MaterialPointSet
 
 
 class MPMModel(FEModel):

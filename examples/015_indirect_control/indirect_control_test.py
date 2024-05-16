@@ -24,32 +24,31 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import pytest
 import argparse
 
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-
-from edelweissmpm.generators import rectangularbsplinegridgenerator, rectangularmpgenerator
-from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.numerics.dofmanager import MPMDofManager
-from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
-from edelweissfe.sets.nodeset import NodeSet
-
-from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissmpm.solvers.nqsmparclength import NonlinearQuasistaticMarmotArcLengthSolver
-from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
-from edelweissfe.utils.exceptions import StepFailed
 import edelweissfe.utils.performancetiming as performancetiming
-
-from edelweissmpm.stepactions.indirectcontrol import IndirectControl
-
 import numpy as np
+import pytest
+from edelweissfe.journal.journal import Journal
+from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
+from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.generators import (
+    rectangularbsplinegridgenerator,
+    rectangularmpgenerator,
+)
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.solvers.nqsmparclength import (
+    NonlinearQuasistaticMarmotArcLengthSolver,
+)
+from edelweissmpm.stepactions.dirichlet import Dirichlet
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
+from edelweissmpm.stepactions.indirectcontrol import IndirectControl
 
 
 def run_sim():
@@ -191,16 +190,13 @@ def run_sim():
             indirectcontrol,
         )
 
-    except StepFailed as e:
-        raise
-
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "PerfGraph")
 
     return mpmModel
 

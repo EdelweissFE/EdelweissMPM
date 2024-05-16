@@ -28,13 +28,13 @@
 """
 
 
+from abc import abstractmethod
+
+import numpy as np
 from edelweissfe.stepactions.base.stepactionbase import StepActionBase
 from edelweissfe.timesteppers.timestep import TimeStep
+
 from edelweissmpm.sets.cellset import CellSet
-from edelweissfe.config.phenomena import getFieldSize
-import numpy as np
-import sympy as sp
-from abc import ABC, abstractmethod
 
 
 class MPMBodyLoadBase(StepActionBase):
@@ -53,7 +53,6 @@ class MPMBodyLoadBase(StepActionBase):
         CellSet
             The list of cells.
         """
-        pass
 
     @property
     @abstractmethod
@@ -65,7 +64,6 @@ class MPMBodyLoadBase(StepActionBase):
         str
             The load type.
         """
-        pass
 
     @abstractmethod
     def getCurrentLoad(self, timeStep: TimeStep) -> np.ndarray:
@@ -81,4 +79,3 @@ class MPMBodyLoadBase(StepActionBase):
         np.ndarray
             The magnitude.
         """
-        pass

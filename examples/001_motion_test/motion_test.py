@@ -26,23 +26,19 @@
 #  ---------------------------------------------------------------------
 
 import argparse
-import os
+
+import edelweissfe.utils.performancetiming as performancetiming
+import numpy as np
 import pytest
-
-from edelweissfe.steps.stepmanager import StepManager, StepActionDefinition, StepActionDefinition
 from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
 from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
-import edelweissfe.utils.performancetiming as performancetiming
-
-import numpy as np
 
 
 def run_sim():
@@ -88,7 +84,7 @@ def run_sim():
 
     fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCells, "dU")
     fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement", allMPs, "displacement", **{"f(x)": "np.pad(x,((0,0),(0,1)))"}
+        "displacement", allMPs, "displacement", f_x=lambda x: np.pad(x, ((0, 0), (0, 1)))
     )
 
     fieldOutputController.initializeJob()
@@ -108,10 +104,6 @@ def run_sim():
 
             if hasChanged:
                 print("material points in cells have changed since previous localization")
-
-                # if mpmManager.hasLostMaterialPoints():
-                #     print("we have lost material points outside the grid!")
-                #     break
 
                 activeCells = mpmManager.getActiveCells()
                 activeNodes = set([n for cell in activeCells for n in cell.nodes])

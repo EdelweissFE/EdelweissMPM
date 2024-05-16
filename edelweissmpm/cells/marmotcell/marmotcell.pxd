@@ -24,12 +24,14 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from libcpp.string cimport string
-from libcpp.vector cimport vector
-from libcpp.unordered_map cimport unordered_map
 cimport numpy as np
+from libcpp.string cimport string
+from libcpp.unordered_map cimport unordered_map
+from libcpp.vector cimport vector
+
 import numpy as np
-        
+
+
 cdef extern from "Marmot/MarmotMPMLibrary.h" namespace "MarmotLibrary" nogil:
     
     cdef cppclass MarmotCellFactory:

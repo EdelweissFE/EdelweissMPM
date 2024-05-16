@@ -24,27 +24,14 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissfe.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissfe.outputmanagers.ensight import (
-    createUnstructuredPartFromElementSet,
-    EnsightChunkWiseCase,
-    EnsightGeometry,
-    EnsightUnstructuredPart,
-)
 
-import os
-import datetime
-import numpy as np
-from collections import defaultdict, OrderedDict
-from distutils.util import strtobool
+from edelweissfe.outputmanagers.ensight import EnsightUnstructuredPart
+from edelweissfe.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from edelweissfe.points.node import Node
-from edelweissfe.utils.meshtools import disassembleElsetToEnsightShapes
-import edelweissfe.config.phenomena
-from edelweissfe.utils.math import evalModelAccessibleExpression
-from io import TextIOBase
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissmpm.sets.cellset import CellSet
+
 from edelweissmpm.sets.cellelementset import CellElementSet
+from edelweissmpm.sets.cellset import CellSet
+from edelweissmpm.sets.materialpointset import MaterialPointSet
 
 
 def createUnstructuredPartFromCellSet(cellPartName, cells: list, partID: int):
@@ -159,12 +146,12 @@ class OutputManager(EnsightOutputManager):
         return feModelParts
 
     def _getTargetPartForFieldOutput(self, fieldOutput, **kwargs):
-        if "mpSet" in kwargs:
-            return self.mpSetToEnsightPart[kwargs.pop("mpSet")]
-        if "cellSet" in kwargs:
-            return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
-        if "cellElementSet" in kwargs:
-            return self.cellElementSetToEnsightPart[kwargs.pop("cellSet")]
+        # if "mpSet" in kwargs:
+        #     return self.mpSetToEnsightPart[kwargs.pop("mpSet")]
+        # if "cellSet" in kwargs:
+        #     return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
+        # if "cellElementSet" in kwargs:
+        #     return self.cellElementSetToEnsightPart[kwargs.pop("cellSet")]
 
         theSetName = fieldOutput.associatedSet.name
 

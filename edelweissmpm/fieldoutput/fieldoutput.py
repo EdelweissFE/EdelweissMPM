@@ -24,12 +24,14 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissfe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
-from edelweissmpm.fieldoutput.mpresultcollector import MaterialPointResultCollector
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissmpm.models.mpmmodel import MPMModel
+from typing import Callable
+
 from edelweissfe.journal.journal import Journal
-import numpy as np
+from edelweissfe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
+
+from edelweissmpm.fieldoutput.mpresultcollector import MaterialPointResultCollector
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.sets.materialpointset import MaterialPointSet
 
 
 class MaterialPointFieldOutput(_FieldOutputBase):
@@ -48,19 +50,34 @@ class MaterialPointFieldOutput(_FieldOutputBase):
         The :class:`MPMModel tree instance.
     journal
         The :class:`Journal instance for logging.
-    **kwargs
-        The definition for this output.
+    saveHistory
+        If the history of the results should be saved.
+    f_x
+        The function to apply to the results.
+    export
+        Whether to export the results.
+    fExport_x
+        The function to apply to the exported results.
     """
 
     def __init__(
-        self, name: str, mpSet: MaterialPointSet, resultName: str, model: MPMModel, journal: Journal, **kwargs: dict
+        self,
+        name: str,
+        mpSet: MaterialPointSet,
+        resultName: str,
+        model: MPMModel,
+        journal: Journal,
+        saveHistory: bool = False,
+        f_x=Callable,
+        export: str = None,
+        fExport_x=Callable,
     ):
         self.associatedSet = mpSet
         self.resultName = resultName
 
         self.mpResultCollector = MaterialPointResultCollector(list(self.associatedSet), self.resultName)
 
-        super().__init__(name, model, journal, **kwargs)
+        super().__init__(name, model, journal, saveHistory, f_x, export, fExport_x)
 
     def updateResults(self, model: MPMModel):
         """Update the field output.
@@ -86,7 +103,14 @@ class MPMFieldOutputController(FieldOutputController):
         super().__init__(*args, **kwargs)
 
     def addPerMaterialPointFieldOutput(
-        self, name: str, materialPointSet: MaterialPointSet, result: str, **kwargs: dict
+        self,
+        name: str,
+        materialPointSet: MaterialPointSet,
+        result: str = None,
+        saveHistory: bool = False,
+        f_x=None,
+        export: str = None,
+        fExport_x=None,
     ):
         """
         Parameters
@@ -97,12 +121,21 @@ class MPMFieldOutputController(FieldOutputController):
             The :class:`NodeField, on which this FieldOutput should operate.
         resultName
             The name of the result entry in the :class:`NodeField
-        **kwargs
-            Further definitions of the FieldOutput
+        saveHistory
+            If the history of the results should be saved.
+        f_x
+            The function to apply to the results.
+        export
+            Whether to export the results.
+        fExport_x
+            The function to apply to the exported results.
         """
         if name in self.fieldOutputs:
             raise Exception("FieldOutput {:} already exists!".format(name))
 
+        if not result:
+            result = name
+
         self.fieldOutputs[name] = MaterialPointFieldOutput(
-            name, materialPointSet, result, self.model, self.journal, **kwargs
+            name, materialPointSet, result, self.model, self.journal, saveHistory, f_x, export, fExport_x
         )

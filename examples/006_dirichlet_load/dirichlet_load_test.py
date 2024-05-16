@@ -24,30 +24,22 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import pytest
 import argparse
 
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-
-from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
-from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
-
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.numerics.dofmanager import MPMDofManager
-from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
-from edelweissfe.sets.nodeset import NodeSet
-
-from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.bodyload import BodyLoad
 import edelweissfe.utils.performancetiming as performancetiming
-
 import numpy as np
+import pytest
+from edelweissfe.journal.journal import Journal
+from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
+from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
+from edelweissmpm.stepactions.dirichlet import Dirichlet
 
 
 def run_sim():

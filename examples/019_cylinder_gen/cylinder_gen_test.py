@@ -24,34 +24,25 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import pytest
 import argparse
-import numpy as np
 
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-
-from edelweissmpm.generators import boxbsplinegridgenerator, cylindermpgenerator
-from edelweissmpm.mpmmanagers.simplempmmanager import SimpleMaterialPointManager
-from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.numerics.dofmanager import MPMDofManager
-from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
-from edelweissmpm.constraints.penaltyequalvalue import PenaltyEqualValue
-from edelweissfe.sets.nodeset import NodeSet
-
-from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
-from edelweissfe.utils.exceptions import StepFailed
 import edelweissfe.utils.performancetiming as performancetiming
-
 import numpy as np
-from datetime import datetime
+import pytest
+from edelweissfe.journal.journal import Journal
+from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
+from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.generators import boxbsplinegridgenerator, cylindermpgenerator
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
+from edelweissmpm.stepactions.dirichlet import Dirichlet
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
 
 
 def run_sim():
@@ -115,7 +106,7 @@ def run_sim():
 
     bottomNodeField = mpmModel.nodeFields["displacement"].subset(mpmModel.nodeSets["boxgrid_bottom"])
 
-    fieldOutputController.addPerNodeFieldOutput("reaction_force", bottomNodeField, "P", **{"f(x)": "np.sum(x, axis=0)"})
+    fieldOutputController.addPerNodeFieldOutput("reaction_force", bottomNodeField, "P", f_x=lambda x: np.sum(x, axis=0))
     fieldOutputController.addPerMaterialPointFieldOutput(
         "displacement",
         allMPs,
@@ -234,8 +225,6 @@ def run_sim():
             iterationOptions,
         )
 
-    except StepFailed as e:
-        raise
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()

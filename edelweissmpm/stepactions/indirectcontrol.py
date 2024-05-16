@@ -25,15 +25,18 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from edelweissmpm.stepactions.base.arclengthcontrollerbase import ArcLengthControllerBase
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.numerics.dofmanager import DofManager
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.materialpoints.base.mp import MaterialPointBase
-from edelweissfe.numerics.dofmanager import DofVector
-from edelweissfe.config.phenomena import getFieldSize
 import numpy as np
+from edelweissfe.config.phenomena import getFieldSize
+from edelweissfe.journal.journal import Journal
+from edelweissfe.numerics.dofmanager import DofVector
+from edelweissfe.timesteppers.timestep import TimeStep
+
+from edelweissmpm.materialpoints.base.mp import MaterialPointBase
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.numerics.dofmanager import DofManager
+from edelweissmpm.stepactions.base.arclengthcontrollerbase import (
+    ArcLengthControllerBase,
+)
 
 
 class IndirectControl(ArcLengthControllerBase):
@@ -118,7 +121,7 @@ class IndirectControl(ArcLengthControllerBase):
             for mp in self._materialPoints
         ]
 
-        dUMatrices = [dU[idcs].reshape((-1, self._fieldSize)) for idcs in mpIndices]
+        # dUMatrices = [dU[idcs].reshape((-1, self._fieldSize)) for idcs in mpIndices]
 
         Ns = [
             np.asarray([cell.getInterpolationVector(mp.getCenterCoordinates()) for cell in mp.assignedCells]).flatten()

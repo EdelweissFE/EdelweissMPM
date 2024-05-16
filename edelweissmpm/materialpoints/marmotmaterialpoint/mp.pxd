@@ -25,10 +25,12 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+cimport numpy as np
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-cimport numpy as np
+
 import numpy as np
+
 
 cdef extern from "Marmot/Marmot.h" namespace "MarmotLibrary" nogil:
     cdef cppclass MarmotMaterialFactory:

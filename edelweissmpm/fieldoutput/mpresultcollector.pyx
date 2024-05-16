@@ -28,8 +28,11 @@
 
         
 cimport numpy as np
+
 import numpy as np
-from libc.stdlib cimport malloc, free
+
+from libc.stdlib cimport free, malloc
+
 
 cdef class MaterialPointResultCollector:
     

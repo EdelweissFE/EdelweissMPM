@@ -24,13 +24,14 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissmpm.sets.materialpointset import MaterialPointSet
 import numpy as np
 import sympy as sp
+from edelweissfe.journal.journal import Journal
+from edelweissfe.timesteppers.timestep import TimeStep
+
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.sets.materialpointset import MaterialPointSet
+from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 
 
 class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):

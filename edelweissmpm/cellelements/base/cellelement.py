@@ -30,12 +30,12 @@ To this end, they provide an interface to get the number and locations of the ma
 material point type, following a specific quadrature rule and order.
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+
 import numpy as np
 from edelweissfe.points.node import Node
-from edelweissmpm.cells.base.cell import CellBase
 
-from edelweissmpm.materialpoints.base.mp import MaterialPointBase
+from edelweissmpm.cells.base.cell import CellBase
 
 
 class CellElementBase(CellBase):
@@ -67,8 +67,6 @@ class CellElementBase(CellBase):
     def nMaterialPoints(self) -> int:
         """The unique number of this cell"""
 
-        pass
-
     @abstractmethod
     def getRequestedMaterialPointCoordinates(self) -> np.ndarray:
         """Get the list of the requested material point coordinates.
@@ -78,7 +76,6 @@ class CellElementBase(CellBase):
         np.ndarray
             The material point coordinates.
         """
-        pass
 
     @abstractmethod
     def getRequestedMaterialPointVolumes(self) -> np.ndarray:
@@ -90,8 +87,6 @@ class CellElementBase(CellBase):
             The material point volumes.
         """
 
-        pass
-
     @abstractmethod
     def getRequestedMaterialPointType(self) -> type:
         """Get the type of the requested material point.
@@ -102,13 +97,9 @@ class CellElementBase(CellBase):
             The material point type.
         """
 
-        pass
-
     @abstractmethod
     def acceptLastState(self):
         """Accept the last state of the CellElement.
 
         This method is called after a time step has been accepted.
         """
-
-        pass

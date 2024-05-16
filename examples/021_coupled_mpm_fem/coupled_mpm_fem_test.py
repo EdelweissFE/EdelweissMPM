@@ -24,36 +24,27 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import pytest
 import argparse
-import numpy as np
 
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-
-from edelweissmpm.generators import rectangularcellelementgridgenerator
-from edelweissmpm.generators import rectangulargridgenerator
-from edelweissmpm.generators import rectangularbsplinegridgenerator
-from edelweissmpm.generators import rectangularmpgenerator
-from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.numerics.dofmanager import MPMDofManager
-from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
-from edelweissfe.sets.nodeset import NodeSet
-
-from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.bodyload import BodyLoad
-from edelweissmpm.constraints.penaltyconstrainmp2node import PenaltyConstrainMP2Node
-from edelweissfe.utils.exceptions import StepFailed
 import edelweissfe.utils.performancetiming as performancetiming
-
 import numpy as np
-from datetime import datetime
+import pytest
+from edelweissfe.journal.journal import Journal
+from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
+from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+
+from edelweissmpm.constraints.penaltyconstrainmp2node import PenaltyConstrainMP2Node
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.generators import (
+    rectangularbsplinegridgenerator,
+    rectangularcellelementgridgenerator,
+    rectangularmpgenerator,
+)
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
+from edelweissmpm.stepactions.dirichlet import Dirichlet
 
 
 @performancetiming.timeit("simulation")
@@ -66,7 +57,9 @@ def run_sim():
 
     mpmModel = MPMModel(dimension)
 
-    from edelweissmpm.materialpoints.marmotmaterialpoint.mp import MarmotMaterialPointWrapper
+    from edelweissmpm.materialpoints.marmotmaterialpoint.mp import (
+        MarmotMaterialPointWrapper,
+    )
 
     gmNeoHookean = {
         "material": "GMDAMAGEDSHEARNEOHOOKE",
@@ -147,19 +140,10 @@ def run_sim():
 
     nodeFieldOnAllCellElements = mpmModel.nodeFields["displacement"].subset(cellElements)
 
-    fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCellElements, "dU")
-    fieldOutputController.addPerNodeFieldOutput("U", nodeFieldOnAllCellElements, "U")
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement",
-        allMPs,
-        "displacement",
-    )
-
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "deformation gradient",
-        allMPs,
-        "deformation gradient",
-    )
+    fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCellElements)
+    fieldOutputController.addPerNodeFieldOutput("U", nodeFieldOnAllCellElements)
+    fieldOutputController.addPerMaterialPointFieldOutput("displacement", allMPs)
+    fieldOutputController.addPerMaterialPointFieldOutput("deformation gradient", allMPs)
 
     fieldOutputController.initializeJob()
 
@@ -167,11 +151,11 @@ def run_sim():
         "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
     )
 
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["U"], create="perNode")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
-    ensightOutput.updateDefinition(
-        fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode"
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["dU"], varSize=3)
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["U"], varSize=3)
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["displacement"], varSize=3)
+    ensightOutput.createPerNodeOutput(
+        fieldOutputController.fieldOutputs["deformation gradient"], name="deformation_gradient", varSize=9
     )
 
     ensightOutput.initializeJob()
