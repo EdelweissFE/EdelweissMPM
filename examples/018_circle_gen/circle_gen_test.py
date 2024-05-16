@@ -32,7 +32,6 @@ import pytest
 from edelweissfe.journal.journal import Journal
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.generators import circlempgenerator, rectangulargridgenerator
@@ -41,7 +40,9 @@ from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
 from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
 
 
 def run_sim():
@@ -179,8 +180,6 @@ def run_sim():
             iterationOptions,
         )
 
-    except StepFailed as e:
-        raise
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()

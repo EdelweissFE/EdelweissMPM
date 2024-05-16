@@ -84,7 +84,7 @@ def run_sim():
 
     fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCells, "dU")
     fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement", allMPs, "displacement", **{"f(x)": "np.pad(x,((0,0),(0,1)))"}
+        "displacement", allMPs, "displacement", f_x=lambda x: np.pad(x, ((0, 0), (0, 1)))
     )
 
     fieldOutputController.initializeJob()
@@ -104,10 +104,6 @@ def run_sim():
 
             if hasChanged:
                 print("material points in cells have changed since previous localization")
-
-                # if mpmManager.hasLostMaterialPoints():
-                #     print("we have lost material points outside the grid!")
-                #     break
 
                 activeCells = mpmManager.getActiveCells()
                 activeNodes = set([n for cell in activeCells for n in cell.nodes])

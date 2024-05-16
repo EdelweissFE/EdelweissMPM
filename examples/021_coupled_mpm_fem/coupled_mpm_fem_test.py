@@ -57,7 +57,9 @@ def run_sim():
 
     mpmModel = MPMModel(dimension)
 
-    from edelweissmpm.materialpoints.marmotmaterialpoint.mp import MarmotMaterialPointWrapper
+    from edelweissmpm.materialpoints.marmotmaterialpoint.mp import (
+        MarmotMaterialPointWrapper,
+    )
 
     gmNeoHookean = {
         "material": "GMDAMAGEDSHEARNEOHOOKE",
@@ -138,19 +140,10 @@ def run_sim():
 
     nodeFieldOnAllCellElements = mpmModel.nodeFields["displacement"].subset(cellElements)
 
-    fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCellElements, "dU")
-    fieldOutputController.addPerNodeFieldOutput("U", nodeFieldOnAllCellElements, "U")
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement",
-        allMPs,
-        "displacement",
-    )
-
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "deformation gradient",
-        allMPs,
-        "deformation gradient",
-    )
+    fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCellElements)
+    fieldOutputController.addPerNodeFieldOutput("U", nodeFieldOnAllCellElements)
+    fieldOutputController.addPerMaterialPointFieldOutput("displacement", allMPs)
+    fieldOutputController.addPerMaterialPointFieldOutput("deformation gradient", allMPs)
 
     fieldOutputController.initializeJob()
 
@@ -158,11 +151,11 @@ def run_sim():
         "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
     )
 
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["U"], create="perNode")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
-    ensightOutput.updateDefinition(
-        fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perNode"
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["dU"], varSize=3)
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["U"], varSize=3)
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["displacement"], varSize=3)
+    ensightOutput.createPerNodeOutput(
+        fieldOutputController.fieldOutputs["deformation gradient"], name="deformation_gradient", varSize=9
     )
 
     ensightOutput.initializeJob()

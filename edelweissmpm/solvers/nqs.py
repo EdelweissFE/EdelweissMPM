@@ -152,9 +152,6 @@ class NonlinearQuasistaticSolver:
         table.align = "l"
         self.journal.printPrettyTable(table, self.identification)
 
-        nMaximumIterations = iterationOptions["max. iterations"]
-        nCrititicalIterations = iterationOptions["critical iterations"]
-
         materialPoints = model.materialPoints.values()
 
         self._applyStepActionsAtStepStart(model, dirichlets + bodyLoads + distributedLoads)
@@ -162,7 +159,6 @@ class NonlinearQuasistaticSolver:
         elements = model.elements.values()
         scalarVariables = model.scalarVariables.values()
 
-        activeCellsOld = None
         newtonCache = None
         theDofManager = None
 
@@ -1115,6 +1111,7 @@ class NonlinearQuasistaticSolver:
         theDofManager
             The DofManager instance.
         """
+        time_ = np.array([time, time])
 
         for el in elements:
             dUEl = dU[el]
@@ -1122,11 +1119,11 @@ class NonlinearQuasistaticSolver:
             UElnp = UEln + dUEl
             PEl = np.zeros(el.nDof)
             KEl = K_VIJ[el]
-            el.computeMaterialPointKernels(UElnp, PEl, KEl, time, dT)
-            P[el] += PEl
+            el.computeYourself(KEl, PEl, UElnp, dUEl, time_, dT)
+            P[el] -= PEl
             F[el] += abs(PEl)
 
-    @performancetiming.timeit("computation elements")
+    @performancetiming.timeit("computation cell elements")
     def _computeCellElements(
         self,
         elements: list,

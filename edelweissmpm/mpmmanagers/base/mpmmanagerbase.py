@@ -32,7 +32,6 @@ Furthermore, they provide the active cells, which are the cells that contain mat
 
 from abc import ABC, abstractmethod
 
-
 from edelweissmpm.sets.cellset import CellSet
 
 

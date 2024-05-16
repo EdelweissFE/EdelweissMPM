@@ -34,7 +34,9 @@ from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.numerics.dofmanager import DofManager
-from edelweissmpm.stepactions.base.arclengthcontrollerbase import ArcLengthControllerBase
+from edelweissmpm.stepactions.base.arclengthcontrollerbase import (
+    ArcLengthControllerBase,
+)
 
 
 class IndirectControl(ArcLengthControllerBase):
@@ -119,7 +121,7 @@ class IndirectControl(ArcLengthControllerBase):
             for mp in self._materialPoints
         ]
 
-        dUMatrices = [dU[idcs].reshape((-1, self._fieldSize)) for idcs in mpIndices]
+        # dUMatrices = [dU[idcs].reshape((-1, self._fieldSize)) for idcs in mpIndices]
 
         Ns = [
             np.asarray([cell.getInterpolationVector(mp.getCenterCoordinates()) for cell in mp.assignedCells]).flatten()

@@ -32,7 +32,6 @@ import pytest
 from edelweissfe.journal.journal import Journal
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.generators import boxbsplinegridgenerator, cylindermpgenerator
@@ -41,7 +40,9 @@ from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
 from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
 
 
 def run_sim():
@@ -105,7 +106,7 @@ def run_sim():
 
     bottomNodeField = mpmModel.nodeFields["displacement"].subset(mpmModel.nodeSets["boxgrid_bottom"])
 
-    fieldOutputController.addPerNodeFieldOutput("reaction_force", bottomNodeField, "P", **{"f(x)": "np.sum(x, axis=0)"})
+    fieldOutputController.addPerNodeFieldOutput("reaction_force", bottomNodeField, "P", f_x=lambda x: np.sum(x, axis=0))
     fieldOutputController.addPerMaterialPointFieldOutput(
         "displacement",
         allMPs,
@@ -224,8 +225,6 @@ def run_sim():
             iterationOptions,
         )
 
-    except StepFailed as e:
-        raise
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()

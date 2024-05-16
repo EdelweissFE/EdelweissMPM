@@ -38,11 +38,14 @@ from edelweissfe.utils.exceptions import CutbackRequest
 from libc.stdlib cimport free, malloc
 from libcpp.memory cimport allocator, make_unique, unique_ptr
 
-from edelweissmpm.cells.marmotcell.marmotcell cimport (MarmotCellFactory,
-                                                       MarmotCellWrapper,
-                                                       MarmotMaterialPoint)
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport \
-    MarmotMaterialPointWrapper
+from edelweissmpm.cells.marmotcell.marmotcell cimport (
+    MarmotCellFactory,
+    MarmotCellWrapper,
+    MarmotMaterialPoint,
+)
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPointWrapper,
+)
 
 
 @cython.final # no subclassing -> cpdef with nogil possible
@@ -61,7 +64,7 @@ cdef class BSplineMarmotCellWrapper(MarmotCellWrapper):
 
         Parameters
         ----------
-        cellType 
+        cellType
             The Marmot cell type which should be represented.
         cellNumber
             The (unique) number of this cell.
@@ -80,9 +83,9 @@ cdef class BSplineMarmotCellWrapper(MarmotCellWrapper):
         knotVectorsView = knotVectors_
 
         try:
-            self._marmotCell = MarmotCellFactory.createBSplineCell( cellType.encode('utf-8'), 
-                                                                    self._cellNumber, 
-                                                                    &self._nodeCoordinates[0,0], 
+            self._marmotCell = MarmotCellFactory.createBSplineCell( cellType.encode('utf-8'),
+                                                                    self._cellNumber,
+                                                                    &self._nodeCoordinates[0,0],
                                                                     self._nodeCoordinates.size,
                                                                     &knotVectorsView[0,0],
                                                                     knotVectorsView.size)

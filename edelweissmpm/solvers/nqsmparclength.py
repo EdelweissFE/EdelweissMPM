@@ -31,15 +31,14 @@ import numpy as np
 from edelweissfe.numerics.dofmanager import DofManager, DofVector
 from edelweissfe.outputmanagers.base.outputmanagerbase import OutputManagerBase
 from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissfe.utils.exceptions import (
-    DivergingSolution,
-    ReachedMaxIterations,
-)
+from edelweissfe.utils.exceptions import DivergingSolution, ReachedMaxIterations
 from edelweissfe.utils.fieldoutput import FieldOutputController
 
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.solvers.nqsmarmotparallel import NQSParallelForMarmot
-from edelweissmpm.stepactions.base.arclengthcontrollerbase import ArcLengthControllerBase
+from edelweissmpm.stepactions.base.arclengthcontrollerbase import (
+    ArcLengthControllerBase,
+)
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 

@@ -146,12 +146,12 @@ class OutputManager(EnsightOutputManager):
         return feModelParts
 
     def _getTargetPartForFieldOutput(self, fieldOutput, **kwargs):
-        if "mpSet" in kwargs:
-            return self.mpSetToEnsightPart[kwargs.pop("mpSet")]
-        if "cellSet" in kwargs:
-            return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
-        if "cellElementSet" in kwargs:
-            return self.cellElementSetToEnsightPart[kwargs.pop("cellSet")]
+        # if "mpSet" in kwargs:
+        #     return self.mpSetToEnsightPart[kwargs.pop("mpSet")]
+        # if "cellSet" in kwargs:
+        #     return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
+        # if "cellElementSet" in kwargs:
+        #     return self.cellElementSetToEnsightPart[kwargs.pop("cellSet")]
 
         theSetName = fieldOutput.associatedSet.name
 

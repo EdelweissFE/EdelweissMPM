@@ -32,16 +32,22 @@ import pytest
 from edelweissfe.journal.journal import Journal
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-from edelweissmpm.generators import rectangularbsplinegridgenerator, rectangularmpgenerator
+from edelweissmpm.generators import (
+    rectangularbsplinegridgenerator,
+    rectangularmpgenerator,
+)
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.solvers.nqsmparclength import NonlinearQuasistaticMarmotArcLengthSolver
+from edelweissmpm.solvers.nqsmparclength import (
+    NonlinearQuasistaticMarmotArcLengthSolver,
+)
 from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
 from edelweissmpm.stepactions.indirectcontrol import IndirectControl
 
 
@@ -184,16 +190,13 @@ def run_sim():
             indirectcontrol,
         )
 
-    except StepFailed as e:
-        raise
-
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "PerfGraph")
 
     return mpmModel
 

@@ -28,7 +28,6 @@
 
 from collections import defaultdict
 
-
 from edelweissmpm.cells.base.cell import CellBase
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase

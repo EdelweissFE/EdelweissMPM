@@ -39,10 +39,15 @@ from libc.stdlib cimport free, malloc
 from libcpp.memory cimport allocator, make_unique, unique_ptr
 
 from edelweissmpm.cellelements.marmotcellelement.marmotcellelement cimport (
-    MarmotCell, MarmotCellElement, MarmotCellElementFactory,
-    MarmotCellElementWrapper, MarmotMaterialPoint)
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport \
-    MarmotMaterialPointWrapper
+    MarmotCell,
+    MarmotCellElement,
+    MarmotCellElementFactory,
+    MarmotCellElementWrapper,
+    MarmotMaterialPoint,
+)
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPointWrapper,
+)
 
 
 @cython.final # no subclassing -> cpdef with nogil possible
@@ -79,7 +84,7 @@ cdef class LagrangianMarmotCellElementWrapper(MarmotCellElementWrapper):
             raise NotImplementedError("Marmot cellelement {:} not found in library.".format(cellType))
 
         self._nMaterialPoints = self._marmotCellElement.getNMaterialPoints()
-    
+
     def __dealloc__(self):
         """This method is called when the object is deleted. It is responsible for freeing the memory of the MarmotCellElement."""
         if isinstance(self, LagrangianMarmotCellElementWrapper):

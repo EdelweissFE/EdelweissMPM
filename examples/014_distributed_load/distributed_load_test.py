@@ -35,13 +35,18 @@ from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-from edelweissmpm.generators import rectangularbsplinegridgenerator, rectangularmpgenerator
+from edelweissmpm.generators import (
+    rectangularbsplinegridgenerator,
+    rectangularmpgenerator,
+)
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
 from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
 from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
 
 
 def run_sim():
@@ -97,20 +102,16 @@ def run_sim():
     nodeFieldOnAllCells = mpmModel.nodeFields["displacement"].subset(allCells)
 
     fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCells, "dU")
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement",
-        allMPs,
-        "displacement",
-    )
+    fieldOutputController.addPerMaterialPointFieldOutput("displacement", allMPs, "displacement")
 
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager(
-        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
+        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=True
     )
 
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["dU"], varSize=3)
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["displacement"], varSize=3)
     ensightOutput.initializeJob()
 
     outputManagers = [
@@ -181,6 +182,7 @@ def run_sim():
         )
 
     except StepFailed as e:
+        print("Step failed: ", e)
         raise
 
     finally:

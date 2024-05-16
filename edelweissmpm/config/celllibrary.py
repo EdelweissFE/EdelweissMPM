@@ -32,7 +32,7 @@ In future, elements by other providers or elements directly implemented in Edelw
     :caption: Example:
 
     *element, type=C3D8, provider=marmot
-        ** el_label, node1, node2, node3, node4, ... 
+        ** el_label, node1, node2, node3, node4, ...
         1000,        1,     2,     3,     4,     ...
 """
 
@@ -57,12 +57,16 @@ def getCellClass(provider: str) -> type:
         return Cell
 
     if provider.lower() == "LagrangianMarmotCell".lower():
-        from edelweissmpm.cells.marmotcell.lagrangianmarmotcell import LagrangianMarmotCellWrapper
+        from edelweissmpm.cells.marmotcell.lagrangianmarmotcell import (
+            LagrangianMarmotCellWrapper,
+        )
 
         return LagrangianMarmotCellWrapper
 
     if provider.lower() == "BSplineMarmotCell".lower():
-        from edelweissmpm.cells.marmotcell.bsplinemarmotcell import BSplineMarmotCellWrapper
+        from edelweissmpm.cells.marmotcell.bsplinemarmotcell import (
+            BSplineMarmotCellWrapper,
+        )
 
         return BSplineMarmotCellWrapper
 

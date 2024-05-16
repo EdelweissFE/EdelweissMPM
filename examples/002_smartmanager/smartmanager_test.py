@@ -92,7 +92,10 @@ def run_sim():
 
     fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCells, "dU")
     fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement", allMPs, "displacement", **{"f(x)": "np.pad(x,((0,0),(0,1)))"}
+        "displacement",
+        allMPs,
+        "displacement",
+        f_x=lambda x: np.pad(x, ((0, 0), (0, 1))),
     )
 
     fieldOutputController.initializeJob()
@@ -176,15 +179,12 @@ def run_sim():
 
             journal.printSeperationLine()
 
-    except Exception as e:
-        raise
-
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "PerfGraph")
 
         return mpmModel
 
