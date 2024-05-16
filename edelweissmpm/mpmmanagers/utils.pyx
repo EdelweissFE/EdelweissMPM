@@ -25,11 +25,13 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+import numpy as np
+
 from edelweissmpm.cells.base.cell import CellBase
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
 
-import numpy as np
 cimport numpy as np
+
 
 cdef int _2pow (int exp) nogil:
     cdef int res = 1 << exp

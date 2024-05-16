@@ -26,9 +26,10 @@
 #  ---------------------------------------------------------------------
 
 import numpy as np
+from edelweissfe.journal.journal import Journal
+
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissfe.journal.journal import Journal
 
 
 def generateModelData(mpmModel: MPMModel, journal: Journal, coordinates: np.ndarray, storeIn: str):

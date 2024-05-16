@@ -25,13 +25,12 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+import numpy as np
 from edelweissfe.journal.journal import Journal
 
-from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.config.mplibrary import getMaterialPointClass
+from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.sets.materialpointset import MaterialPointSet
-
-import numpy as np
 
 
 def generateModelData(model: MPMModel, journal: Journal, **kwargs):

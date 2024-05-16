@@ -27,11 +27,11 @@
 #  ---------------------------------------------------------------------
 
 
-from edelweissfe.stepactions.base.dirichletbase import DirichletBase
-from edelweissfe.config.phenomena import getFieldSize
-from edelweissfe.timesteppers.timestep import TimeStep
 import numpy as np
 import sympy as sp
+from edelweissfe.config.phenomena import getFieldSize
+from edelweissfe.stepactions.base.dirichletbase import DirichletBase
+from edelweissfe.timesteppers.timestep import TimeStep
 
 
 class Dirichlet(DirichletBase):

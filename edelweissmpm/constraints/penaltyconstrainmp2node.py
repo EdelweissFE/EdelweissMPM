@@ -1,11 +1,12 @@
-from edelweissfe.points.node import Node
+import numpy as np
 from edelweissfe.config.phenomena import getFieldSize
-from edelweissfe.variables.scalarvariable import ScalarVariable
+from edelweissfe.points.node import Node
 from edelweissfe.timesteppers.timestep import TimeStep
-from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissfe.variables.scalarvariable import ScalarVariable
+
 from edelweissmpm.constraints.base.mpmconstraintbase import MPMConstraintBase
 from edelweissmpm.materialpoints.base.mp import MaterialPointBase
-import numpy as np
+from edelweissmpm.models.mpmmodel import MPMModel
 
 
 class PenaltyConstrainMP2Node(MPMConstraintBase):

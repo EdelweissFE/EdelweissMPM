@@ -24,30 +24,29 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-import pytest
 import argparse
 
-from edelweissfe.journal.journal import Journal
-from edelweissmpm.fields.nodefield import MPMNodeField
-from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
-
-from edelweissmpm.generators import rectangularbsplinegridgenerator, rectangularmpgenerator
-from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
-from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.numerics.dofmanager import MPMDofManager
-from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
-from edelweissmpm.sets.cellset import CellSet
-from edelweissfe.sets.nodeset import NodeSet
-
-from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
-from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
-from edelweissmpm.stepactions.dirichlet import Dirichlet
-from edelweissmpm.stepactions.distributedload import MaterialPointPointWiseDistributedLoad
-from edelweissfe.utils.exceptions import StepFailed
 import edelweissfe.utils.performancetiming as performancetiming
-
 import numpy as np
+import pytest
+from edelweissfe.journal.journal import Journal
+from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
+from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+from edelweissfe.utils.exceptions import StepFailed
+
+from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
+from edelweissmpm.generators import (
+    rectangularbsplinegridgenerator,
+    rectangularmpgenerator,
+)
+from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.smartmpmmanager import SmartMaterialPointManager
+from edelweissmpm.outputmanagers.ensight import OutputManager as EnsightOutputManager
+from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
+from edelweissmpm.stepactions.dirichlet import Dirichlet
+from edelweissmpm.stepactions.distributedload import (
+    MaterialPointPointWiseDistributedLoad,
+)
 
 
 def run_sim():
@@ -103,20 +102,16 @@ def run_sim():
     nodeFieldOnAllCells = mpmModel.nodeFields["displacement"].subset(allCells)
 
     fieldOutputController.addPerNodeFieldOutput("dU", nodeFieldOnAllCells, "dU")
-    fieldOutputController.addPerMaterialPointFieldOutput(
-        "displacement",
-        allMPs,
-        "displacement",
-    )
+    fieldOutputController.addPerMaterialPointFieldOutput("displacement", allMPs, "displacement")
 
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager(
-        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=False
+        "ensight", mpmModel, fieldOutputController, journal, None, exportCellSetParts=True
     )
 
-    # ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["dU"], create="perNode")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["dU"], varSize=3)
+    ensightOutput.createPerNodeOutput(fieldOutputController.fieldOutputs["displacement"], varSize=3)
     ensightOutput.initializeJob()
 
     outputManagers = [
@@ -187,6 +182,7 @@ def run_sim():
         )
 
     except StepFailed as e:
+        print("Step failed: ", e)
         raise
 
     finally:

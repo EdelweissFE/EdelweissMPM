@@ -26,17 +26,23 @@
 #  ---------------------------------------------------------------------
 
 import numpy as np
-cimport numpy as np
-cimport edelweissmpm.cells.marmotcell.marmotcell
-cimport libcpp.cast
+
 cimport cython
+cimport libcpp.cast
+cimport numpy as np
+
+cimport edelweissmpm.cells.marmotcell.marmotcell
 
 from edelweissfe.utils.exceptions import CutbackRequest
-from libcpp.memory cimport unique_ptr, allocator, make_unique
-from libc.stdlib cimport malloc, free
 
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPointWrapper
-    
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPointWrapper,
+)
+
+
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotCellWrapper:
     """This cell as a wrapper for MarmotCells.
@@ -59,29 +65,29 @@ cdef class MarmotCellWrapper:
     def __init__(self, cellType, cellNumber, nodes):
         self._cellNumber = cellNumber
         self._cellType = cellType
-        
+
         self._nNodes                         = self._marmotCell.getNNodes()
-        
+
         self._nDof                           = self._marmotCell.getNDofPerCell()
-        
+
         cdef vector[vector[string]] fields  = self._marmotCell.getNodeFields()
         self._fields                         = [ [ s.decode('utf-8')  for s in n  ] for n in fields ]
-        
+
         cdef vector[int] permutationPattern = self._marmotCell.getDofIndicesPermutationPattern()
         self._dofIndicesPermutation          = np.asarray(permutationPattern)
-    
+
         cdef dict supportedBodyLoads = self._marmotCell.getSupportedBodyLoadTypes()
         self._supportedBodyLoads = {k.decode() :  v for k, v in supportedBodyLoads.items()  }
 
         cdef dict supportedDistributedLoads = self._marmotCell.getSupportedDistributedLoadTypes()
         self._supportedDistributedLoads = {k.decode() :  v for k, v in supportedDistributedLoads.items()  }
-        
+
         self._ensightType                    = self._marmotCell.getCellShape().decode('utf-8')
 
     @property
     def cellNumber(self):
         return self._cellNumber
-    
+
     @property
     def cellType(self):
         return self._cellType
@@ -93,7 +99,7 @@ cdef class MarmotCellWrapper:
     @property
     def nNodes(self):
         return self._nNodes
-    
+
     @property
     def nDof(self):
         return self._nDof
@@ -114,11 +120,11 @@ cdef class MarmotCellWrapper:
     def assignedMaterialPoints(self):
         return self._assignedMaterialPoints
 
-    cpdef void computeMaterialPointKernels(self, 
-                         double[::1] dUc, 
-                         double[::1] Pc, 
-                         double[::1] Kc, 
-                         double timeNew, 
+    cpdef void computeMaterialPointKernels(self,
+                         double[::1] dUc,
+                         double[::1] Pc,
+                         double[::1] Kc,
+                         double timeNew,
                          double dTime, ) nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
@@ -128,35 +134,35 @@ cdef class MarmotCellWrapper:
 
         self._marmotCell.interpolateFieldsToMaterialPoints(&dUc[0])
 
-    def computeBodyLoad(self, 
-                         str loadType, 
-                         double[::1] load, 
-                         double[::1] Pc, 
-                         double[::1] Kc, 
-                         double timeNew, 
+    def computeBodyLoad(self,
+                         str loadType,
+                         double[::1] load,
+                         double[::1] Pc,
+                         double[::1] Kc,
+                         double timeNew,
                          double dTime):
 
         self._marmotCell.computeBodyLoad( self._supportedBodyLoads[loadType.upper()], &load[0], &Pc[0], &Kc[0], timeNew, dTime)
 
-    def computeDistributedLoad(self, 
-                         str loadType, 
-                         int surfaceID, 
-                         materialPoint, 
-                         double[::1] load, 
-                         double[::1] Pc, 
-                         double[::1] Kc, 
-                         double timeNew, 
+    def computeDistributedLoad(self,
+                         str loadType,
+                         int surfaceID,
+                         materialPoint,
+                         double[::1] load,
+                         double[::1] Pc,
+                         double[::1] Kc,
+                         double timeNew,
                          double dTime):
 
         cdef int mpNumber = materialPoint.number
 
-        self._marmotCell.computeDistributedLoad( self._supportedDistributedLoads[loadType.upper()], 
+        self._marmotCell.computeDistributedLoad( self._supportedDistributedLoads[loadType.upper()],
                                                 surfaceID,
                                                 mpNumber,
-                                                &load[0], 
-                                                &Pc[0], 
-                                                &Kc[0], 
-                                                timeNew, 
+                                                &load[0],
+                                                &Pc[0],
+                                                &Kc[0],
+                                                timeNew,
                                                 dTime)
 
     def assignMaterialPoints(self, list marmotMaterialPointWrappers):
@@ -169,13 +175,13 @@ cdef class MarmotCellWrapper:
         self._marmotCell.assignMaterialPoints(mps)
 
         self._assignedMaterialPoints = marmotMaterialPointWrappers
-        
+
     def isCoordinateInCell(self, coordinate: np.ndarray) -> bool:
         cdef double[::1] coords = coordinate
         return self._marmotCell.isCoordinateInCell(&coords[0])
 
     def getBoundingBox(self, ):
-   
+
         cdef int dim = self._nodeCoordinates.shape[1]
         cdef np.ndarray boundingBoxMin = np.zeros(dim)
         cdef np.ndarray boundingBoxMax = np.zeros(dim)
@@ -192,4 +198,4 @@ cdef class MarmotCellWrapper:
         cdef double[::1] Nview_ = N
         self._marmotCell.getInterpolationVector(&Nview_[0], &coords[0])
         return N
-    
+

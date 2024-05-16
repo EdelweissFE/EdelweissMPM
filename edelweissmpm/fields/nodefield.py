@@ -26,9 +26,9 @@
 #  ---------------------------------------------------------------------
 from edelweissfe.fields.nodefield import NodeField, NodeFieldSubset
 from edelweissfe.points.node import Node
-from edelweissmpm.sets.cellset import CellSet
+
 from edelweissmpm.sets.cellelementset import CellElementSet
-import numpy as np
+from edelweissmpm.sets.cellset import CellSet
 
 
 class MPMNodeFieldSubset:
