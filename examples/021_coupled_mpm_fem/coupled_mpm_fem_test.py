@@ -77,6 +77,7 @@ def run_sim():
         nX=10,
         nY=10,
         cellelementProvider="LagrangianMarmotCellElement",
+        nNodesPerCellElement=4,
         cellelementType="GradientEnhancedMicropolar/Quad4",
         quadratureType="QGAUSS_LOBATTO",
         quadratureOrder=2,
@@ -168,7 +169,7 @@ def run_sim():
         "left_fem",
         mpmModel.nodeSets["fem_left"],
         "micro rotation",
-        {0: -1 * np.pi},
+        {0: -2 * np.pi},
         mpmModel,
         journal,
     )

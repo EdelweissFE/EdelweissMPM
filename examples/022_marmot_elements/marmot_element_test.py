@@ -64,10 +64,10 @@ def run_sim():
         {
             "data": [
                 "x0=0.0",
-                "l=200.0",
+                "l=100.0",
                 "y0=0.0",
-                "h=25.0",
-                "nX= 20",
+                "h=100.0",
+                "nX= 10",
                 "nY= 10",
                 "elProvider=marmot",
                 "elType=GMCPE8RUL",
@@ -86,12 +86,16 @@ def run_sim():
     mpmModel.prepareYourself(journal)
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
     mpmModel.nodeFields["displacement"].createFieldValueEntry("U")
+    mpmModel.nodeFields["displacement"].createFieldValueEntry("P")
 
     journal.printSeperationLine()
 
     fieldOutputController = MPMFieldOutputController(mpmModel, journal)
     fieldOutputController.addPerNodeFieldOutput(
         "U", mpmModel.nodeFields["displacement"].subset(mpmModel.elementSets["planeRect_all"]), "U"
+    )
+    fieldOutputController.addPerNodeFieldOutput(
+        "P", mpmModel.nodeFields["displacement"].subset(mpmModel.nodeSets["planeRect_left"]), "P"
     )
     fieldOutputController.initializeJob()
 
@@ -106,8 +110,8 @@ def run_sim():
     dirichletLeft = Dirichlet(
         "left_fem",
         mpmModel.nodeSets["planeRect_left"],
-        "micro rotation",
-        {0: -2 * np.pi},
+        "displacement",
+        {0: 0, 1: 0},
         mpmModel,
         journal,
     )
@@ -116,7 +120,7 @@ def run_sim():
         "right",
         mpmModel.nodeSets["planeRect_right"],
         "displacement",
-        {0: 00.0, 1: -00.0},
+        {0: 50.0, 1: -50.0},
         mpmModel,
         journal,
     )
@@ -125,7 +129,7 @@ def run_sim():
         emptDef = np.array([0.0])
         el.setInitialCondition("initialize material", emptDef)
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 5e-2, 5e-2, 1e-3, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-0, 1e-0, 1e-0, 1000, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 

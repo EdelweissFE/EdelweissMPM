@@ -42,12 +42,17 @@ A mesh generator, for rectangular geometries and structured quad meshes:
       | |__|__|__|__|  V
     x0|_____
       y0
-  
+
 nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
 are automatically generated
 
 Datalines:
 """
+import numpy as np
+from edelweissfe.points.node import Node
+from edelweissfe.sets.nodeset import NodeSet
+
+from edelweissmpm.config.cellelementlibrary import getCellElementClass
 
 documentation = {
     "x0": "(optional) origin at x axis",
@@ -58,12 +63,6 @@ documentation = {
     "nY": "(optional) number of elements along y",
     "elType": "type of element",
 }
-
-import numpy as np
-from edelweissfe.points.node import Node
-from edelweissfe.sets.nodeset import NodeSet
-
-from edelweissmpm.config.cellelementlibrary import getCellElementClass
 
 
 def generateModelData(model, journal, **kwargs):
@@ -116,8 +115,8 @@ def generateModelData(model, journal, **kwargs):
 
     x0 = float(kwargs.get("x0", 0.0))
     y0 = float(kwargs.get("y0", 0.0))
-    h = float(kwargs.get("h", 1.0))
-    l = float(kwargs.get("l", 1.0))
+    height = float(kwargs.get("h", 1.0))
+    length = float(kwargs.get("l", 1.0))
     nX = int(kwargs.get("nX", 10))
     nY = int(kwargs.get("nY", 10))
     quadratureType = kwargs.get("quadratureType", "QGAUSS")
@@ -129,13 +128,13 @@ def generateModelData(model, journal, **kwargs):
     cellType = kwargs["cellelementType"]
     CellFactory = getCellElementClass(cellClass)
 
-    nodesPerCell = int(kwargs.get("nodesPerCell", 4))
+    nodesPerCellElement = int(kwargs.get("nNodesPerCellElement", 4))
 
-    if nodesPerCell == 4:
+    if nodesPerCellElement == 4:
         nNodesX = nX + 1
         nNodesY = nY + 1
 
-    elif nodesPerCell == 8:
+    elif nodesPerCellElement == 8:
         nNodesX = 2 * nX + 1
         nNodesY = 2 * nY + 1
 
@@ -143,8 +142,8 @@ def generateModelData(model, journal, **kwargs):
         raise Exception("Invalid number of nodes per grid cell specified")
 
     grid = np.mgrid[
-        x0 : x0 + l : nNodesX * 1j,
-        y0 : y0 + h : nNodesY * 1j,
+        x0 : x0 + length : nNodesX * 1j,
+        y0 : y0 + height : nNodesY * 1j,
     ]
 
     nodes = []
@@ -164,10 +163,10 @@ def generateModelData(model, journal, **kwargs):
     cellElements = []
     for x in range(nX):
         for y in range(nY):
-            if nodesPerCell == 4:
+            if nodesPerCellElement == 4:
                 cellNodes = [nG[x, y], nG[x + 1, y], nG[x + 1, y + 1], nG[x, y + 1]]
 
-            elif nodesPerCell == 8:
+            elif nodesPerCellElement == 8:
                 cellNodes = [
                     nG[2 * x, 2 * y],
                     nG[2 * x + 2, 2 * y],
@@ -200,12 +199,12 @@ def generateModelData(model, journal, **kwargs):
     MPClass = kwargs["mpClass"]
     material = kwargs["material"]
 
-    mpThickness = float(kwargs.get("thickness", 1.0))
+    # mpThickness = float(kwargs.get("thickness", 1.0))
 
     currentMPNumber = int(kwargs.get("mpNumberStart", len(model.materialPoints) + 1))
     for cell in cellElements:
 
-        nMaterialPoints = cell.nMaterialPoints
+        # nMaterialPoints = cell.nMaterialPoints
         mpCoords = cell.getRequestedMaterialPointCoordinates()
         mpVolumes = cell.getRequestedMaterialPointVolumes()
 

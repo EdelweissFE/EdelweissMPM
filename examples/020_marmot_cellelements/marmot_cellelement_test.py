@@ -67,11 +67,12 @@ def run_sim():
         l=100.0,
         y0=0.0,
         h=100.0,
-        nX=3,
-        nY=3,
+        nX=10,
+        nY=10,
         cellelementProvider="LagrangianMarmotCellElement",
-        cellelementType="GradientEnhancedMicropolar/Quad4",
-        quadratureType="QGAUSS_LOBATTO",
+        nNodesPerCellElement=8,
+        cellelementType="GradientEnhancedMicropolar/Quad8",
+        quadratureType="QGAUSS",
         quadratureOrder=2,
         thickness=1.0,
         mpClass=MarmotMaterialPointWrapper,
@@ -80,8 +81,10 @@ def run_sim():
     )
 
     mpmModel.prepareYourself(journal)
+    journal.printPrettyTable(mpmModel.makePrettyTableSummary(), "Model Summary")
     mpmModel.nodeFields["displacement"].createFieldValueEntry("dU")
     mpmModel.nodeFields["displacement"].createFieldValueEntry("U")
+    mpmModel.nodeFields["displacement"].createFieldValueEntry("P")
 
     allCellElements = mpmModel.cellElementSets["all"]
     allMPs = mpmModel.materialPointSets["all"]
@@ -102,6 +105,10 @@ def run_sim():
     fieldOutputController.addPerMaterialPointFieldOutput(
         "deformation gradient",
         allMPs,
+    )
+
+    fieldOutputController.addPerNodeFieldOutput(
+        "P", mpmModel.nodeFields["displacement"].subset(mpmModel.nodeSets["rectangular_grid_left"])
     )
 
     fieldOutputController.initializeJob()
@@ -136,11 +143,11 @@ def run_sim():
         journal,
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-2, 1e-2, 1e-3, 1000, journal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-0, 1e-0, 1e-0, 1000, journal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(journal)
 
-    iterationOptions = dict()
+    iterationOptions = nonlinearSolver.validOptions.copy()
 
     iterationOptions["max. iterations"] = 15
     iterationOptions["critical iterations"] = 10
