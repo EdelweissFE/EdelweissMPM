@@ -958,6 +958,8 @@ class NonlinearQuasistaticSolver:
             n for element in model.elements.values() for n in element.nodes
         ) | set(n for element in model.cellElements.values() for n in element.nodes)
 
+        # TODO RKPM: Here we need to add the nodes of the RKPM 'elements'
+
         activeNodesWithVolatileFieldValues = set(n for cell in activeCells for n in cell.nodes)
 
         activeNodes = activeNodesWithVolatileFieldValues | activeNodesWithPersistentFieldValues

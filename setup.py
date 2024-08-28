@@ -53,46 +53,34 @@ print("*" * 80)
 
 extensions = list()
 
+
+class MarmotExtension(Extension):
+    """A custom extension that links against Marmot."""
+
+    def __init__(self, pyxpath):
+        super().__init__(
+            "*",
+            sources=[
+                pyxpath,
+            ],
+            include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+            libraries=["Marmot"],
+            library_dirs=[join(marmot_dir, "lib")],
+            runtime_library_dirs=[join(marmot_dir, "lib")],
+            language="c++",
+        )
+
+
 extensions += [
-    Extension(
-        "*",
-        sources=[
-            "edelweissmpm/cells/marmotcell/marmotcell.pyx",
-        ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-        libraries=["Marmot"],
-        library_dirs=[join(marmot_dir, "lib")],
-        runtime_library_dirs=[join(marmot_dir, "lib")],
-        language="c++",
-    )
+    MarmotExtension("edelweissmpm/cells/marmotcell/marmotcell.pyx"),
 ]
 
 extensions += [
-    Extension(
-        "*",
-        sources=[
-            "edelweissmpm/cells/marmotcell/lagrangianmarmotcell.pyx",
-        ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-        libraries=["Marmot"],
-        library_dirs=[join(marmot_dir, "lib")],
-        runtime_library_dirs=[join(marmot_dir, "lib")],
-        language="c++",
-    )
+    MarmotExtension("edelweissmpm/cells/marmotcell/lagrangianmarmotcell.pyx"),
 ]
 
 extensions += [
-    Extension(
-        "*",
-        sources=[
-            "edelweissmpm/cells/marmotcell/bsplinemarmotcell.pyx",
-        ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-        libraries=["Marmot"],
-        library_dirs=[join(marmot_dir, "lib")],
-        runtime_library_dirs=[join(marmot_dir, "lib")],
-        language="c++",
-    )
+    MarmotExtension("edelweissmpm/cells/marmotcell/bsplinemarmotcell.pyx"),
 ]
 
 extensions += [
@@ -120,17 +108,7 @@ extensions += [
 ]
 
 extensions += [
-    Extension(
-        "*",
-        sources=[
-            "edelweissmpm/materialpoints/marmotmaterialpoint/mp.pyx",
-        ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-        libraries=["Marmot"],
-        library_dirs=[join(marmot_dir, "lib")],
-        runtime_library_dirs=[join(marmot_dir, "lib")],
-        language="c++",
-    )
+    MarmotExtension("edelweissmpm/materialpoints/marmotmaterialpoint.pyx"),
 ]
 
 extensions += [
@@ -150,32 +128,19 @@ extensions += [
 ]
 
 extensions += [
-    Extension(
-        "*",
-        sources=[
-            "edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pyx",
-        ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-        libraries=["Marmot"],
-        library_dirs=[join(marmot_dir, "lib")],
-        runtime_library_dirs=[join(marmot_dir, "lib")],
-        language="c++",
-    )
+    MarmotExtension("edelweissmpm/cellelements/marmotcellelement/marmotcellelement.pyx"),
 ]
 
 extensions += [
-    Extension(
-        "*",
-        sources=[
-            "edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx",
-        ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-        libraries=["Marmot"],
-        library_dirs=[join(marmot_dir, "lib")],
-        runtime_library_dirs=[join(marmot_dir, "lib")],
-        language="c++",
-    )
+    MarmotExtension("edelweissmpm/cellelements/marmotcellelement/lagrangianmarmotcellelement.pyx"),
 ]
+
+
+extensions += [
+    MarmotExtension("edelweissmpm/particles/marmot/marmotparticle.pyx"),
+]
+
+extensions += [MarmotExtension("edelweissmpm/meshfreeshapefunctions/marmot/marmotreproducingkernelshapefunction.pyx")]
 
 setup(
     name="EdelweissMPM",

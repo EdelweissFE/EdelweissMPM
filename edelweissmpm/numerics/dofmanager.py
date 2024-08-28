@@ -50,6 +50,8 @@ class MPMDofManager(DofManager):
         A list of cells.
     cellElements : list
         A list of cell elements.
+    particles : list
+        The list of particles (RKPM).
     initializeVIJPattern : bool
         A flag indicating whether the VIJ pattern should be initialized.
     """
@@ -63,6 +65,7 @@ class MPMDofManager(DofManager):
         nodeSets: list,
         cells: list,
         cellElements: list,
+        particles: list,
         initializeVIJPattern=True,
     ):
 
@@ -82,23 +85,34 @@ class MPMDofManager(DofManager):
             self.largestNumberOfCellElementNDof,
         ) = self._gatherCellsInformation(cellElements)
 
+        (
+            self.accumulatedParticleNDof,
+            self._accumulatedParticleVIJSize,
+            self._nAccumulatedNodalFluxesFieldwiseFromParticles,
+            self.largestNumberOfParticleNDof,
+        ) = self._gatherCellsInformation(particles)
+
         self.idcsOfCellsInDofVector = self._locateCellsInDofVector(cells)
         self.idcsOfCellElementsInDofVector = self._locateCellsInDofVector(cellElements)
+        self.idcsOfParticlesInDofVector = self._locateParticlesInDofVector(particles)
 
         for field in self.nAccumulatedNodalFluxesFieldwise.keys():
             self.nAccumulatedNodalFluxesFieldwise[field] += self._nAccumulatedNodalFluxesFieldwiseFromCells[field]
             self.nAccumulatedNodalFluxesFieldwise[field] += self._nAccumulatedNodalFluxesFieldwiseFromCellElements[
                 field
             ]
+            self.nAccumulatedNodalFluxesFieldwise[field] += self._nAccumulatedNodalFluxesFieldwiseFromParticles[field]
 
         self.idcsOfHigherOrderEntitiesInDofVector |= self.idcsOfCellsInDofVector
         self.idcsOfHigherOrderEntitiesInDofVector |= self.idcsOfCellElementsInDofVector
+        self.idcsOfHigherOrderEntitiesInDofVector |= self.idcsOfParticlesInDofVector
 
         self._sizeVIJ = (
             self._accumulatedElementVIJSize
             + self._accumulatedConstraintVIJSize
             + self._accumulatedCellVIJSize
             + self._accumulatedCellElementVIJSize
+            + self._accumulatedParticleVIJSize
         )
         if initializeVIJPattern:
             (self.I, self.J, self.idcsOfHigherOrderEntitiesInVIJ) = self._initializeVIJPattern()
@@ -148,3 +162,31 @@ class MPMDofManager(DofManager):
             idcsOfCellsInDofVector[cl] = destList[cl.dofIndicesPermutation]
 
         return idcsOfCellsInDofVector
+
+    def _locateParticlesInDofVector(self, particles: list) -> dict:
+        """Creates a dictionary containing the location (indices) of each particle
+        within the DofVector structure.
+
+        In contrast to elements, cells and cell elements, particles have an idential set of fields
+        on each attached node.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the location mapping.
+        """
+
+        idcsInDofVector = {}
+
+        for p in particles:
+            destList = np.hstack(
+                [
+                    self.idcsOfFieldVariablesInDofVector[node.fields[nodeField]]
+                    for node in enumerate(p.nodes)  # for each node of the particle ..
+                    for nodeField in p.fields  # for each field
+                ]
+            )  # the index in the global system
+
+            idcsInDofVector[p] = destList[p.dofIndicesPermutation]
+
+        return idcsInDofVector

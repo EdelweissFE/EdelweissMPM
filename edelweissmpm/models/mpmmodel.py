@@ -59,6 +59,9 @@ class MPMModel(FEModel):
         self.materialPointSets = {}  #: The collection of MaterialPointSets in the present model.
         self.cellElements = {}  #: The collection of CellElements in the present model.
         self.cellElementSets = {}  #: The collection of CellElementSets in the present model.
+        self.particles = {}  #: The collection of Particles in the present model.
+        self.particleSets = {}  #: The collection of ParticleSets in the present model.
+        self.meshfreeShapeFunctions = {}  #: The collection of MeshfreeShapeFunctions in the present model.
 
         super().__init__(dimension)
 
@@ -177,9 +180,9 @@ class MPMModel(FEModel):
 
         theNodeFields = dict()
         for field in phenomena.keys():
-            fieldSize = getFieldSize(field, domainSize)
+            # fieldSize = getFieldSize(field, domainSize)
 
-            # TODO: super ugly!
+            # TODO: super ugly! WHY?
             theNodeField = MPMNodeField(field, getFieldSize(field, domainSize), nodes)
 
             if theNodeField.nodes:
@@ -210,6 +213,9 @@ class MPMModel(FEModel):
         prettytable.add_row(("material point sets", list(self.materialPointSets.keys())))
         prettytable.add_row(("cell sets", list(self.cellSets.keys())))
         prettytable.add_row(("cell element sets", list(self.cellElementSets.keys())))
+        prettytable.add_row(("particles", len(self.particles)))
+        prettytable.add_row(("particle sets", list(self.particleSets.keys())))
+        prettytable.add_row(("meshfree shape functions", list(self.meshfreeShapeFunctions.keys())))
 
         prettytable.min_width["model property"] = 80
         prettytable.align = "l"
