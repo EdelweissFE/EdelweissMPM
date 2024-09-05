@@ -25,7 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 """
-Meshfree shapefunctions are one of the core ingredients in meshfree methods.
+Meshfree kernelfunctions are one of the core ingredients in meshfree methods.
 
 """
 
@@ -35,38 +35,60 @@ import numpy as np
 from edelweissfe.points.node import Node
 
 
-class BaseMeshfreeShapeFunction(ABC):
-    """Base class for meshfree shape functions.
+class BaseMeshfreeKernelFunction(ABC):
+    """Base class for meshfree kernel functions.
     Shape functions are used to interpolate field solutions from the nodes to arbitrary points in the domain.
     Furthermore, they are the link between the material points and the nodes in meshfree methods.
 
-    Each shape function should be derived from this base class in order to follow the general interface.
+    Each kernel function should be derived from this base class in order to follow the general interface.
     """
 
     @property
     @abstractmethod
     def node(self) -> Node:
-        """Get the node of the shape function.
+        """Get the node of the kernel function.
 
         Returns
         -------
         Node
-            The node of the shape function.
+            The node of the kernel function.
         """
 
+    @property
     @abstractmethod
-    def getCurrentBoundingBox(self) -> np.ndarray:
-        """Get the bounding box of the shape function.
+    def center(self) -> np.ndarray:
+        """Get the center of the kernel function.
 
         Returns
         -------
         np.ndarray
-            The bounding box of the shape function.
+            The center of the kernel function.
+        """
+
+    @property
+    @abstractmethod
+    def updateCenter(self, center: np.ndarray):
+        """Set the center of the kernel function.
+
+        Parameters
+        ----------
+        center
+            The center of the kernel function.
+        """
+
+    @abstractmethod
+    def getCurrentBoundingBox(self) -> tuple[np.ndarray, np.ndarray]:
+        """Get the bounding box of the kernel function.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            The bounding box of the kernel function.
         """
 
     @abstractmethod
     def isCoordinateInCurrentSupport(self, coords: np.ndarray) -> bool:
-        """Check if the given coordinates are in the support of the shape function.
+        """Check if the given coordinates are in the support of the kernel function.
 
         Parameters
         ----------
@@ -76,5 +98,5 @@ class BaseMeshfreeShapeFunction(ABC):
         Returns
         -------
         bool
-            True if the coordinates are in the support of the shape function, False otherwise.
+            True if the coordinates are in the support of the kernel function, False otherwise.
         """

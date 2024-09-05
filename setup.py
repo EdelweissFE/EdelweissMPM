@@ -54,21 +54,22 @@ print("*" * 80)
 extensions = list()
 
 
-class MarmotExtension(Extension):
+def MarmotExtension(pyxpath, *args, **kwargs):
     """A custom extension that links against Marmot."""
 
-    def __init__(self, pyxpath):
-        super().__init__(
-            "*",
-            sources=[
-                pyxpath,
-            ],
-            include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
-            libraries=["Marmot"],
-            library_dirs=[join(marmot_dir, "lib")],
-            runtime_library_dirs=[join(marmot_dir, "lib")],
-            language="c++",
-        )
+    return Extension(
+        "*",
+        sources=[
+            pyxpath,
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+        *args,
+        **kwargs
+    )
 
 
 extensions += [
@@ -108,7 +109,7 @@ extensions += [
 ]
 
 extensions += [
-    MarmotExtension("edelweissmpm/materialpoints/marmotmaterialpoint.pyx"),
+    MarmotExtension("edelweissmpm/materialpoints/marmotmaterialpoint/mp.pyx"),
 ]
 
 extensions += [
@@ -136,11 +137,11 @@ extensions += [
 ]
 
 
+extensions += [MarmotExtension("edelweissmpm/meshfree/kernelfunctions/marmot/marmotmeshfreekernelfunction.pyx")]
+extensions += [MarmotExtension("edelweissmpm/meshfree/approximations/marmot/marmotmeshfreeapproximation.pyx")]
 extensions += [
-    MarmotExtension("edelweissmpm/particles/marmot/marmotparticle.pyx"),
+    MarmotExtension("edelweissmpm/particles/marmot/marmotparticlewrapper.pyx"),
 ]
-
-extensions += [MarmotExtension("edelweissmpm/meshfreeshapefunctions/marmot/marmotreproducingkernelshapefunction.pyx")]
 
 setup(
     name="EdelweissMPM",

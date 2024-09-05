@@ -33,16 +33,16 @@ import numpy as np
 
 
 cdef extern from "Marmot/MarmotMPMLibrary.h" namespace "MarmotLibrary" nogil:
-    
+
     cdef cppclass MarmotCellFactory:
         @staticmethod
-        MarmotCell* createCell(const string& cellName, 
+        MarmotCell* createCell(const string& cellName,
                                int cellNumber,
                                const double* nodeCoordinates,
                                int sizeNodeCoordinates) except +ValueError
 
         @staticmethod
-        MarmotCell* createBSplineCell(const string& cellName, 
+        MarmotCell* createBSplineCell(const string& cellName,
                                int cellNumber,
                                const double* nodeCoordinates,
                                int sizeNodeCoordinates,
@@ -56,20 +56,20 @@ cdef extern from "Marmot/MarmotMaterialPoint.h" nogil:
 
 cdef extern from "Marmot/MarmotCell.h":
     cdef cppclass MarmotCell nogil:
-        
+
         const vector[vector[string]]& getNodeFields()
 
         const vector[int]& getDofIndicesPermutationPattern()
 
         string getCellShape()
-        
+
         int getNNodes()
-    
+
         int getNDofPerCell()
 
         int isCoordinateInCell(const double *coordinate)
 
-        void assignMaterialPoints(const vector[MarmotMaterialPoint*] materialPoints) 
+        void assignMaterialPoints(const vector[MarmotMaterialPoint*] materialPoints)
 
         void computeMaterialPointKernels(   const double* dUc,
                                             double* Pc,
@@ -77,17 +77,17 @@ cdef extern from "Marmot/MarmotCell.h":
                                             double timeNewTotal,
                                             double dT) except +
 
-        void computeBodyLoad(               int type, 
-                                            const double* load, 
+        void computeBodyLoad(               int type,
+                                            const double* load,
                                             double* Pc,
                                             double* Kc,
                                             double timeNewTotal,
                                             double dT) except +
 
-        void computeDistributedLoad(        int type, 
-                                            int surfaceID, 
+        void computeDistributedLoad(        int type,
+                                            int surfaceID,
                                             int materialPointNumber,
-                                            const double* load, 
+                                            const double* load,
                                             double* Pc,
                                             double* Kc,
                                             double timeNewTotal,
@@ -102,13 +102,13 @@ cdef extern from "Marmot/MarmotCell.h":
         void getInterpolationVector( double* N, const double* coordinates)
 
         void getBoundingBox(double* boundingBoxMin, double* boundingBoxMax)
-        
+
 cdef class MarmotCellWrapper:
-    
+
     cdef MarmotCell* _marmotCell
-    cdef list _nodes, 
-    cdef int _cellNumber, 
-    cdef str _cellType, 
+    cdef list _nodes,
+    cdef int _cellNumber,
+    cdef str _cellType,
     cdef int _nNodes, _nDof
     cdef list _fields
     cdef str _ensightType
@@ -117,14 +117,12 @@ cdef class MarmotCellWrapper:
     cdef dict _supportedBodyLoads
 
     cdef dict _supportedDistributedLoads
-    
+
     cdef double[:, ::1] _nodeCoordinates
 
     cdef list _assignedMaterialPoints
 
     cpdef void computeMaterialPointKernels(self, double[::1] dUc, double[::1] Rhs, double[::1] AMatrix, double timeNew, double dTime, ) nogil
 
-    cpdef void interpolateFieldsToMaterialPoints(self, 
-                     double[::1] dUc ) nogil 
-
-
+    cpdef void interpolateFieldsToMaterialPoints(self,
+                     double[::1] dUc ) nogil

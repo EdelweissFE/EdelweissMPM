@@ -25,30 +25,26 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-cimport numpy as np
-from libcpp.string cimport string
-from libcpp.vector cimport vector
-
 import numpy as np
 
 
-cdef extern from "Marmot/MarmotReproducingKernelShapeFunctionBSplineBoxed.h":
-    cdef cppclass MarmotReproducingKernelShapeFunctionBSplineBoxed nogil:
-        MarmotReproducingMeshfreeShapeFunctionBSplineBoxed(const double *coord, int dim, double supportRadius, int continuityOrder, int completeOrder)
+class GridNode:
+    """A basic gridnode.
+    It has a label, a spatial position, and may be associated with an arbitrary number of fields.
 
-        double computeShapeFunction( const double *coord, const std::vector<const MarmotReproducingMeshfreeShapeFunctionBSplineBoxed *> &neighboringFunctions)
+    Parameters
+    ----------
+    label
+        The unique label for this node.
+    coordinates
+        The coordinates of this node.
+    """
 
-        void getBoundingBox( double *min, double *max ) const
-
-        int isInSupport( const double *coord ) const
-
-
-cdef class MarmotReproducingKernelShapeFunctionWrapper:
-
-    cdef MarmotReproducingKernelShapeFunction* _marmotReproducingKernelShapeFunction
-
-
-    cdef int _dim
-    cdef double _supportRadius
-    cdef int _continuityOrder
-    cdef int _completenessOrder
+    def __init__(
+        self,
+        label: int,
+        coordinates: np.ndarray,
+    ):
+        self.label = label
+        self.coordinates = coordinates
+        self.fields = dict()

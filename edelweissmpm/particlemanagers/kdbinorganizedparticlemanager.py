@@ -25,50 +25,56 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-import math
 
 import numpy as np
 
-from edelweissmpm.meshfreeshapefunctions.base.basemeshfreeshapefunction import (
-    BaseMeshfreeShapeFunction,
+from edelweissmpm.meshfree.kernelfunctions.base.basemeshfreekernelfunction import (
+    BaseMeshfreeKernelFunction,
 )
 from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
 from edelweissmpm.particles.base.baseparticle import BaseParticle
 
 
 class _KDBinOrganizer:
-    """A class to manage the shape functions in cartesian bins in multiple dimension for fast access.
+    """A class to manage the kernel functions in cartesian bins in multiple dimension for fast access.
 
-    We store the bounding box of each shape function (support) in the respective (partially-)covereing bins.
+    We store the bounding box of each kerne lfunction (support) in the respective (partially-)covereing bins.
     This way, we can quickly find for given coordinates (of particles) the shape function candidates of which the support might cover the coordinates.
 
     Parameters
     ----------
-    shapeFunctions
+    kernelFunctions
         The list of shape functions.
     dimension
         The dimension of the problem.
     """
 
-    def __init__(self, shapeFunctions, dimension):
+    def __init__(self, kernelFunctions, dimension):
         self._dimension = dimension
-        self._shapeFunctions = shapeFunctions
+        self._kernelFunctions = kernelFunctions
 
         # we make the bin size the average of the bounding box of the shape functions
-        self._binSize = np.mean([sf.getBoundingBox()[1] - sf.getBoundingBox()[0] for sf in shapeFunctions], axis=0)
 
-        self._boundingBoxMin = [min([sf.getBoundingBox()[0][i] for sf in shapeFunctions]) for i in range(dimension)]
-        self._boundingBoxMax = [max([sf.getBoundingBox()[1][i] for sf in shapeFunctions]) for i in range(dimension)]
+        # boundingBoxes = np.array([sf.getBoundingBox() for sf in kernelFunctions])
+        boundingBoxes = [sf.getBoundingBox() for sf in kernelFunctions]
+        boundingBoxesMins = np.array([bb[0] for bb in boundingBoxes])
+        boundingBoxesMaxs = np.array([bb[1] for bb in boundingBoxes])
 
-        self._nBins = (math.ceil(s) for s in (self._boundingBoxMax - self._boundingBoxMin) / self._binSize)
+        self._binSize = np.mean(boundingBoxesMaxs - boundingBoxesMins, axis=0)
+        self._boundingBoxMin = np.min(boundingBoxesMins, axis=0) - 1e-12
+        self._boundingBoxMax = np.max(boundingBoxesMaxs, axis=0) + 1e-12
+
+        # self._nBins = (math.ceil(s) for s in (self._boundingBoxMax - self._boundingBoxMin) / self._binSize)
+        self._nBins = np.ceil((self._boundingBoxMax - self._boundingBoxMin) / self._binSize).astype(int)
         # self._thebins = np.empty( self._nBins, dtype=list)
 
         self._thebins = np.frompyfunc(list, 0, 1)(np.empty(self._nBins, dtype=object))
+        # print(self._thebins.shape)
 
         # for every shape function, we need to get the bin indices for the min. and max. bounding box:
-        for sf in shapeFunctions:
-            minIndices = self.getBinIndices(sf.getBoundingBox()[0])
-            maxIndices = self.getBinIndices(sf.getBoundingBox()[1])
+        for i, kf in enumerate(kernelFunctions):
+            minIndices = self._getBinIndices(boundingBoxes[i][0])
+            maxIndices = self._getBinIndices(boundingBoxes[i][1])
 
             # now we need to loop over all bins in the bounding box of the shape function and add the shape function to the bin
             # 3d case:
@@ -76,12 +82,12 @@ class _KDBinOrganizer:
                 for i in range(minIndices[0], maxIndices[0] + 1):
                     for j in range(minIndices[1], maxIndices[1] + 1):
                         for k in range(minIndices[2], maxIndices[2] + 1):
-                            self._thebins[i, j, k].append(sf)
+                            self._thebins[i, j, k].append(kf)
             # 2d case:
             elif self._dimension == 2:
                 for i in range(minIndices[0], maxIndices[0] + 1):
                     for j in range(minIndices[1], maxIndices[1] + 1):
-                        self._thebins[i, j].append(sf)
+                        self._thebins[i, j].append(kf)
             # 1d case:
             elif self._dimension == 1:
                 for i in range(minIndices[0], maxIndices[0] + 1):
@@ -104,9 +110,9 @@ class _KDBinOrganizer:
             The list of indices.
         """
 
-        return [int((coordinate[i] - self._boundingBox[0][i]) / self._binSize[i]) for i in range(self._dimension)]
+        return [int((coordinate[i] - self._boundingBoxMin[i]) / self._binSize[i]) for i in range(self._dimension)]
 
-    def getShapeFunctionCandidates(self, coordinate: np.ndarray) -> list:
+    def getKernelFunctionCandidates(self, coordinate: np.ndarray) -> list:
         """Get the shape function candidates for a given coordinate.
 
         Candidates are shape functions that might cover the given coordinate.
@@ -125,10 +131,11 @@ class _KDBinOrganizer:
         """
 
         indices = self._getBinIndices(coordinate)
-        return self._thebins[indices]
+        thebin = self._thebins[tuple(indices)]
+        return thebin
 
     def __str__(self):
-        return f"KDBin with {len(self._shapeFunctions)} shape functions in {self._nBins} bins of size {self._binSize} in a bounding box from {self._boundingBoxMin} to {self._boundingBoxMax}."
+        return f"KDBin with {len(self._kernelFunctions)} shape functions in {self._nBins} bins of size {self._binSize} in a bounding box from {self._boundingBoxMin} to {self._boundingBoxMax}."
 
 
 class KDBinOrganizedParticleManager(BaseParticleManager):
@@ -136,7 +143,7 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
 
     Parameters
     ----------
-    meshfreeShapeFunctions
+    meshfreeKernelFunctions
         The list of shape functions.
     particles
         The list of particles.
@@ -146,12 +153,12 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
 
     def __init__(
         self,
-        meshfreeShapeFunctions: list[BaseMeshfreeShapeFunction],
+        meshfreeKernelFunctions: list[BaseMeshfreeKernelFunction],
         particles: list[BaseParticle],
         dimension: int,
     ):
 
-        self._meshfreeShapeFunctions = meshfreeShapeFunctions
+        self._meshfreeKernelFunctions = meshfreeKernelFunctions
         self._particles = particles
         self._dimension = dimension
         self.signalizeShapeFunctionLocationUpdate()
@@ -159,24 +166,39 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
     def signalizeShapeFunctionLocationUpdate(
         self,
     ):
-        self._theBins = _KDBinOrganizer(self._meshfreeShapeFunctions, self._dimension)
+        self._theBins = _KDBinOrganizer(self._meshfreeKernelFunctions, self._dimension)
 
     def updateConnectivity(
         self,
     ):
         hasChanged = False
         for p in self._particles:
-            shapeFunctionCandidates = self._theBins.getShapeFunctionCandidates(p.getCoordinates())
+            vertexCoordinates = p.getVertexCoordinates()
 
-            shapeFunctions = set(
+            # rough search based on the bounding box of the kernel functions
+            kernelFunctionCandidates = {
+                candidate
+                for vertex in vertexCoordinates
+                for candidate in self._theBins.getKernelFunctionCandidates(vertex)
+            }
+            # fine search based on the actual support of the kernel functions
+            kernelFunctions = {
                 sf
-                for coordinate in p.getVertexCoordinates()
-                for sf in shapeFunctionCandidates
-                if sf.isInSupport(coordinate)
-            )
+                for coordinate in vertexCoordinates
+                for sf in kernelFunctionCandidates
+                if sf.isCoordinateInCurrentSupport(coordinate)
+            }
 
-            if shapeFunctions != p.getAssignedShapeFunctions():
+            if hasChanged or kernelFunctions != set(p.getAssignedKernelFunctions()):
                 hasChanged = True
-                p.assignShapeFunctions(shapeFunctions)
+                p.assignKernelFunctions(list(kernelFunctions))
 
         return hasChanged
+
+    def getCoveredDomain(
+        self,
+    ):
+        return self._theBins._boundingBoxMin, self._theBins._boundingBoxMax
+
+    def __str__(self):
+        return f"KDBinOrganizedParticleManager with {len(self._particles)} particles and {len(self._meshfreeKernelFunctions)} shape functions in {self._dimension} dimensions. Covered domain: {self.getCoveredDomain()}."

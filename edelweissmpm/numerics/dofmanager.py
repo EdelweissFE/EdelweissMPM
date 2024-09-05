@@ -26,7 +26,9 @@
 #  ---------------------------------------------------------------------
 
 import numpy as np
+from edelweissfe.fields.nodefield import NodeField
 from edelweissfe.numerics.dofmanager import DofManager
+from edelweissfe.variables.scalarvariable import ScalarVariable
 
 
 class MPMDofManager(DofManager):
@@ -58,15 +60,15 @@ class MPMDofManager(DofManager):
 
     def __init__(
         self,
-        nodeFields: list,
-        scalarVariables: list,
-        elements: list,
-        constraints: list,
-        nodeSets: list,
-        cells: list,
-        cellElements: list,
-        particles: list,
-        initializeVIJPattern=True,
+        nodeFields: list[NodeField],
+        scalarVariables: list[ScalarVariable] = [],
+        elements: list = [],
+        constraints: list = [],
+        nodeSets: list = [],
+        cells: list = [],
+        cellElements: list = [],
+        particles: list = [],
+        initializeVIJPattern: bool = True,
     ):
 
         super().__init__(nodeFields, scalarVariables, elements, constraints, nodeSets, initializeVIJPattern=False)
@@ -167,7 +169,7 @@ class MPMDofManager(DofManager):
         """Creates a dictionary containing the location (indices) of each particle
         within the DofVector structure.
 
-        In contrast to elements, cells and cell elements, particles have an idential set of fields
+        In contrast to elements, cells and cell elements, particles have an identical set of fields
         on each attached node.
 
         Returns

@@ -39,8 +39,8 @@ from edelweissfe.nodecouplingentity.base.nodecouplingentity import (
     BaseNodeCouplingEntity,
 )
 
-from edelweissmpm.meshfreeshapefunctions.base.basemeshfreeshapefunction import (
-    BaseMeshfreeShapeFunction,
+from edelweissmpm.meshfree.kernelfunctions.base.basemeshfreekernelfunction import (
+    BaseMeshfreeKernelFunction,
 )
 
 
@@ -113,18 +113,6 @@ class BaseParticle(BaseNodeCouplingEntity):
         self,
     ):
         """Initalize the particle to be ready for computing."""
-
-    @abstractmethod
-    def setMaterial(self, materialName: str, materialProperties: np.ndarray):
-        """Assign a material and material properties.
-
-        Parameters
-        ----------
-        materialName
-            The name of the requested material.
-        materialProperties
-            The numpy array containing the material properties.
-        """
 
     @abstractmethod
     def setInitialCondition(self, stateType: str, values: np.ndarray):
@@ -223,12 +211,22 @@ class BaseParticle(BaseNodeCouplingEntity):
         """
 
     @abstractmethod
-    def assignMeshfreeShapeFunctions(self, shapeFunctions: list[BaseMeshfreeShapeFunction]):
-        """Assign the meshfree shape functions to the particle.
+    def assignMeshfreeKernelFunctions(self, kernelFunctions: list[BaseMeshfreeKernelFunction]):
+        """Assign the meshfree kernel functions to the particle.
 
         Parameters
         ----------
         shapeFunctions
+            The meshfree shape functions.
+        """
+
+    @abstractmethod
+    def getAssignedKernelFunctions(self):
+        """Get the assigned meshfree kernel functions.
+
+        Returns
+        -------
+        list
             The meshfree shape functions.
         """
 
