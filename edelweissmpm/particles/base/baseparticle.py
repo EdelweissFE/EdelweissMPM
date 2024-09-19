@@ -25,7 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 """
-Together with meshfree shape functions (:class:`~BaseMeshfreeShapeFunction`), Particles represent the basic building blocks of a particle based method. They
+Together with meshfree kernel functions (:class:`~BaseMeshfreeKernelFunction`), particles represent the basic building blocks of a particle based method. They
 are used for computing the quadrature.
 
 Implementing your own particles can be done easily by subclassing from
@@ -45,9 +45,45 @@ from edelweissmpm.meshfree.kernelfunctions.base.basemeshfreekernelfunction impor
 
 
 class BaseParticle(BaseNodeCouplingEntity):
+    """The BaseParticle class is an abstract base class for all particles.
+
+    If you want to implement a new particle, you have to inherit from this class.
+
+    Particles communicate with field variables (:class:`~FieldVariable`) through meshfree kernel functions (:class:`~BaseMeshfreeKernelFunction`),
+    which are attached to nodes.
+    During a simulation, particles are used to compute the quadrature of the weak form of the governing equations.
+    Accordingly, like elements and cells, they are responsible for computing the residual and stiffness matrix.
+
+    Naturally, and in contrast to elements, cells and cell elements, particles have an identical set of fields on each attached node.
+    Furthermore, due to the varying number attached nodes, no permutation is allowed.
+    For particles generally a node-wise layout is assumed.
+
+    For instance: [node_1_displacement, node_1_temperature, node_2_displacement, node_2_temperature, ...]
+    """
+
+    @property
+    @abstractmethod
+    def baseFields(self) -> list[str]:
+        """Defines which fields are attached to the particle."""
+
+    @property
+    @abstractmethod
+    def kernelFunctions(self) -> list[BaseMeshfreeKernelFunction]:
+        """The kernel functions assigned to the particle."""
 
     @abstractmethod
     def getBoundingBox(
+        self,
+    ) -> np.ndarray:
+        """Get the bounding box of the particle.
+
+        Returns
+        -------
+        np.ndarray
+            All coordinates for all bounding vertices."""
+
+    @abstractmethod
+    def getVertexCoordinates(
         self,
     ) -> np.ndarray:
         """The vertices defining the shape of the particle.
@@ -57,26 +93,22 @@ class BaseParticle(BaseNodeCouplingEntity):
         np.ndarray
             All coordinates for all bounding vertices."""
 
-    # @abstractmethod
-    # def getVertexCoordinates(
-    #     self,
-    # ) -> np.ndarray:
-    #     """The vertices defining the shape of the particle.
+    @abstractmethod
+    def getCenterCoordinates(
+        self,
+    ) -> np.ndarray:
+        """Get the center coordinates of the particle.
 
-    #     Returns
-    #     -------
-    #     np.ndarray
-    #         All coordinates for all bounding vertices."""
+        Returns
+        -------
+        np.ndarray
+            The center coordinates."""
 
     @abstractmethod
     def acceptStateAndPosition(
         self,
     ):
         """Accept the computed state (in nonlinear iteration schemes) and the position."""
-
-    @abstractmethod
-    def prepareTimestep(self, timeTotal: float, dT: float):
-        """Prepare a new time step, i.e., before interpolation from the grid takes place."""
 
     @abstractmethod
     def getResultArray(self, result: str, getPersistentView: bool = True) -> np.ndarray:
@@ -217,16 +249,6 @@ class BaseParticle(BaseNodeCouplingEntity):
         Parameters
         ----------
         shapeFunctions
-            The meshfree shape functions.
-        """
-
-    @abstractmethod
-    def getAssignedKernelFunctions(self):
-        """Get the assigned meshfree kernel functions.
-
-        Returns
-        -------
-        list
             The meshfree shape functions.
         """
 

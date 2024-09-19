@@ -38,10 +38,10 @@ cimport edelweissmpm.meshfree.kernelfunctions.marmot.marmotmeshfreekernelfunctio
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotMeshfreeKernelFunctionWrapper:
     # cdef classes cannot subclass.
-    def __init__(self, node, str kernelType, *args, **kwargs):
+    def __init__(self, node, str kernelType, **kwargs):
         pass
 
-    def __cinit__(self, node, str kernelType, *args, **kwargs):
+    def __cinit__(self, node, str kernelType, **kwargs):
 
         self._node = node
         self._center = np.copy(self._node.coordinates)
@@ -73,10 +73,8 @@ cdef class MarmotMeshfreeKernelFunctionWrapper:
     def center(self) -> np.ndarray:
         return self._center
 
-    def move(self, double[::1] displacement):
-        # self._displacement = np.copy(displacement)
-        # cdef double[::1] displacementView = self._displacement
-        self._marmotMeshfreeKernelFunction.move(&displacement[0])
+    def moveTo(self, double[::1] coordinates):
+        self._marmotMeshfreeKernelFunction.moveTo(&coordinates[0])
 
     def getBoundingBox(self, ):
 

@@ -44,7 +44,7 @@ cdef extern from "Marmot/MarmotMeshfreeKernelFunction.h" namespace "Marmot::Mesh
 
         int isInSupport( const double *coord ) const
 
-        void move ( const double *displacement )
+        void moveTo ( const double *coordinates )
 
 cdef extern from "Marmot/MarmotMeshfreeKernelFunctionBSplineBoxed.h" namespace "Marmot::Meshfree":
     cdef cppclass MarmotMeshfreeKernelFunctionBSplineBoxed nogil:

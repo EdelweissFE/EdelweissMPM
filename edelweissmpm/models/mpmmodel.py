@@ -25,6 +25,8 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+import copy
+
 from edelweissfe.config.phenomena import getFieldSize, phenomena
 from edelweissfe.journal.journal import Journal
 from edelweissfe.models.femodel import FEModel
@@ -37,6 +39,7 @@ from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.sets.cellelementset import CellElementSet
 from edelweissmpm.sets.cellset import CellSet
 from edelweissmpm.sets.materialpointset import MaterialPointSet
+from edelweissmpm.sets.particleset import ParticleSet
 
 
 class MPMModel(FEModel):
@@ -61,7 +64,8 @@ class MPMModel(FEModel):
         self.cellElementSets = {}  #: The collection of CellElementSets in the present model.
         self.particles = {}  #: The collection of Particles in the present model.
         self.particleSets = {}  #: The collection of ParticleSets in the present model.
-        self.meshfreeShapeFunctions = {}  #: The collection of MeshfreeShapeFunctions in the present model.
+        self.meshfreeKernelFunctions = {}  #: The collection of MeshfreeKernelFunctions in the present model.
+        self.particleKernelDomains = {}  #: The collection of ParticleKernelDomains in the present model.
 
         super().__init__(dimension)
 
@@ -89,6 +93,26 @@ class MPMModel(FEModel):
                     if field not in node.fields:
                         node.fields[field] = FieldVariable(node, field)
 
+    def _populateNodeFieldVariablesFromParticleKernelDomains(
+        self,
+    ):
+        """Creates FieldVariables on Nodes depending on the all defined particle-kernel interactions.
+        For particles and kernels, the situation is a bit more complicated compared to elements or cells:
+        Unlike for elements or cells, there is no direct connection between a particle and a node.
+        Hence, the fields on the nodes are not necessarily known at the beginning of simulation.
+
+        For this reason, we force the user to tell us which particles (which have fields) are interacting with which kernelfunctions during the simulation.
+        """
+
+        for particleKernelInteraction in self.particleKernelDomains.values():
+            theFields = particleKernelInteraction.particles[
+                0
+            ].baseFields  # TODO: We assume that all particles have the same fields; let's change this later
+            for field in theFields:
+                for kf in particleKernelInteraction.meshfreeKernelFunctions:
+                    if field not in kf.node.fields:
+                        kf.node.fields[field] = FieldVariable(kf.node, field)
+
     def _prepareVariablesAndFields(self, journal):
         """Prepare all variables and fields for a simulation.
 
@@ -97,10 +121,15 @@ class MPMModel(FEModel):
         journal
             The journal instance.
         """
-
-        journal.message("Activating fields on Nodes from Cells", self.identification)
-        self._populateNodeFieldVariablesFromCells()
-        self._populateNodeFieldVariablesFromCellElements()
+        if self.cells:
+            journal.message("Activating fields on Nodes from Cells", self.identification)
+            self._populateNodeFieldVariablesFromCells()
+        if self.cellElements:
+            journal.message("Activating fields on Nodes from CellElements", self.identification)
+            self._populateNodeFieldVariablesFromCellElements()
+        if self.particleKernelDomains:
+            journal.message("Activating fields on Nodes from Particles", self.identification)
+            self._populateNodeFieldVariablesFromParticleKernelDomains()
 
         return super()._prepareVariablesAndFields(journal)
 
@@ -120,6 +149,22 @@ class MPMModel(FEModel):
         for mp in self.materialPoints.values():
             mp.initializeYourself()
 
+    def _prepareParticles(self, journal: Journal):
+        """Prepare elements for a simulation.
+        In detail, sections are assigned.
+
+
+        Parameters
+        ----------
+        journal
+            The journal instance.
+        """
+        # for section in self.sections.values():
+        #     section.assignSectionPropertiesToModel(self)
+
+        for p in self.particles.values():
+            p.initializeYourself()
+
     def prepareYourself(self, journal: Journal):
         """Prepare the model for a simulation.
         Creates the variables, bundles the fields,
@@ -137,8 +182,10 @@ class MPMModel(FEModel):
         self.materialPointSets["all"] = MaterialPointSet("all", self.materialPoints.values())
         self.cellSets["all"] = CellSet("all", self.cells.values())
         self.cellElementSets["all"] = CellElementSet("all", self.cellElements.values())
+        self.particleSets["all"] = ParticleSet("all", self.particles.values())
 
         self._prepareMaterialPoints(journal)
+        self._prepareParticles(journal)
 
         super().prepareYourself(journal)
 
@@ -158,6 +205,9 @@ class MPMModel(FEModel):
 
         for mp in self.materialPoints.values():
             mp.acceptStateAndPosition()
+
+        for p in self.particles.values():
+            p.acceptStateAndPosition()
 
         return super().advanceToTime(time)
 
@@ -180,15 +230,64 @@ class MPMModel(FEModel):
 
         theNodeFields = dict()
         for field in phenomena.keys():
-            # fieldSize = getFieldSize(field, domainSize)
-
-            # TODO: super ugly! WHY?
             theNodeField = MPMNodeField(field, getFieldSize(field, domainSize), nodes)
 
             if theNodeField.nodes:
                 theNodeFields[field] = theNodeField
 
         return theNodeFields
+
+    def getActiveSubModel(self):
+        """
+        For many applications only a part of the model is active.
+        For instance, in MPM simulations only cells occupied by material points are active.
+        In order to create a numerical model, we need to know which part of the model is active, and which is not.
+        This function returns the active sub model, based on the current state of the model.
+
+        Returns
+        -------
+        MPMModel
+            The active sub model.
+        """
+
+        activeModel = copy.copy(self)
+
+        activeCells = {cell.number: cell for mp in self.materialPoints.values() for cell in mp.cells}
+
+        activeNodesWithPersistentFieldValues = set(
+            n for element in self.elements.values() for n in element.nodes
+        ) | set(n for element in self.cellElements.values() for n in element.nodes)
+
+        activeNodesWithVolatileFieldValues = set(n for cell in activeCells for n in cell.nodes)
+
+        activeNodesWithVolatileFieldValues |= set(
+            kf.node for particle in self.particles.values() for kf in particle.kernelFunctions
+        )
+
+        activeNodes = activeNodesWithVolatileFieldValues | activeNodesWithPersistentFieldValues
+
+        activeNodes = NodeSet("activeNodes", activeNodes)
+        activeNodesWithPersistentFieldValues = NodeSet(
+            "activeNodesWithPersistentFieldvalues", activeNodesWithPersistentFieldValues
+        )
+        activeNodesWithVolatileFieldValues = NodeSet(
+            "activeNodesWithVolatileFieldValues", activeNodesWithVolatileFieldValues
+        )
+
+        reducedNodeFields = {
+            nodeField.name: MPMNodeField(nodeField.name, nodeField.dimension, activeNodes)
+            for nodeField in self.nodeFields.values()
+        }
+
+        reducedNodeSets = {
+            nodeSet: NodeSet(nodeSet.name, set(activeNodes).intersection(nodeSet)) for nodeSet in self.nodeSets.values()
+        }
+
+        activeModel.nodeSets = reducedNodeSets
+        activeModel.nodeFields = reducedNodeFields
+        activeModel.cells = activeCells
+
+        return activeModel
 
     def makePrettyTableSummary(self):
         """Create a pretty table with a summary of the model properties."""
@@ -215,7 +314,8 @@ class MPMModel(FEModel):
         prettytable.add_row(("cell element sets", list(self.cellElementSets.keys())))
         prettytable.add_row(("particles", len(self.particles)))
         prettytable.add_row(("particle sets", list(self.particleSets.keys())))
-        prettytable.add_row(("meshfree shape functions", list(self.meshfreeShapeFunctions.keys())))
+        prettytable.add_row(("meshfree kernel functions", len(self.meshfreeKernelFunctions.keys())))
+        prettytable.add_row(("particle kernel domains", list(self.particleKernelDomains.keys())))
 
         prettytable.min_width["model property"] = 80
         prettytable.align = "l"

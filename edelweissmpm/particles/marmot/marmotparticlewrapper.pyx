@@ -55,21 +55,10 @@ from edelweissmpm.meshfree.kernelfunctions.marmot.marmotmeshfreekernelfunction c
 
 @cython.final # no subclassing -> cpdef with nogil possible
 cdef class MarmotParticleWrapper:
-    """This cell as a wrapper for MarmotCells.
-    It is an abstract class and cannot be used directly.
-    Rather, it is used as a base class for the specific cell types, such as LagrangianMarmotCell and BSplineMarmotCell.
+    """This class as a wrapper for MarmotParticles.
 
-    For the documentation of MarmotCells, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
-
-    Parameters
-    ----------
-    cellType
-        The Marmot element which should be represented, e.g., CPE4.
-    cellNumber
-        The (unique) number of this cell.
-    nodes
-        The list of nodes for this Cell.
-        """
+    For the documentation of MarmotParticles, please refer to `Marmot <https://github.com/MAteRialMOdelingToolbox/Marmot/>`_.
+    """
 
 
     def __cinit__(self,
@@ -77,14 +66,19 @@ cdef class MarmotParticleWrapper:
                   int particleNumber,
                   np.ndarray vertexCoordinates,
                   double volume,
-                  MarmotMaterialPointWrapper marmotMaterialPointWrapper,
                   MarmotMeshfreeApproximationWrapper marmotMeshfreeApproximationWrapper,
+                  dict material
                   ):
+
+        self._mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", particleNumber, vertexCoordinates, volume, material)
 
         self._vertexCoordinates = np.copy(vertexCoordinates)
         self._vertexCoordinatesView = self._vertexCoordinates
 
-        self._marmotMaterialPoint = <MarmotMaterialPoint*> marmotMaterialPointWrapper._marmotMaterialPoint
+        self._centerCoordinates = np.zeros(vertexCoordinates.shape[1])
+        self._centerCoordinatesView = self._centerCoordinates
+
+        self._marmotMaterialPoint = <MarmotMaterialPoint*> self._mp._marmotMaterialPoint
         self._marmotMeshfreeApproximation = <MarmotMeshfreeApproximation* > marmotMeshfreeApproximationWrapper._marmotMeshfreeApproximation
 
         self._assignedKernelFunctions = list()
@@ -108,22 +102,16 @@ cdef class MarmotParticleWrapper:
 
         self._marmotParticle.assignStateVars(&self._stateVarsTemp[0], self._nStateVars)
 
-        # self._cellNumber = cellNumber
-        self._particleType = particleType
+        self._particleType          = particleType
         self._number                = particleNumber
         self._ensightType           = self._marmotParticle.getParticleShape().decode('utf-8')
         self._nVertices             = self._marmotParticle.getNumberOfVertices()
         self._nDim                  = self._marmotParticle.getDimension()
-        self._assignedShapeFunctions = list()
-
-        # self._centerCoordinates = np.ndarray(self._nDim)
-        # self._centerCoordinatesView = self._centerCoordinates
+        self._nBaseDof              = self._marmotParticle.getNBaseDof()
+        # self._assignedKernelFunctions = list()
 
         cdef vector[string] fields           = self._marmotParticle.getFields()
-        self._fields                         = [  s.decode('utf-8')  for s in fields ]
-
-        cdef vector[int] permutationPattern = self._marmotParticle.getDofIndicesPermutationPattern()
-        self._dofIndicesPermutation          = np.asarray(permutationPattern)
+        self._baseFields                         = [  s.decode('utf-8')  for s in fields ]
 
         cdef dict supportedBodyLoads = self._marmotParticle.getSupportedBodyLoadTypes()
         self._supportedBodyLoads = {k.decode() :  v for k, v in supportedBodyLoads.items()  }
@@ -131,54 +119,37 @@ cdef class MarmotParticleWrapper:
         cdef dict supportedDistributedLoads = self._marmotParticle.getSupportedDistributedLoadTypes()
         self._supportedDistributedLoads = {k.decode() :  v for k, v in supportedDistributedLoads.items()  }
 
-        # cdef MarmotMeshfreeApproximationWrapper mfaWrapper = approximation
-
-        # cdef const MarmotMeshfreeApproximation* mfa = <const MarmotMeshfreeApproximation*> (  mfaWrapper._marmotMeshfreeApproximation   )
-        # self._marmotParticle.assignApproximationType( mfa[0] )
-
-    # @property
-    # def cellNumber(self):
-    #     return self._cellNumber
-
-    # @property
-    # def cellType(self):
-    #     return self._cellType
-
     @property
     def nodes(self):
-        return [sf.node for sf in self._assignedShapeFunctions ]
+        return self._nodes
 
     @property
-    def nNodes(self):
-        return len(self._shapeFunctions)
-
-    # @property
-    # def nDof(self):
-    #     return self._nDof
+    def baseFields(self):
+        return self._baseFields
 
     @property
     def fields(self):
         return self._fields
 
     @property
-    def dofIndicesPermutation(self):
-        return self._dofIndicesPermutation
+    def nDof(self):
+        return self._nBaseDof * self._nAssignedKernelFunctions
 
     @property
     def ensightType(self):
         return self._ensightType
-
-    # @property
-    # def assignedMaterialPoints(self):
-    #     return self._assignedMaterialPoints
 
     @property
     def number(self):
         return self._number
 
     @property
-    def materialPointType(self):
-        return self._materialPointType
+    def kernelFunctions(self):
+        return self._assignedKernelFunctions
+
+    @property
+    def dofIndicesPermutation(self):
+        return None
 
     cpdef void computePhysicsKernels(self,
                          double[::1] dUc,
@@ -188,11 +159,11 @@ cdef class MarmotParticleWrapper:
                          double dTime, ) nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
+        self._initializeStateVarsTemp()
         self._marmotParticle.computePhysicsKernels(&dUc[0], &Pc[0], &Kc[0], timeNew, dTime)
 
-    # cpdef void interpolateFieldsToMaterialPoints(self, double[::1] dUc) nogil:
-
-    #     self._marmotCell.interpolateFieldsToMaterialPoints(&dUc[0])
+    cpdef void _initializeStateVarsTemp(self, ) nogil:
+        self._stateVarsTemp[:] = self._stateVars
 
     def computeBodyLoad(self,
                          str loadType,
@@ -215,61 +186,39 @@ cdef class MarmotParticleWrapper:
                          double dTime):
 
         pass
-        # cdef int mpNumber = materialPoint.number
 
-        # self._marmotParticle.computeDistributedLoad( self._supportedDistributedLoads[loadType.upper()],
-        #                                         surfaceID,
-        #                                         &load[0],
-        #                                         &Pc[0],
-        #                                         &Kc[0],
-        #                                         timeNew,
-        #                                         dTime)
-
-    def getInterpolationVector(self, coordinate: np.ndarray) -> np.ndarray:
-        pass
-        # cdef double[::1] coords = coordinate
-        # cdef np.ndarray N = np.zeros(self._nNodes)
-        # cdef double[::1] Nview_ = N
-        # self._marmotCell.getInterpolationVector(&Nview_[0], &coords[0])
-        # return N
-
+    def getInterpolationVector(self, double[::1] coordinates) -> np.ndarray:
+        cdef np.ndarray N = np.zeros(len(self._nodes))
+        cdef double[::1] Nview_ = N
+        self._marmotParticle.getInterpolationVector(&Nview_[0], &coordinates[0])
+        return N
 
     def assignKernelFunctions(self, list marmotMeshfreeKernelFunctionWrappers):
         self._assignedKernelFunctions = marmotMeshfreeKernelFunctionWrappers
+        self._nAssignedKernelFunctions = len(marmotMeshfreeKernelFunctionWrappers)
 
-    def getAssignedKernelFunctions(self):
-        return self._assignedKernelFunctions
+        cdef vector[const MarmotMeshfreeKernelFunction*] kernelFunctions
 
-        # cdef vector[MarmotMeshfreeShapeFunction*] sfs
-        # cdef MarmotMeshfreeApproximationWrapper sfWrapper
+        cdef MarmotMeshfreeKernelFunctionWrapper k
+        for k in marmotMeshfreeKernelFunctionWrappers:
+            kernelFunctions.push_back(k._marmotMeshfreeKernelFunction)
 
-        # for sfWrapper in marmotMeshfreeShapeFunctionWrappers:
-        #     sfs.push_back(<MarmotMeshfreeShapeFunction*> sfWrapper._marmotMeshfreeShapeFunction)
+        self._marmotParticle.assignMeshfreeKernelFunctions(kernelFunctions)
 
-        # self._marmotParticle.assignShapeFunctions(sfs)
-
-        # self._assignedMaterialPoints = validMarotMeshfreeShapeFunctions
-
+        self._nodes = [kf.node for kf in self._assignedKernelFunctions]
+        self._fields = [ self._baseFields for n in self._nodes ]
 
     def acceptStateAndPosition(self,):
-        self._marmotMaterialPoint.acceptStateAndPosition()
         self._stateVars[:] = self._stateVarsTemp
 
     def initializeYourself(self):
         self._stateVarsTemp[:] = self._stateVars
-        self._marmotMaterialPoint.initializeYourself()
+        self._marmotParticle.initializeYourself()
         self.acceptStateAndPosition()
-
-    # def prepareYourself(self, timeTotal: float, dTime: float):
-    #     self._stateVarsTemp[:] = self._stateVars
-    #     self._marmotMaterialPoint.prepareYourself(timeTotal, dTime)
-
-    cpdef void _initializeStateVarsTemp(self, ) nogil:
-        self._stateVarsTemp[:] = self._stateVars
 
     def getResultArray(self, result:str, getPersistentView:bool=True):
         """Get the array of a result, possibly as a persistent view which is continiously
-        updated by the underlying MarmotMaterialPoint."""
+        updated by the underlying MarmotParticle."""
 
         cdef string result_ =  result.encode('UTF-8')
         return np.array(  self.getStateView(result_ ), copy= not getPersistentView)
@@ -282,48 +231,21 @@ cdef class MarmotParticleWrapper:
         return <double[:res.stateSize]> ( res.stateLocation )
 
     def getVertexCoordinates(self):
-        """Get the underlying MarmotMaterialPoint vertex coordinates."""
+        """Get the underlying MarmotParticle vertex coordinates."""
 
         self._marmotParticle.getVertexCoordinates(&self._vertexCoordinatesView[0,0])
 
         return self._vertexCoordinates
 
+    def getCenterCoordinates(self):
+        """Get the underlying MarmotParticle center coordinates."""
 
-    # def getCenterCoordinates(self):
-    #     """Compute the underlying MarmotMaterialPoint center of mass coordinates."""
-    #     self._marmotMaterialPoint.getVertexCoordinates(&self._centerCoordinatesView[0])
+        self._marmotParticle.getCenterCoordinates(&self._centerCoordinatesView[0])
 
-    #     return self._centerCoordinates
-
-    # cpdef void computeYourself(self,
-    #                      double timeNew,
-    #                      double dTime, ) except * nogil:
-    #     """Evaluate residual and stiffness for given time, field, and field increment."""
-
-    #     self._marmotMaterialPoint.computeYourself(timeNew, dTime)
+        return self._centerCoordinates
 
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         pass
-
-    # def _assignMaterial(self, materialName: str, materialProperties: np.ndarray):
-    #     """Assign a material and material properties to the underlying MarmotElement.
-    #     Furthermore, create two sets of state vars:
-
-    #         - the actual set,
-    #         - and a temporary set for backup in nonlinear iteration schemes.
-    #     """
-
-    #     self._materialProperties =  materialProperties
-
-    #     try:
-    #         self._marmotParticle.assignMaterial(
-    #                 MarmotMaterialSection(
-    #                         MarmotMaterialFactory.getMaterialCodeFromName(
-    #                                 materialName.upper().encode('UTF-8')),
-    #                         &self._materialProperties[0],
-    #                         self._materialProperties.shape[0] ) )
-    #     except IndexError:
-    #         raise NotImplementedError("Marmot material {:} not found in library.".format(materialName))
 
 
     def __dealloc__(self):

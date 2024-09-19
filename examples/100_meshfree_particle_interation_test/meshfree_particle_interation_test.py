@@ -38,11 +38,14 @@ from edelweissmpm.particlemanagers.kdbinorganizedparticlemanager import (
 def run_sim():
     dimension = 2
 
+    from edelweissfe.journal.journal import Journal
     from edelweissfe.points.node import Node
 
     from edelweissmpm.meshfree.kernelfunctions.marmot.marmotmeshfreekernelfunction import (
         MarmotMeshfreeKernelFunctionWrapper,
     )
+
+    theJournal = Journal()
 
     # create 4 kernel functions
 
@@ -55,15 +58,15 @@ def run_sim():
 
     testNode2 = Node(2, np.array([0.00, 0.0]))
     kernelFunction2 = MarmotMeshfreeKernelFunctionWrapper(testNode2, "BSplineBoxed", supportRadius=supportRadii[1])
-    kernelFunction2.move(np.array([1.0, 0.0]))
+    kernelFunction2.moveTo(np.array([1.0, 0.0]))
 
     testNode3 = Node(3, np.array([0.0, 0.0]))
     kernelFunction3 = MarmotMeshfreeKernelFunctionWrapper(testNode3, "BSplineBoxed", supportRadius=supportRadii[2])
-    kernelFunction3.move(np.array([1.0, 1.0]))
+    kernelFunction3.moveTo(np.array([1.0, 1.0]))
 
     testNode4 = Node(4, np.array([0.0, 0.0]))
     kernelFunction4 = MarmotMeshfreeKernelFunctionWrapper(testNode4, "BSplineBoxed", supportRadius=supportRadii[3])
-    kernelFunction4.move(np.array([0.0, 1.0]))
+    kernelFunction4.moveTo(np.array([0.0, 1.0]))
 
     # let's define the type of approximation: We would like to have a reproducing kernel approximation of completeness order 1
     from edelweissmpm.meshfree.approximations.marmot.marmotmeshfreeapproximation import (
@@ -77,15 +80,15 @@ def run_sim():
         "material": "GMDamagedShearNeoHooke",
         "properties": np.array([30000.0, 0.3, 1, 1, 2, 1.4999]),
     }
-    mpCoordinates = np.array([-0.0, 0.0]).reshape(-1, dimension)
-    mpVolume = 1.0
+    particleCoordinates = np.array([-0.0, 0.0]).reshape(-1, dimension)
+    particleVolume = 1.0
 
     # let's instance the material point
-    from edelweissmpm.materialpoints.marmotmaterialpoint.mp import (
-        MarmotMaterialPointWrapper,
-    )
+    # from edelweissmpm.materialpoints.marmotmaterialpoint.mp import (
+    #     MarmotMaterialPointWrapper,
+    # )
 
-    mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", 1, mpCoordinates, mpVolume, theMaterial)
+    # mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", 1, mpCoordinates, mpVolume, theMaterial)
 
     # and finally .. create the particle. The particle hosts the material point, which again hosts the material.
     from edelweissmpm.particles.marmot.marmotparticlewrapper import (
@@ -93,15 +96,25 @@ def run_sim():
     )
 
     marmotParticle1 = MarmotParticleWrapper(
-        "GradientEnhancedMicropolar/PlaneStrain/Point", 1, mpCoordinates, mpVolume, mp, theApproximation
+        "GradientEnhancedMicropolar/PlaneStrain/Point",
+        1,
+        particleCoordinates,
+        particleVolume,
+        theApproximation,
+        theMaterial,
+    )
+
+    # Create the particle-kernel-domain, which describes to possible interaction of the particles with the kernel functions
+    from edelweissmpm.meshfree.particlekerneldomain import ParticleKernelDomain
+
+    theParticleKernelDomain = ParticleKernelDomain(
+        [marmotParticle1], [kernelFunction1, kernelFunction2, kernelFunction3, kernelFunction4]
     )
 
     # create the particle manager
     # The particle manager is responsible for the organization of the kernel functions and the particles.
     # In detail, it determines the connectivity of the kernel functions and the particles, and it assigns all covering kernel functions to the particles.
-    theParticleManager = KDBinOrganizedParticleManager(
-        [kernelFunction1, kernelFunction2, kernelFunction3, kernelFunction4], [marmotParticle1], dimension
-    )
+    theParticleManager = KDBinOrganizedParticleManager(theParticleKernelDomain, dimension, theJournal)
     # let's print some details
     print(theParticleManager)
 
@@ -110,7 +123,7 @@ def run_sim():
 
     # now let's move the particle and update the connectivity
     # to this end, we get access to the particle's displacement (this is usually the result of a simulation step)
-    mpDisplacementView = mp.getResultArray("displacement")
+    mpDisplacementView = marmotParticle1.getResultArray("displacement")
 
     # # let's move the particle in a circle
     # # and make a nice animation
@@ -143,7 +156,7 @@ def run_sim():
         marmotParticle1.getVertexCoordinates()[0][0], marmotParticle1.getVertexCoordinates()[0][1], "ro"
     )[0]
 
-    nAssignedKernelFunctions = len(marmotParticle1.getAssignedKernelFunctions())
+    nAssignedKernelFunctions = len(marmotParticle1.kernelFunctions)
     nKernelFunctionsAnnotation = ax.annotate(
         str(nAssignedKernelFunctions),
         (marmotParticle1.getVertexCoordinates()[0][0], marmotParticle1.getVertexCoordinates()[0][1]),
@@ -181,9 +194,7 @@ def run_sim():
 
         theParticle.set_data((currentCoordinates[0],), (currentCoordinates[1],))
         nKernelFunctionsAnnotation.set_position((currentCoordinates[0] + 0.1, currentCoordinates[1]))
-        nKernelFunctionsAnnotation.set_text(
-            "n assigned kernel functions: " + str(len(marmotParticle1.getAssignedKernelFunctions()))
-        )
+        nKernelFunctionsAnnotation.set_text("n assigned kernel functions: " + str(len(marmotParticle1.kernelFunctions)))
 
         theBinIndices = theParticleManager._theBins._getBinIndices(currentCoordinates)
         binIdxAnnotation.set_text("bin indices: " + str(theBinIndices))

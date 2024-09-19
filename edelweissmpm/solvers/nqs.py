@@ -54,6 +54,7 @@ from edelweissmpm.fields.nodefield import MPMNodeField
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
 from edelweissmpm.numerics.dofmanager import MPMDofManager
+from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 
@@ -98,15 +99,16 @@ class NonlinearQuasistaticSolver:
         self,
         timeStepper,
         linearSolver,
-        mpmManagers: list[MPMManagerBase],
-        dirichlets: list[DirichletBase],
-        bodyLoads: list[MPMBodyLoadBase],
-        distributedLoads: list[MPMDistributedLoadBase],
-        constraints: list[ConstraintBase],
         model: MPMModel,
         fieldOutputController: FieldOutputController,
-        outputmanagers: list[OutputManagerBase],
-        userIterationOptions: dict,
+        mpmManagers: list[MPMManagerBase] = [],
+        particleManagers: list[BaseParticleManager] = [],
+        dirichlets: list[DirichletBase] = [],
+        bodyLoads: list[MPMBodyLoadBase] = [],
+        distributedLoads: list[MPMDistributedLoadBase] = [],
+        constraints: list[ConstraintBase] = [],
+        outputManagers: list[OutputManagerBase] = [],
+        userIterationOptions: dict = {},
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -158,6 +160,7 @@ class NonlinearQuasistaticSolver:
 
         elements = model.elements.values()
         scalarVariables = model.scalarVariables.values()
+        particles = model.particles.values()
 
         newtonCache = None
         theDofManager = None
@@ -177,15 +180,24 @@ class NonlinearQuasistaticSolver:
                     level=1,
                 )
 
-                self.journal.message(
-                    "updating material point - cell connectivity",
-                    self.identification,
-                    level=1,
-                )
+                connectivityHasChanged = False
 
-                self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
+                if materialPoints:
+                    self.journal.message(
+                        "updating material point - cell connectivity",
+                        self.identification,
+                        level=1,
+                    )
+                    self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
+                    connectivityHasChanged |= self._updateConnectivity(mpmManagers)
 
-                connectivityHasChanged = self._updateConnectivity(mpmManagers)
+                if particleManagers:
+                    self.journal.message(
+                        "updating particle kernel connectivity",
+                        self.identification,
+                        level=1,
+                    )
+                    connectivityHasChanged |= self._updateConnectivity(particleManagers)
 
                 for c in constraints:
                     connectivityHasChanged |= c.updateConnectivity(model)
@@ -211,15 +223,21 @@ class NonlinearQuasistaticSolver:
                         elements,
                         constraints,
                         # TODO : Check how to make next line more elegant
-                        list(reducedNodeSets.values()) + [activeNodesWithPersistentData],
+                        # TODO 2
+                        # list(
+                        reducedNodeSets.values(),
+                        # ) + [activeNodesWithPersistentData],
                         activeCells,
                         model.cellElements.values(),
+                        particles,
                     )
 
                     U = theDofManager.constructDofVector()
-                    if len(activeNodesWithPersistentData) > 0:
-                        for field in model.nodeFields.values():
-                            theDofManager.writeNodeFieldToDofVector(U, field, "U", activeNodesWithPersistentData)
+
+                    # TODO 3
+                    # if len(activeNodesWithPersistentData) > 0:
+                    #     for field in model.nodeFields.values():
+                    #         theDofManager.writeNodeFieldToDofVector(U, field, "U", activeNodesWithPersistentData)
 
                     self.journal.message(
                         "resulting equation system has a size of {:}".format(theDofManager.nDof),
@@ -254,6 +272,7 @@ class NonlinearQuasistaticSolver:
                         activeCells,
                         model.cellElements.values(),
                         materialPoints,
+                        particles,
                         constraints,
                         theDofManager,
                         linearSolver,
@@ -267,7 +286,7 @@ class NonlinearQuasistaticSolver:
                     self.journal.message(str(e), self.identification, 1)
                     timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
 
-                    for man in outputmanagers:
+                    for man in outputManagers:
                         man.finalizeFailedIncrement()
 
                 else:
@@ -289,7 +308,7 @@ class NonlinearQuasistaticSolver:
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
                     )
 
-                    self._finalizeIncrementOutput(fieldOutputController, outputmanagers)
+                    self._finalizeIncrementOutput(fieldOutputController, outputManagers)
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)
@@ -301,7 +320,7 @@ class NonlinearQuasistaticSolver:
         self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
 
         fieldOutputController.finalizeStep()
-        for man in outputmanagers:
+        for man in outputManagers:
             man.finalizeStep()
 
     @performancetiming.timeit("newton iteration")
@@ -316,6 +335,7 @@ class NonlinearQuasistaticSolver:
         activeCells: list,
         cellElements: list,
         materialPoints: list,
+        particles: list,
         constraints: list,
         theDofManager: DofManager,
         linearSolver,
@@ -346,6 +366,8 @@ class NonlinearQuasistaticSolver:
             The list of cell elements.
         materialPoints
             The list of material points.
+        particles
+            The list of particles.
         constraints
             The list of constraints.
         theDofManager
@@ -404,6 +426,10 @@ class NonlinearQuasistaticSolver:
 
             self._computeCellElements(
                 cellElements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            )
+
+            self._computeParticles(
+                particles, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
 
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
@@ -760,6 +786,9 @@ class NonlinearQuasistaticSolver:
             convergedFlux = fluxResidualRel < fluxTolRel if nonZeroFlux else True
             convergedFlux = convergedFlux or fluxResidualAbs < fluxTolAbs
 
+            # if iterations == 0:
+            #     convergedFlux = False
+
             iterationMessage += iterationMessageTemplate.format(
                 fluxResidualAbs,
                 "✓" if convergedFlux else " ",
@@ -953,14 +982,17 @@ class NonlinearQuasistaticSolver:
                 - the list of NodeFields on the active Nodes.
                 - the list of reduced NodeSets on the active Nodes.
         """
+        # TODO: This method should be part of Model, in the spirit of 'getReducedModel()' or similar
 
         activeNodesWithPersistentFieldValues = set(
             n for element in model.elements.values() for n in element.nodes
         ) | set(n for element in model.cellElements.values() for n in element.nodes)
 
-        # TODO RKPM: Here we need to add the nodes of the RKPM 'elements'
-
         activeNodesWithVolatileFieldValues = set(n for cell in activeCells for n in cell.nodes)
+
+        activeNodesWithVolatileFieldValues |= set(
+            kf.node for particle in model.particles.values() for kf in particle.kernelFunctions
+        )
 
         activeNodes = activeNodesWithVolatileFieldValues | activeNodesWithPersistentFieldValues
 
@@ -1172,6 +1204,47 @@ class NonlinearQuasistaticSolver:
             P[el] += PEl
             F[el] += abs(PEl)
 
+    @performancetiming.timeit("computation particles")
+    def _computeParticles(
+        self,
+        particles: list,
+        dU: DofVector,
+        P: DofVector,
+        F: DofVector,
+        K_VIJ: VIJSystemMatrix,
+        time: float,
+        dT: float,
+        theDofManager: DofManager,
+    ):
+        """Evaluate all cells.
+
+        Parameters
+        ----------
+        elements
+            The list of elements to be evaluated.
+        dU
+            The current global solution increment vector.
+        P
+            The current global flux vector.
+        F
+            The accumulated nodal fluxes vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        time
+            The current time.
+        dT
+            The increment of time.
+        theDofManager
+            The DofManager instance.
+        """
+        for p in particles:
+            dUP = dU[p]
+            PP = np.zeros(p.nDof)
+            KP = K_VIJ[p]
+            p.computePhysicsKernels(dUP, PP, KP, time, dT)
+            P[p] += PP
+            F[p] += abs(PP)
+
     @performancetiming.timeit("computation constraints")
     def _computeConstraints(
         self, constraints: list, dU: DofVector, P: DofVector, K_VIJ: VIJSystemMatrix, timeStep: TimeStep
@@ -1203,16 +1276,16 @@ class NonlinearQuasistaticSolver:
         return MPMDofManager(*args)
 
     @performancetiming.timeit("update connectivity")
-    def _updateConnectivity(self, mpmManagers) -> bool:
-        """Update the connectivity of all MPMManagers.
+    def _updateConnectivity(self, managers) -> bool:
+        """Update the connectivity of all MPMManagers or particle managers.
 
         Parameters
         ----------
-        mpmManagers
-            The list of MPMManagerBase instances.
+        managers
+            The list of managers to update.
         """
         connectivityHasChanged = False
-        for man in mpmManagers:
+        for man in managers:
             connectivityHasChanged |= man.updateConnectivity()
 
         return connectivityHasChanged

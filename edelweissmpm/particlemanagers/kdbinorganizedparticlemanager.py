@@ -27,12 +27,10 @@
 
 
 import numpy as np
+from edelweissfe.journal.journal import Journal
 
-from edelweissmpm.meshfree.kernelfunctions.base.basemeshfreekernelfunction import (
-    BaseMeshfreeKernelFunction,
-)
+from edelweissmpm.meshfree.particlekerneldomain import ParticleKernelDomain
 from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
-from edelweissmpm.particles.base.baseparticle import BaseParticle
 
 
 class _KDBinOrganizer:
@@ -60,13 +58,11 @@ class _KDBinOrganizer:
         boundingBoxesMins = np.array([bb[0] for bb in boundingBoxes])
         boundingBoxesMaxs = np.array([bb[1] for bb in boundingBoxes])
 
-        self._binSize = np.mean(boundingBoxesMaxs - boundingBoxesMins, axis=0)
+        self._binSize = np.mean(boundingBoxesMaxs - boundingBoxesMins, axis=0) / 2
         self._boundingBoxMin = np.min(boundingBoxesMins, axis=0) - 1e-12
         self._boundingBoxMax = np.max(boundingBoxesMaxs, axis=0) + 1e-12
 
-        # self._nBins = (math.ceil(s) for s in (self._boundingBoxMax - self._boundingBoxMin) / self._binSize)
         self._nBins = np.ceil((self._boundingBoxMax - self._boundingBoxMin) / self._binSize).astype(int)
-        # self._thebins = np.empty( self._nBins, dtype=list)
 
         self._thebins = np.frompyfunc(list, 0, 1)(np.empty(self._nBins, dtype=object))
         # print(self._thebins.shape)
@@ -153,17 +149,30 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
 
     def __init__(
         self,
-        meshfreeKernelFunctions: list[BaseMeshfreeKernelFunction],
-        particles: list[BaseParticle],
+        particleKernelDomain: ParticleKernelDomain,
         dimension: int,
+        journal: Journal,
+        bondParticlesToKernelFunctions: bool = False,
     ):
 
-        self._meshfreeKernelFunctions = meshfreeKernelFunctions
-        self._particles = particles
+        self._meshfreeKernelFunctions = particleKernelDomain.meshfreeKernelFunctions
+        self._particles = particleKernelDomain.particles
         self._dimension = dimension
-        self.signalizeShapeFunctionLocationUpdate()
+        self._bondParticlesToKernelFunctions = bondParticlesToKernelFunctions
+        self._journal = journal
 
-    def signalizeShapeFunctionLocationUpdate(
+        if self._bondParticlesToKernelFunctions:
+            if len(self._particles) != len(self._meshfreeKernelFunctions):
+                raise ValueError("The number of particles and kernel functions must be equal.")
+            for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
+                if not np.isclose(particle.getCenterCoordinates(), kernelFunction.center).all():
+                    raise ValueError(
+                        f"The particle and kernel function coordinates must be close to each other. {particle.getCenterCoordinates()} != {kernelFunction.center}"
+                    )
+
+        self.signalizeKernelFunctionUpdate()
+
+    def signalizeKernelFunctionUpdate(
         self,
     ):
         self._theBins = _KDBinOrganizer(self._meshfreeKernelFunctions, self._dimension)
@@ -172,6 +181,17 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
         self,
     ):
         hasChanged = False
+
+        if self._bondParticlesToKernelFunctions:
+            self._journal.message(
+                f"Updating kernel function positions for the bonding definition with {len(self._particles)} particles.",
+                "ParticleManager",
+            )
+            for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
+                kernelFunction.moveTo(particle.getCenterCoordinates())
+
+            self.signalizeKernelFunctionUpdate()
+
         for p in self._particles:
             vertexCoordinates = p.getVertexCoordinates()
 
@@ -188,8 +208,9 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
                 for sf in kernelFunctionCandidates
                 if sf.isCoordinateInCurrentSupport(coordinate)
             }
+            # print(kernelFunctions)
 
-            if hasChanged or kernelFunctions != set(p.getAssignedKernelFunctions()):
+            if hasChanged or kernelFunctions != set(p.kernelFunctions):
                 hasChanged = True
                 p.assignKernelFunctions(list(kernelFunctions))
 
@@ -202,3 +223,33 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
 
     def __str__(self):
         return f"KDBinOrganizedParticleManager with {len(self._particles)} particles and {len(self._meshfreeKernelFunctions)} shape functions in {self._dimension} dimensions. Covered domain: {self.getCoveredDomain()}."
+
+    def visualize(self):
+        """For 2D only: Visualize the number of kernel functions in the bins."""
+
+        if self._dimension != 2:
+            raise ValueError("Visualization only supported for 2D.")
+
+        import matplotlib.pyplot as plt
+
+        nBins = self._theBins._nBins
+        nKernelFunctions = np.zeros(nBins)
+        for i in range(nBins[0]):
+            for j in range(nBins[1]):
+                nKernelFunctions[i, j] = len(self._theBins._thebins[i, j])
+
+        plt.figure()
+        plt.imshow(
+            nKernelFunctions.T,
+        )
+        plt.title("Number of kernel functions in the bins of the KDBinOrganizer")
+
+        nBins = self._theBins._nBins
+        # plot the lines:
+        for i in range(nBins[0] + 1):
+            plt.plot([i - 0.5, i - 0.5], [0 - 0.5, nBins[1] - 0.5], "k")
+        for j in range(nBins[1] + 1):
+            plt.plot([0 - 0.5, nBins[0] - 0.5], [j - 0.5, j - 0.5], "k")
+
+        plt.colorbar()
+        plt.show()

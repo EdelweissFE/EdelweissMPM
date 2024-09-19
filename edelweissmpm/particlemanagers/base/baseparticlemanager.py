@@ -56,10 +56,10 @@ class BaseParticleManager(ABC):
         """
 
     @abstractmethod
-    def signalizeShapeFunctionLocationUpdate(
+    def signalizeKernelFunctionUpdate(
         self,
     ) -> None:
         """
-        For semi-Lagrangian methods, the shape function locations may change.
+        For semi-Lagrangian methods, the kernel function locations may change.
         This method is to signalize such a to the material point manager, so that it can account for the changed supports.
         """

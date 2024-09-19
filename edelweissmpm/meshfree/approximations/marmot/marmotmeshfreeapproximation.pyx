@@ -43,12 +43,16 @@ cdef class MarmotMeshfreeApproximationWrapper:
 
     def __cinit__(self, str approximationType, int dim, **kwargs):
 
+        validApproximationTypes = ["ReproducingKernel"]
+
         self._nDim = dim
+
         if approximationType == "ReproducingKernel":
-            # cdef int completenessOrder = kwargs.get('completenessOrder', 1)
-            self._marmotMeshfreeApproximation = <MarmotMeshfreeApproximation*> ( new MarmotMeshfreeReproducingKernelApproximation( dim, kwargs.get('completenessOrder', 1.0) ) )
+                self._marmotMeshfreeApproximation = <MarmotMeshfreeApproximation*> (
+                                                                                    new
+                                                                                    MarmotMeshfreeReproducingKernelApproximation( dim, kwargs['completenessOrder'] ) )
         else:
-            raise NotImplementedError("Approximation type {:} not found in library. Valid options are 'ReproducingKernel'.".format(approximationType))
+                raise NotImplementedError("Approximation type {:} not found in library. Valid options are {:}".format(approximationType, validApproximationTypes))
 
     def computeShapeFunctions(self, double[::1] coordinates, list marmotMeshfreeKernelFunctionWrappers):
         cdef vector[const MarmotMeshfreeKernelFunction*] mMFKFs

@@ -161,7 +161,10 @@ class MPMDofManager(DofManager):
                 ]
             )  # the index in the global system
 
-            idcsOfCellsInDofVector[cl] = destList[cl.dofIndicesPermutation]
+            if cl.dofIndicesPermutation is not None:
+                idcsOfCellsInDofVector[cl] = destList[cl.dofIndicesPermutation]
+            else:
+                idcsOfCellsInDofVector[cl] = destList
 
         return idcsOfCellsInDofVector
 
@@ -171,6 +174,10 @@ class MPMDofManager(DofManager):
 
         In contrast to elements, cells and cell elements, particles have an identical set of fields
         on each attached node.
+        Furthermore, due to the varying number attached nodes, no permutation is allowed.
+        For particles generally a node-wise layout is assumed.
+
+        For instance: [node_1_displacement, node_1_temperature, node_2_displacement, node_2_temperature, ...]
 
         Returns
         -------
@@ -178,17 +185,4 @@ class MPMDofManager(DofManager):
             A dictionary containing the location mapping.
         """
 
-        idcsInDofVector = {}
-
-        for p in particles:
-            destList = np.hstack(
-                [
-                    self.idcsOfFieldVariablesInDofVector[node.fields[nodeField]]
-                    for node in enumerate(p.nodes)  # for each node of the particle ..
-                    for nodeField in p.fields  # for each field
-                ]
-            )  # the index in the global system
-
-            idcsInDofVector[p] = destList[p.dofIndicesPermutation]
-
-        return idcsInDofVector
+        return self._locateNodeCouplingEntitiesInDofVector(particles)

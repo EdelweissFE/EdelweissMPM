@@ -26,12 +26,14 @@
 #  ---------------------------------------------------------------------
 from typing import Callable
 
+import numpy as np
 from edelweissfe.journal.journal import Journal
 from edelweissfe.utils.fieldoutput import FieldOutputController, _FieldOutputBase
 
 from edelweissmpm.fieldoutput.mpresultcollector import MaterialPointResultCollector
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.sets.materialpointset import MaterialPointSet
+from edelweissmpm.sets.particleset import ParticleSet
 
 
 class MaterialPointFieldOutput(_FieldOutputBase):
@@ -94,6 +96,66 @@ class MaterialPointFieldOutput(_FieldOutputBase):
         super()._applyResultsPipleline(result)
 
 
+class ParticleFieldOutput(_FieldOutputBase):
+    """
+    A FieldOutput for material points.
+
+    Parameters
+    ----------
+    name
+        The name of this FieldOutput.
+    pSet
+        The :class:`ParticleSet on which this FieldOutput operates.
+    resultName
+        The name of the result entry in the :class:`ElementBase.
+    model
+        The :class:`MPMModel tree instance.
+    journal
+        The :class:`Journal instance for logging.
+    saveHistory
+        If the history of the results should be saved.
+    f_x
+        The function to apply to the results.
+    export
+        Whether to export the results.
+    fExport_x
+        The function to apply to the exported results.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        pSet: ParticleSet,
+        resultName: str,
+        model: MPMModel,
+        journal: Journal,
+        saveHistory: bool = False,
+        f_x=Callable[[np.ndarray], np.ndarray],
+        export: str = None,
+        fExport_x=Callable[[np.ndarray], np.ndarray],
+    ):
+        self.associatedSet = pSet
+        self.resultName = resultName
+
+        self.pResultCollector = MaterialPointResultCollector(list(self.associatedSet), self.resultName)
+
+        super().__init__(name, model, journal, saveHistory, f_x, export, fExport_x)
+
+    def updateResults(self, model: MPMModel):
+        """Update the field output.
+        Will use the current solution and reaction vector if result is a nodal result.
+
+        Parameters
+        ----------
+        model
+            The model tree.
+        """
+
+        result = self.pResultCollector.getCurrentResults()
+
+        super()._applyResultsPipleline(result)
+
+
 class MPMFieldOutputController(FieldOutputController):
     """
     The central module for managing field outputs, which can be used by output managers.
@@ -139,3 +201,15 @@ class MPMFieldOutputController(FieldOutputController):
         self.fieldOutputs[name] = MaterialPointFieldOutput(
             name, materialPointSet, result, self.model, self.journal, saveHistory, f_x, export, fExport_x
         )
+
+    def addPerParticleFieldOutput(
+        self,
+        name: str,
+        particleSet: ParticleSet,
+        result: str = None,
+        saveHistory: bool = False,
+        f_x=None,
+        export: str = None,
+        fExport_x=None,
+    ):
+        return self.addPerMaterialPointFieldOutput(name, particleSet, result, saveHistory, f_x, export, fExport_x)

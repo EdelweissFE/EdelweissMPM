@@ -31,7 +31,10 @@ from libcpp.vector cimport vector
 
 import numpy as np
 
-from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport MarmotMaterialPoint
+from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
+    MarmotMaterialPoint,
+    MarmotMaterialPointWrapper,
+)
 from edelweissmpm.meshfree.approximations.marmot.marmotmeshfreeapproximation cimport (
     MarmotMeshfreeApproximation,
 )
@@ -50,21 +53,6 @@ cdef extern from "Marmot/MarmotUtils.h":
         double *stateLocation
         int stateSize
 
-# cdef extern from "Marmot/MarmotElementProperty.h":
-#     cdef cppclass MarmotElementProperty nogil:
-#         pass
-
-#     cdef cppclass MarmotMaterialSection(MarmotElementProperty) nogil:
-#         MarmotMaterialSection(int materialCode, const double* materialProperties, int nMaterialProperties)
-
-# cdef extern from "Marmot/MarmotMeshfreeApproximation.h" namesp:
-#     cdef cppclass MarmotMeshfreeApproximation nogil:
-#         pass
-
-# cdef extern from "Marmot/MarmotMeshfreeKernelFunction.h":
-#     cdef cppclass MarmotMeshfreeKernelFunction nogil:
-#         pass
-
 cdef extern from "Marmot/MarmotParticleLibrary.h" namespace "MarmotLibrary" nogil:
     cdef cppclass MarmotParticleFactory:
         @staticmethod
@@ -81,15 +69,15 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         const vector[string]& getFields()
 
-        const vector[int]& getDofIndicesPermutationPattern()
-
         void getVertexCoordinates(double* )
 
         void getVisualizationVertexCoordinates(double* )
 
+        void getCenterCoordinates(double* )
+
         string getParticleShape()
 
-        void assignMeshfreeKernelFunctions (const vector[const MarmotMeshfreeKernelFunction*] meshfreeKernelFunctions)
+        void assignMeshfreeKernelFunctions (const vector[const MarmotMeshfreeKernelFunction*]& meshfreeKernelFunctions)
 
         void computePhysicsKernels(   const double* dUc,
                                             double* Pc,
@@ -132,9 +120,12 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         int getNumberOfVertices()
 
+        int getNBaseDof()
+
 
 cdef class MarmotParticleWrapper:
 
+    cdef MarmotMaterialPointWrapper _mp
     cdef MarmotParticle* _marmotParticle
     cdef MarmotMaterialPoint* _marmotMaterialPoint
     cdef MarmotMeshfreeApproximation* _marmotMeshfreeApproximation
@@ -145,16 +136,20 @@ cdef class MarmotParticleWrapper:
     cdef str _particleType,
     cdef str _ensightType
     cdef int _nVertices
+
+    cdef list _baseFields
     cdef list _fields
 
-    cdef np.ndarray _dofIndicesPermutation
+    cdef int _nBaseDof # the number of dofs we have for a single attached kernel function / node
+    cdef int _nAssignedKernelFunctions # the number of attached kernel functions
 
     cdef public double[::1] _stateVars
     cdef public double[::1] _stateVarsTemp
     cdef int _nStateVars
     cdef int _nDim
 
-    cdef _assignedKernelFunctions
+    cdef list[MarmotMeshfreeKernelFunctionWrapper] _assignedKernelFunctions
+    cdef list _nodes
 
     cdef dict _supportedBodyLoads
 
@@ -164,18 +159,14 @@ cdef class MarmotParticleWrapper:
 
     cdef public double[::1]  _materialProperties
 
-    # cdef public np.ndarray _centerCoordinates
-    cdef public np.ndarray _vertexCoordinates
-
-    # cdef double[::1] _centerCoordinatesView
+    cdef np.ndarray _vertexCoordinates
     cdef double[:,::1] _vertexCoordinatesView
+
+    cdef np.ndarray _centerCoordinates
+    cdef double[::1] _centerCoordinatesView
 
     # nogil methods are already declared here
 
     cpdef void _initializeStateVarsTemp(self, ) nogil
-
-    # cpdef void computeYourself(self,
-    #                  double timeNew,
-    #                  double dTime, ) except * nogil
 
     cdef double[::1] getStateView(self, string stateName)

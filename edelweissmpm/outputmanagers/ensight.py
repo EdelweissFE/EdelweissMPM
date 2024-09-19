@@ -32,6 +32,7 @@ from edelweissfe.points.node import Node
 from edelweissmpm.sets.cellelementset import CellElementSet
 from edelweissmpm.sets.cellset import CellSet
 from edelweissmpm.sets.materialpointset import MaterialPointSet
+from edelweissmpm.sets.particleset import ParticleSet
 
 
 def createUnstructuredPartFromCellSet(cellPartName, cells: list, partID: int):
@@ -101,15 +102,58 @@ def createUnstructuredPartFromMaterialPointSet(mpPartName, mps: list, partID: in
     return EnsightUnstructuredPart(mpPartName, partID, partNodes, mpDict)
 
 
+def createUnstructuredPartFromParticleSet(pPartName, particles: list, partID: int):
+    """Determines the mp and node list for an Ensightpart from an
+    mp set. The reduced, unique node set is generated, as well as
+    the mp to node index mapping for the ensight part.
+
+    Parameters
+    ----------
+    mpSet
+        The list of mps defining this part.
+    partID
+        The id of this part.
+    """
+
+    return createUnstructuredPartFromMaterialPointSet(pPartName, particles, partID)
+
+
 class OutputManager(EnsightOutputManager):
     identification = "Ensight Export"
+
+    """The output manager for the Ensight export.
+    This class is responsible for the creation of the Ensight parts
+
+    Parameters
+    ----------
+    name
+        The name of the output manager.
+    model
+        The model to which the output manager is attached.
+    fieldOutputController
+        The field output controller.
+    journal
+        The journal instance for logging purposes.
+    plotter
+        The plotter instance for plotting purposes.
+    exportCellSetParts
+        Whether to export cell set parts.
+    exportCellElementSetParts
+        Whether to export cell element set parts.
+    exportMPSetParts
+        Whether to export material point set parts.
+    exportParticleParts
+        Whether to export particle set parts.
+    """
 
     def __init__(self, name, model, fieldOutputController, journal, plotter, **kwargs):
         self._exportCellSetParts = kwargs.get("exportCellSetParts", True)
         self._exportCellElementSetParts = kwargs.get("exportCellElementSetParts", True)
         self._exportMPSetParts = kwargs.get("exportMPSetParts", True)
+        self._exportParticleParts = kwargs.get("exportParticleSetParts", True)
 
         self.mpSetToEnsightPart = dict()
+        self.particleSetToEnsightPart = dict()
         self.cellSetToEnsightPart = dict()
         self.cellElementSetToEnsightPart = dict()
         return super().__init__(name, model, fieldOutputController, journal, plotter)
@@ -143,20 +187,25 @@ class OutputManager(EnsightOutputManager):
                 feModelParts.append(self.mpSetToEnsightPart[setName])
                 partCounter += 1
 
+        if self._exportParticleParts:
+            for setName, pSet in self.model.particleSets.items():
+                self.particleSetToEnsightPart[setName] = createUnstructuredPartFromParticleSet(
+                    "PSET_{:}".format(setName), pSet, partCounter
+                )
+                feModelParts.append(self.particleSetToEnsightPart[setName])
+                partCounter += 1
+
         return feModelParts
 
     def _getTargetPartForFieldOutput(self, fieldOutput, **kwargs):
-        # if "mpSet" in kwargs:
-        #     return self.mpSetToEnsightPart[kwargs.pop("mpSet")]
-        # if "cellSet" in kwargs:
-        #     return self.cellSetToEnsightPart[kwargs.pop("cellSet")]
-        # if "cellElementSet" in kwargs:
-        #     return self.cellElementSetToEnsightPart[kwargs.pop("cellSet")]
 
         theSetName = fieldOutput.associatedSet.name
 
         if isinstance(fieldOutput.associatedSet, MaterialPointSet):
             return self.mpSetToEnsightPart[theSetName]
+
+        if isinstance(fieldOutput.associatedSet, ParticleSet):
+            return self.particleSetToEnsightPart[theSetName]
 
         if isinstance(fieldOutput.associatedSet, CellSet):
             return self.cellSetToEnsightPart[theSetName]
