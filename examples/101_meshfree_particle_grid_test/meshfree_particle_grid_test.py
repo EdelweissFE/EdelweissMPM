@@ -143,6 +143,7 @@ def run_sim():
         dUc[indicesDisplacement_y] = disp_y
 
         theParticle.computePhysicsKernels(dUc, Pc, Kc, timeNew, dTime)
+        theParticle.acceptStateAndPosition()
 
         print("step: ", i)
         print("applied incremental displacement: ", disp_x, disp_y)

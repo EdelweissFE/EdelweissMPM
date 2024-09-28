@@ -39,8 +39,10 @@ from edelweissmpm.materialpoints.marmotmaterialpoint.mp cimport (
     MarmotMaterialPoint,
     MarmotMaterialPointWrapper,
 )
-
-# from edelweissfe.utils.exceptions import CutbackRequest
+from edelweissmpm.particles.marmot.marmotparticlewrapper cimport (
+    MarmotParticle,
+    MarmotParticleWrapper,
+)
 
 import os
 from multiprocessing import cpu_count
@@ -220,4 +222,115 @@ class NQSParallelForMarmot(NonlinearQuasistaticSolver):
                     F_mView[ I[cellIdxInVIJ + j] ] += abs( Pe[ cellIdxInPe + j ] )
         finally:
             free( cppActiveCells )
+
+    @performancetiming.timeit("computation particles")
+    def _computeParticles(
+        self,
+        particles_,
+        double[::1] dU,
+        double[::1] P,
+        double[::1] F,
+        K_VIJ,
+        float time,
+        float dT,
+        theDofManager,
+    ):
+        """Evaluate all particles.
+
+        Parameters
+        ----------
+        particles
+            The list of particles to be evaluated.
+        dU
+            The current global solution increment vector.
+        P
+            The current global flux vector.
+        F
+            The accumulated nodal fluxes vector.
+        K_VIJ
+            The global system matrix in VIJ (COO) format.
+        time
+            The current time.
+        dT
+            The increment of time.
+        theDofManager
+            The DofManager instance.
+        """
+        cdef:
+            int particleNDof, particleNumber, particleIdxInVIJ, particleIdxInPe, threadID, currentIdxInU
+            int desiredThreads = self.numThreads
+            int nActiveParticles = len(particles_)
+            list particles = list(particles_)
+
+            long[::1] I             = K_VIJ.I
+            double[::1] K_mView     = K_VIJ
+            double[::1] dU_mView    = dU
+            double[::1] P_mView     = P
+            double[::1] F_mView     = F
+
+            # oversized Buffers for parallel computing:
+            # tables [nThreads x max(particles.ndof) ] for U & dU (can be overwritten during parallel computing)
+            maxNDofOfAnyParticle      = theDofManager.largestNumberOfParticleNDof
+            double[:, ::1] dUe  = np.empty((desiredThreads, maxNDofOfAnyParticle), )
+            # oversized buffer for Pe ( size = sum(particles.ndof) )
+            double[::1] Pe = np.zeros(theDofManager.accumulatedParticleNDof)
+
+
+            MarmotParticleWrapper backendBasedCythonParticle
+            # lists (cpp particles + indices and nDofs), which can be accessed parallely
+            MarmotParticle** cppActiveParticles =      <MarmotParticle**> malloc ( nActiveParticles * sizeof(MarmotParticle*) )
+            int[::1] particleIndicesInVIJ         = np.empty( (nActiveParticles,), dtype=np.intc )
+            int[::1] particleIndexInPe            = np.empty( (nActiveParticles,), dtype=np.intc )
+            int[::1] particleNDofs                = np.empty( (nActiveParticles,), dtype=np.intc )
+
+            int i,j=0
+
+        for i in range(nActiveParticles):
+            # prepare all lists for upcoming parallel element computing
+            backendBasedCythonParticle   = particles[i]
+            backendBasedCythonParticle._initializeStateVarsTemp()
+            cppActiveParticles[i]             = backendBasedCythonParticle._marmotParticle
+            particleIndicesInVIJ[i]           = theDofManager.idcsOfHigherOrderEntitiesInVIJ[backendBasedCythonParticle]
+            particleNDofs[i]                  = backendBasedCythonParticle.nDof
+            # each element gets its place in the Pe buffer
+            particleIndexInPe[i] = j
+            j += particleNDofs[i]
+
+        try:
+            for i in prange(nActiveParticles,
+                        schedule='dynamic',
+                        num_threads=desiredThreads,
+                        nogil=True):
+
+
+                threadID      = threadid()
+                particleIdxInVIJ  = particleIndicesInVIJ[i]
+                particleIdxInPe   = particleIndexInPe[i]
+                particleNDof = particleNDofs[i]
+
+                for j in range (particleNDof):
+                    # copy global U & dU to buffer memories for element eval.
+                    currentIdxInU =     I [ particleIndicesInVIJ[i] +  j ]
+                    dUe[threadID, j] =  dU_mView[ currentIdxInU ]
+
+                (<MarmotParticle*>
+                     cppActiveParticles[i] )[0].computePhysicsKernels(
+                                                        &dUe[threadID, 0],
+                                                        &Pe[particleIdxInPe],
+                                                        &K_mView[particleIdxInVIJ],
+                                                        time,
+                                                        dT)
+
+            #successful particles evaluation: condense oversize Pe buffer -> P
+            P_mView[:] = 0.0
+            F_mView[:] = 0.0
+            for i in range(nActiveParticles):
+                particleIdxInVIJ =    particleIndicesInVIJ[i]
+                particleIdxInPe =     particleIndexInPe[i]
+                particleNDof =   particleNDofs[i]
+                for j in range (particleNDof):
+                    P_mView[ I[particleIdxInVIJ + j] ] +=      Pe[ particleIdxInPe + j ]
+                    F_mView[ I[particleIdxInVIJ + j] ] += abs( Pe[ particleIdxInPe + j ] )
+        finally:
+            free( cppActiveParticles )
 

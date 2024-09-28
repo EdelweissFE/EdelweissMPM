@@ -174,18 +174,17 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [dirichletBottom, dirichletLeft, dirichletRight],
-            [gravityLoad],
-            [],
-            [],
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[dirichletBottom, dirichletLeft, dirichletRight],
+            bodyLoads=[gravityLoad],
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
     except StepFailed as e:
+        journal.errorMessage(str(e), "StepFailed")
         raise
 
     finally:
@@ -194,7 +193,7 @@ def run_sim():
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "Summary")
 
     return mpmModel
 

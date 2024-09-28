@@ -32,6 +32,7 @@ import pytest
 from edelweissfe.journal.journal import Journal
 from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
+from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.generators import rectangulargridgenerator, rectangularmpgenerator
@@ -87,9 +88,6 @@ def run_sim():
     allMPs = mpmModel.materialPointSets["all"]
 
     mpmManager = SimpleMaterialPointManager(allCells, allMPs)
-
-    activeCells = None
-    activeNodes = None
 
     journal.printSeperationLine()
 
@@ -163,17 +161,15 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [dirichletLeft, dirichletRight],
-            [],
-            [],
-            [],
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[dirichletLeft, dirichletRight],
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
     except StepFailed as e:
+        journal.errorMessage(str(e), "StepFailed")
         raise
 
     finally:
@@ -182,7 +178,7 @@ def run_sim():
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "Summary")
 
     return mpmModel
 

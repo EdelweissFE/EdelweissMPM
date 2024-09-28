@@ -166,28 +166,27 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [
-                dirichletLeft,
-            ],
-            [],
-            [],
-            weakDirichlets,
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[
+                dirichletLeft,
+            ],
+            constraints=weakDirichlets,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
     except StepFailed as e:
-        raise ValueError("Step failed")
+        journal.errorMessage(str(e), "StepFailed")
+        raise
     finally:
         fieldOutputController.finalizeJob()
         ensightOutput.finalizeJob()
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "Summary")
 
     np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
 

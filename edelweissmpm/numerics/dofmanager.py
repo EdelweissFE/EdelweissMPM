@@ -186,3 +186,31 @@ class MPMDofManager(DofManager):
         """
 
         return self._locateNodeCouplingEntitiesInDofVector(particles)
+
+    # def _initializeCSRPattern(self, ):
+
+    #     nRows = self.nDof
+
+    #     rowIndices = [ list() for i in range(nRows) ]
+    #     for ( entity, entityIdcsInDofVector) in self.idcsOfHigherOrderEntitiesInDofVector.items():
+    #         for idx in entityIdcsInDofVector:
+    #             rowIndices[idx].append( entityIdcsInDofVector)
+
+    #     rowIndices = [ np.unique(np.hstack(row)) for row in rowIndices]
+
+    #     indptr = np.zeros(nRows+1, dtype=int)
+    #     indptr[0] = 0
+    #     for i in range(nRows):
+    #         indptr[i+1] = indptr[i] + len(rowIndices[i])
+
+    #     indices = np.hstack(rowIndices)
+
+    #     return (indices, indptr)
+
+    # def constructCSRMatrix(self,):
+    #     """Creates a CSR matrix from the DofManager.
+    #     """
+
+    #     import scipy as sp
+
+    #     return sp.sparse.csr_matrix((np.zeros_like(self.indices), self.indices, self.indptr), shape=(self.nDof, self.nDof))

@@ -170,6 +170,7 @@ def run_sim():
             dTime = 0.0
 
             theParticle.computePhysicsKernels(dUc, Pc, Kc, timeNew, dTime)
+            theParticle.acceptStateAndPosition()
 
             print("particle: ", theParticle.number)
             print("applied incremental displacement: ", disp_x, disp_y)
@@ -200,7 +201,6 @@ def test_sim():
 
     gold = np.loadtxt("gold.csv")
 
-    # assert np.isclose(lastStiffness, gold).all()
     assert np.isclose(np.linalg.norm(lastStiffness.flatten()), np.linalg.norm(gold.flatten()))
 
 

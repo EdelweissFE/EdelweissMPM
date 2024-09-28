@@ -261,3 +261,70 @@ class BaseParticle(BaseNodeCouplingEntity):
         np.ndarray
             The interpolation vector for all nodes.
         """
+
+    @abstractmethod
+    def getNumberOfVCIConstraints(
+        self,
+    ) -> int:
+        """Get the number of constraints if a variationally consistent integration is used.
+
+        Returns
+        -------
+        int
+            The number of VCI constraints.
+        """
+
+    @abstractmethod
+    def computeTestFunctionBoundaryIntegral(
+        self, fInt: np.ndarray, boundarySurfaceVector: np.ndarray, boundaryFaceID: int, vciConstraint: int
+    ):
+        """Compute the boundary integral for the test function.
+
+        Parameters
+        ----------
+        fInt
+            The integral.
+        boundarySurfaceVector
+            The surface vector defining the area and orientation of the boundary.
+            For higher order (non point) particles, the surface vector might be omitted and computed internally from the boundary face ID.
+        boundaryFaceID
+            The ID of the boundary face (for point shaped particles, this one is ignored).
+        vciConstraint
+            The VCI constraint.
+        """
+
+    @abstractmethod
+    def computeTestFuntionGradientVolumeIntegral(self, fInt: np.ndarray, vciConstraint: int):
+        """Compute the volume integral for the test function gradient.
+
+        Parameters
+        ----------
+        fInt
+            The integral.
+        vciConstraint
+            The VCI constraint.
+        """
+
+    @abstractmethod
+    def computeKernelLocalizationIntegral(self, fInt: np.ndarray, vciConstraint: int):
+        """Compute the kernel localization integral.
+
+        Parameters
+        ----------
+        fInt
+            The integral.
+        vciConstraint
+            The VCI constraint.
+        """
+
+    @abstractmethod
+    def assignShapeFunctionCorrectionTerm(self, correctionTerm: float, vciConstraint: int):
+        """Assign the shape function correction term.
+
+        Parameters
+        ----------
+        correctionTerm
+            The correction term.
+        vciConstraint
+            The VCI constraint.
+        """

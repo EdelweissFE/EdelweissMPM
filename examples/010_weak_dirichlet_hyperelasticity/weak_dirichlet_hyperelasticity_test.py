@@ -167,17 +167,15 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [
-                dirichletLeft,
-            ],
-            [],
-            [],
-            weakDirichlets,
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[
+                dirichletLeft,
+            ],
+            constraints=weakDirichlets,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
     except StepFailed as e:

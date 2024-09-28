@@ -109,6 +109,7 @@ class NonlinearQuasistaticSolver:
         constraints: list[ConstraintBase] = [],
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
+        vciManagers: list = [],
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -253,6 +254,12 @@ class NonlinearQuasistaticSolver:
                 #     presentVariableNames += [
                 #         "scalar variables",
                 #     ]
+
+                # TODO: We are handling this currently as a dedicated special case,
+                # but we should consider to make this part of a more general
+                # "generic" step action handling once we have more such cases.
+                for vciManager in vciManagers:
+                    vciManager.computeVCICorrections()
 
                 nVariables = len(presentVariableNames)
                 iterationHeader = ("{:^25}" * nVariables).format(*presentVariableNames)
@@ -1276,7 +1283,7 @@ class NonlinearQuasistaticSolver:
         return MPMDofManager(*args)
 
     @performancetiming.timeit("update connectivity")
-    def _updateConnectivity(self, managers) -> bool:
+    def _updateConnectivity(self, managers: list[MPMManagerBase] | list[BaseParticleManager]) -> bool:
         """Update the connectivity of all MPMManagers or particle managers.
 
         Parameters

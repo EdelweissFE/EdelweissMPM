@@ -176,6 +176,7 @@ def run_sim():
             dTime = 0.0
 
             theParticle.computePhysicsKernels(dUc, Pc, Kc, timeNew, dTime)
+            theParticle.acceptStateAndPosition()
 
             theJournal.message(f"particle: {theParticle.number}", "info")
             theJournal.message(f"particle assigned nodes: {[n.label for n in particleNodes]}", "info")

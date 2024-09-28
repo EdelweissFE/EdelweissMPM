@@ -64,13 +64,19 @@ cdef class MarmotParticleWrapper:
     def __cinit__(self,
                   str particleType,
                   int particleNumber,
-                  np.ndarray vertexCoordinates,
+                  double[:,::1] vertexCoordinates,
                   double volume,
                   MarmotMeshfreeApproximationWrapper marmotMeshfreeApproximationWrapper,
                   dict material
                   ):
 
-        self._mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", particleNumber, vertexCoordinates, volume, material)
+
+        #TODO: This this crap:
+        mpCenter =  np.mean( vertexCoordinates, axis=0).reshape(-1, vertexCoordinates.shape[1])
+        # print("center for mp")
+        # print(mpCenter)
+
+        self._mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", particleNumber, mpCenter , volume, material)
 
         self._vertexCoordinates = np.copy(vertexCoordinates)
         self._vertexCoordinatesView = self._vertexCoordinates
@@ -209,6 +215,7 @@ cdef class MarmotParticleWrapper:
         self._fields = [ self._baseFields for n in self._nodes ]
 
     def acceptStateAndPosition(self,):
+        self._marmotMaterialPoint.acceptStateAndPosition()
         self._stateVars[:] = self._stateVarsTemp
 
     def initializeYourself(self):
@@ -247,6 +254,21 @@ cdef class MarmotParticleWrapper:
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         pass
 
+
+    def getNumberOfVCIConstraints(self, ):
+        return self._marmotParticle.getNumberOfVCIConstraints()
+
+    def computeTestFunctionBoundaryIntegral(self, double[::1] fInt, double[::1] boundarySurfaceVector, int boundaryFaceID, int vciConstraint ):
+        self._marmotParticle.computeTestFunctionBoundaryIntegral(&fInt[0], &boundarySurfaceVector[0], boundaryFaceID, vciConstraint)
+
+    def computeTestFuntionGradientVolumeIntegral(self, double[::1]fInt, int vciConstraint):
+        self._marmotParticle.computeTestFuntionGradientVolumeIntegral(&fInt[0], vciConstraint)
+
+    def computeKernelLocalizationIntegral(self, double[::1] fInt, int vciConstraint):
+        self._marmotParticle.computeKernelLocalizationIntegral(&fInt[0], vciConstraint)
+
+    def assignShapeFunctionCorrectionTerm(self, double[::1] correctionTerm, int vciConstraint):
+        self._marmotParticle.assignShapeFunctionCorrectionTerms(&correctionTerm[0], vciConstraint)
 
     def __dealloc__(self):
         del self._marmotParticle

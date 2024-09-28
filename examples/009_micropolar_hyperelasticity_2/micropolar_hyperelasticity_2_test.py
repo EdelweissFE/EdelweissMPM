@@ -147,15 +147,6 @@ def run_sim():
         journal,
     )
 
-    dirichletRight = Dirichlet(
-        "right",
-        mpmModel.nodeSets["rectangular_grid_right"],
-        "displacement",
-        {0: 0.0, 1: 0.0},
-        mpmModel,
-        journal,
-    )
-
     gravityLoad = BodyLoad(
         "theGravity",
         mpmModel,
@@ -181,21 +172,20 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [
+            mpmModel,
+            fieldOutputController,
+            mpmManagers=[mpmManager],
+            dirichlets=[
                 dirichletBottom,
                 dirichletLeft,
             ],
-            [gravityLoad],
-            [],
-            [],
-            mpmModel,
-            fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            bodyLoads=[gravityLoad],
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
     except StepFailed as e:
+        journal.errorMessage(str(e), "StepFailed")
         raise
     finally:
         fieldOutputController.finalizeJob()
@@ -203,7 +193,7 @@ def run_sim():
 
         prettytable = performancetiming.makePrettyTable()
         prettytable.min_table_width = journal.linewidth
-        print(prettytable)
+        journal.printPrettyTable(prettytable, "Summary")
 
     np.savetxt("U.csv", fieldOutputController.fieldOutputs["displacement"].getLastResult())
 

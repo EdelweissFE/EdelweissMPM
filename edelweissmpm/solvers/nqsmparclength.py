@@ -28,13 +28,17 @@
 
 import edelweissfe.utils.performancetiming as performancetiming
 import numpy as np
+from edelweissfe.constraints.base.constraintbase import ConstraintBase
 from edelweissfe.numerics.dofmanager import DofManager, DofVector
 from edelweissfe.outputmanagers.base.outputmanagerbase import OutputManagerBase
+from edelweissfe.stepactions.base.dirichletbase import DirichletBase
 from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.utils.exceptions import DivergingSolution, ReachedMaxIterations
 from edelweissfe.utils.fieldoutput import FieldOutputController
 
 from edelweissmpm.models.mpmmodel import MPMModel
+from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
+from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
 from edelweissmpm.solvers.nqsmarmotparallel import NQSParallelForMarmot
 from edelweissmpm.stepactions.base.arclengthcontrollerbase import (
     ArcLengthControllerBase,
@@ -59,41 +63,48 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         self,
         timeStepper,
         linearSolver,
-        mpmManager,
-        dirichlets,
-        bodyLoads: list[MPMBodyLoadBase],
-        distributedLoads: list[MPMDistributedLoadBase],
-        constraints,
         model: MPMModel,
         fieldOutputController: FieldOutputController,
-        outputmanagers: list[OutputManagerBase],
-        userIterationOptions: dict,
         arcLengthController: ArcLengthControllerBase,
+        mpmManagers: list[MPMManagerBase] = [],
+        particleManagers: list[BaseParticleManager] = [],
+        dirichlets: list[DirichletBase] = [],
+        bodyLoads: list[MPMBodyLoadBase] = [],
+        distributedLoads: list[MPMDistributedLoadBase] = [],
+        constraints: list[ConstraintBase] = [],
+        outputManagers: list[OutputManagerBase] = [],
+        userIterationOptions: dict = {},
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
         Parameters
         ----------
         timeStepper
-            The timeStepper instance.
+            The time stepper instance.
         linearSolver
-            The linear solver instance to be used.
-        mpmManager
-            The MPMManagerBase instance to be used for updating the connectivity.
-        dirichlets
-            The list of dirichlet StepActions.
-        bodyLoads
-            The list of bodyload StepActions.
-        constraints
-            The list of constraints.
+            The linear solver instance.
         model
-            The full MPMModel instance.
+            The MPMModel instance.
         fieldOutputController
-            The field output controller.
-        outputmanagers
+            The field output controller instance.
+        arcLengthController
+            The arc length controller instance.
+        mpmManagers
+            The list of MPMManagerBase instances.
+        particleManagers
+            The list of BaseParticleManager instances.
+        dirichlets
+            The list of DirichletBase instances.
+        bodyLoads
+            The list of MPMBodyLoadBase instances.
+        distributedLoads
+            The list of MPMDistributedLoadBase instances.
+        constraints
+            The list of ConstraintBase instances.
+        outputManagers
             The list of OutputManagerBase instances.
         userIterationOptions
-            The dict controlling the Newton cycle(s).
+            The user specified iteration options.
 
         Returns
         -------
@@ -110,15 +121,16 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         return super().solveStep(
             timeStepper,
             linearSolver,
-            mpmManager,
-            dirichlets,
-            bodyLoads,
-            distributedLoads,
-            constraints,
             model,
             fieldOutputController,
-            outputmanagers,
-            userIterationOptions,
+            mpmManagers=mpmManagers,
+            particleManagers=particleManagers,
+            dirichlets=dirichlets,
+            bodyLoads=bodyLoads,
+            distributedLoads=distributedLoads,
+            constraints=constraints,
+            outputManagers=outputManagers,
+            userIterationOptions=userIterationOptions,
         )
 
     @performancetiming.timeit("newton iteration")
@@ -133,6 +145,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         activeCells: list,
         cellElements: list,
         materialPoints: list,
+        particles: list,
         constraints: list,
         theDofManager: DofManager,
         linearSolver,
@@ -196,6 +209,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
                 activeCells,
                 cellElements,
                 materialPoints,
+                particles,
                 constraints,
                 theDofManager,
                 linearSolver,

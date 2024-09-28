@@ -194,16 +194,16 @@ def run_sim(logFile=None):
         nonlinearSolver.solveStep(
             AdaptiveTimeStepper(mpmModel.time, 1.0, 2e-1, 2e-1, 2e-1, 100, journal),
             linearSolver,
-            [mpmManager],
-            [dirichletLeft],
-            [gravityLoad],
-            consolidationPressures,
-            constraints,
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
             None,
+            mpmManagers=[mpmManager],
+            dirichlets=[dirichletLeft],
+            bodyLoads=[gravityLoad],
+            distributedLoads=consolidationPressures,
+            constraints=constraints,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
         prettytable = performancetiming.makePrettyTable()
@@ -236,16 +236,16 @@ def run_sim(logFile=None):
         nonlinearSolver.solveStep(
             AdaptiveTimeStepper(mpmModel.time, 1.0, 2e-1, 2e-1, 2e-1, 100, journal),
             linearSolver,
-            [mpmManager],
-            [dirichletLeft],
-            [gravityLoad],
-            consolidationPressures + [unitPressureLoad],
-            constraints,
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
             indirectcontrol,
+            mpmManagers=[mpmManager],
+            dirichlets=[dirichletLeft],
+            bodyLoads=[gravityLoad],
+            distributedLoads=consolidationPressures + [unitPressureLoad],
+            constraints=constraints,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
         prettytable = performancetiming.makePrettyTable()

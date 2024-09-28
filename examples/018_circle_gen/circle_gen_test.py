@@ -167,17 +167,15 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [
-                dirichletBottom,
-            ],
-            [],
-            pressureLoads,
-            [],
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[
+                dirichletBottom,
+            ],
+            distributedLoads=pressureLoads,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
     finally:

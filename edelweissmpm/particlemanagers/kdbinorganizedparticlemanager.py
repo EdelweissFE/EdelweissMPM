@@ -164,11 +164,11 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
         if self._bondParticlesToKernelFunctions:
             if len(self._particles) != len(self._meshfreeKernelFunctions):
                 raise ValueError("The number of particles and kernel functions must be equal.")
-            for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
-                if not np.isclose(particle.getCenterCoordinates(), kernelFunction.center).all():
-                    raise ValueError(
-                        f"The particle and kernel function coordinates must be close to each other. {particle.getCenterCoordinates()} != {kernelFunction.center}"
-                    )
+            # for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
+            #     if not np.isclose(particle.getCenterCoordinates(), kernelFunction.center).all():
+            #         raise ValueError(
+            #             f"The particle and kernel function coordinates must be close to each other. {particle.getCenterCoordinates()} != {kernelFunction.center}"
+            #         )
 
         self.signalizeKernelFunctionUpdate()
 
@@ -208,7 +208,6 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
                 for sf in kernelFunctionCandidates
                 if sf.isCoordinateInCurrentSupport(coordinate)
             }
-            # print(kernelFunctions)
 
             if hasChanged or kernelFunctions != set(p.kernelFunctions):
                 hasChanged = True

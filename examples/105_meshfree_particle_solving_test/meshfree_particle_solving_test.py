@@ -78,8 +78,8 @@ def run_sim():
     x0 = -1
     y0 = -1
     height = 2
-    length = 2
-    nX = 10
+    length = 8
+    nX = 40
     nY = 10
     supportRadius = 0.4
 
@@ -135,21 +135,29 @@ def run_sim():
         theModel.particleSets["all"],
         "displacement",
     )
+    fieldOutputController.addPerParticleFieldOutput(
+        "deformation gradient",
+        theModel.particleSets["all"],
+        "deformation gradient",
+    )
 
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager("ensight", theModel, fieldOutputController, theJournal, None)
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
+    ensightOutput.updateDefinition(
+        fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perElement"
+    )
     ensightOutput.initializeJob()
 
     dirichletLeft = ParticlePenaltyWeakDirichlet(
         "left", theModel, theModel.particleSets["rectangular_grid_left"], "displacement", {0: 0.0, 1: 0.0}, 1e6
     )
     dirichletRight = ParticlePenaltyWeakDirichlet(
-        "right", theModel, theModel.particleSets["rectangular_grid_right"], "displacement", {0: 0, 1: 1.0}, 1e6
+        "right", theModel, theModel.particleSets["rectangular_grid_right"], "displacement", {0: 0, 1: 4.0}, 1e6
     )
 
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 5e-2, 5e-2, 1e-2, 1000, theJournal)
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, 1e-1, 1e-1, 1e-1, 1000, theJournal)
 
     nonlinearSolver = NonlinearQuasistaticSolver(theJournal)
 
@@ -185,7 +193,7 @@ def run_sim():
         prettytable.min_table_width = theJournal.linewidth
         theJournal.printPrettyTable(prettytable, "Summary")
 
-    return theModel
+    return theModel, fieldOutputController
 
 
 @pytest.fixture(autouse=True)
@@ -206,20 +214,21 @@ def test_sim():
 
     warnings.filterwarnings("ignore")
 
-    lastStiffness = run_sim()
+    theModel, fieldOutputController = run_sim()
 
+    res = fieldOutputController.fieldOutputs["displacement"].getLastResult().flatten()
     gold = np.loadtxt("gold.csv")
 
-    # assert np.isclose(lastStiffness, gold).all()
-    assert np.isclose(np.linalg.norm(lastStiffness.flatten()), np.linalg.norm(gold.flatten()))
+    assert np.isclose(np.linalg.norm(res.flatten()), np.linalg.norm(gold.flatten()))
 
 
 if __name__ == "__main__":
-    lastStiffness = run_sim()
+    mpmModel, fieldOutputController = run_sim()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
     args = parser.parse_args()
 
     if args.create_gold:
-        np.savetxt("gold.csv", lastStiffness)
+        res = fieldOutputController.fieldOutputs["displacement"].getLastResult().flatten()
+        np.savetxt("gold.csv", res)

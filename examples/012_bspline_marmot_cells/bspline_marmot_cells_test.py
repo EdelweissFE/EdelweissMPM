@@ -176,17 +176,15 @@ def run_sim(bspline_order):
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [mpmManager],
-            [
-                dirichletLeft,
-            ],
-            [],
-            [],
-            weakDirichlets,
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[
+                dirichletLeft,
+            ],
+            constraints=weakDirichlets,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
     finally:

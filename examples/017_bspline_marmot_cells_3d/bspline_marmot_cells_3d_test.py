@@ -190,21 +190,20 @@ def run_sim(logFile=None, order: int = 2):
         nonlinearSolver.solveStep(
             AdaptiveTimeStepper(mpmModel.time, 1.0, 2e-1, 2e-1, 2e-1, 100, journal),
             linearSolver,
-            [mpmManager],
-            [dirichletBottom, dirichletLeft, dirichletBack],
-            [gravityLoad],
-            [],
-            [],
             mpmModel,
             fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            mpmManagers=[mpmManager],
+            dirichlets=[dirichletBottom, dirichletLeft, dirichletBack],
+            bodyLoads=[gravityLoad],
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
 
         prettytable = performancetiming.makePrettyTable()
         journal.printPrettyTable(prettytable, "Summary Step 1")
 
     except StepFailed as e:
+        journal.errorMessage(str(e), "StepFailed")
         raise
 
     finally:
