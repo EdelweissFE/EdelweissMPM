@@ -1,5 +1,6 @@
 *.vtu
 *.pvtu
+*.pvsm
 *.case
 *.geo
 *.var
@@ -7,4 +8,5 @@
 *.vtk
 *.html
 *.cpp
+*.so
 __pycache__
