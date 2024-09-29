@@ -1,0 +1,10 @@
+*.vtu
+*.pvtu
+*.case
+*.geo
+*.var
+*.swp
+*.vtk
+*.html
+*.cpp
+__pycache__
