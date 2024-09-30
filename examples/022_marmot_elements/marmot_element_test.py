@@ -145,18 +145,14 @@ def run_sim():
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
             linearSolver,
-            [],
-            [
+            mpmModel,
+            fieldOutputController,
+            dirichlets=[
                 dirichletLeft,
                 dirichletRight,
             ],
-            [],
-            [],
-            [],
-            mpmModel,
-            fieldOutputController,
-            outputManagers,
-            iterationOptions,
+            outputManagers=outputManagers,
+            userIterationOptions=iterationOptions,
         )
     finally:
         fieldOutputController.finalizeJob()
