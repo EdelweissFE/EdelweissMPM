@@ -25,20 +25,37 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import numpy as np
-import sympy as sp
 from edelweissfe.journal.journal import Journal
 from edelweissfe.timesteppers.timestep import TimeStep
 
 from edelweissmpm.models.mpmmodel import MPMModel
-from edelweissmpm.sets.materialpointset import MaterialPointSet
-from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
+from edelweissmpm.sets.particleset import ParticleSet
 
 
-class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
+class ParticleDistributedLoad:
     """
-    This is a simple distributed load for material points which consist of a single vertex.
-    Accordingly, the load vector already includes the surface vector defintion.
+    This is a distributed load for particles.
 
+    Parameters
+    ----------
+    name : str
+        Name of the distributed load.
+    model : MPMModel
+        The MPM model tree.
+    journal : Journal
+        The journal to write messages to.
+    particles : Particles
+        The particles to apply the distributed load to.
+    distributedLoadType : str
+        The type of the distributed load, e.g., "pressure".
+    loadVector : np.ndarray
+        The load vector to apply to the particles.
+    **kwargs
+        Additional keyword arguments. The following are supported:
+        - f_t : Callable
+            The amplitude function of the distributed load.
+        - surface_ID : int
+            The surface ID of the particles to apply the distributed load to.
     """
 
     def __init__(
@@ -46,7 +63,7 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
         name: str,
         model: MPMModel,
         journal: Journal,
-        materialPoints: MaterialPointSet,
+        particles: ParticleSet,
         distributedLoadType: str,
         loadVector: np.ndarray,
         **kwargs
@@ -56,23 +73,24 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
         self._loadVector = loadVector
         self._loadAtStepStart = np.zeros_like(self._loadVector)
         self._loadType = distributedLoadType
-        self._materialPoints = materialPoints
-
-        if len(self._loadVector) < model.domainSize:
-            raise Exception("BodyForce {:}: load vector has wrong dimension!".format(self.name))
+        self._particles = particles
 
         self._delta = self._loadVector
         if "f_t" in kwargs:
-            t = sp.symbols("t")
-            self._amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t"]), "numpy")
+            self._amplitude = kwargs["f_t"]
         else:
             self._amplitude = lambda x: x
+
+        if "surfaceID" in kwargs:
+            self._surface_ID = kwargs["surfaceID"]
+        else:
+            self._surface_ID = 0
 
         self._idle = False
 
     @property
-    def mpSet(self) -> MaterialPointSet:
-        return self._materialPoints
+    def particles(self) -> ParticleSet:
+        return self._particles
 
     @property
     def loadType(self) -> str:
@@ -81,16 +99,14 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
     def applyAtStepEnd(self, model, stepMagnitude=None):
         if not self._idle:
             if stepMagnitude is None:
-                # standard case
                 self._loadAtStepStart += self._delta * self._amplitude(1.0)
             else:
-                # set the 'actual' increment manually, e.g. for arc length method
                 self._loadAtStepStart += self._delta * stepMagnitude
 
             self._delta = 0
             self._idle = True
 
-    def getCurrentMaterialPointLoad(self, materialPoint, timeStep: TimeStep) -> tuple[int, np.ndarray]:
+    def getCurrentLoad(self, particle, timeStep: TimeStep) -> tuple[int, np.ndarray]:
         if self._idle:
             t = 1.0
         else:
@@ -98,4 +114,4 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
 
         loadVec = self._loadAtStepStart + self._delta * self._amplitude(t)
 
-        return 0, loadVec
+        return self._surface_ID, loadVec

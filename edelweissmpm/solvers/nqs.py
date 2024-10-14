@@ -57,6 +57,7 @@ from edelweissmpm.numerics.dofmanager import MPMDofManager
 from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
+from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
 
 
 class NonlinearQuasistaticSolver:
@@ -106,6 +107,7 @@ class NonlinearQuasistaticSolver:
         dirichlets: list[DirichletBase] = [],
         bodyLoads: list[MPMBodyLoadBase] = [],
         distributedLoads: list[MPMDistributedLoadBase] = [],
+        particleDistributedLoads: list[ParticleDistributedLoad] = [],
         constraints: list[ConstraintBase] = [],
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
@@ -125,6 +127,10 @@ class NonlinearQuasistaticSolver:
             The list of dirichlet StepActions.
         bodyLoads
             The list of bodyload StepActions.
+        distributedLoads
+            The list of distributed load StepActions.
+        particleDistributedLoads
+            The list of particle distributed load StepActions.
         constraints
             The list of constraints.
         model
@@ -273,6 +279,7 @@ class NonlinearQuasistaticSolver:
                         dirichlets,
                         bodyLoads,
                         distributedLoads,
+                        particleDistributedLoads,
                         reducedNodeSets,
                         elements,
                         U,
@@ -336,6 +343,7 @@ class NonlinearQuasistaticSolver:
         dirichlets: list[DirichletBase],
         bodyLoads: list,
         distributedLoads: list,
+        particleDistributedLoads: list,
         reducedNodeSets: list,
         elements: list,
         Un: DofVector,
@@ -442,7 +450,11 @@ class NonlinearQuasistaticSolver:
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
-            PExt, K = self._computeDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep, theDofManager)
+            PExt, K = self._computeCellDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep, theDofManager)
+
+            PExt, K = self._computeParticleDistributedLoads(
+                particleDistributedLoads, PExt, K_VIJ, timeStep, theDofManager
+            )
 
             Rhs[:] = -PInt
             Rhs -= PExt
@@ -529,7 +541,7 @@ class NonlinearQuasistaticSolver:
         return PExt, K
 
     @performancetiming.timeit("compute distributed loads")
-    def _computeDistributedLoads(
+    def _computeCellDistributedLoads(
         self,
         distributedLoads: list[MPMDistributedLoadBase],
         PExt: DofVector,
@@ -577,6 +589,66 @@ class NonlinearQuasistaticSolver:
                         timeStep.timeIncrement,
                     )
                     PExt[cl] += Pc
+
+        return PExt, K_VIJ
+
+    @performancetiming.timeit("compute distributed loads")
+    def _computeParticleDistributedLoads(
+        self,
+        distributedLoads: list[ParticleDistributedLoad],
+        PExt: DofVector,
+        K_VIJ: VIJSystemMatrix,
+        timeStep: TimeStep,
+        theDofManager,
+    ) -> tuple[DofVector, VIJSystemMatrix]:
+        """Loop over all body forces loads acting on elements, and evaluate them.
+        Assembles into the global external load vector and the system matrix.
+
+        Parameters
+        ----------
+        distributedLoads
+            The list of distributed loads.
+        PExt
+            The external load vector to be augmented.
+        K_VIJ
+            The system matrix to be augmented.
+        timeStep
+            The current time increment.
+        theDofManager
+            The DofManager instance.
+
+        Returns
+        -------
+        tuple[DofVector,VIJSystemMatrix]
+            The augmented load vector and system matrix.
+        """
+
+        for distributedLoad in distributedLoads:
+            surfaceID, loadVector = distributedLoad.getCurrentLoad(None, timeStep)
+            for p in distributedLoad.particles:
+                Pc = np.zeros(p.nDof)
+                Kc = K_VIJ[p]
+                Kc2 = np.zeros_like(Kc)
+                p.computeDistributedLoad(
+                    distributedLoad.loadType,
+                    surfaceID,
+                    loadVector,
+                    Pc,
+                    Kc,
+                    timeStep.totalTime,
+                    timeStep.timeIncrement,
+                )
+                p.computeDistributedLoad(
+                    distributedLoad.loadType,
+                    surfaceID,
+                    loadVector,
+                    Pc,
+                    Kc2,
+                    timeStep.totalTime,
+                    timeStep.timeIncrement,
+                )
+
+                PExt[p] += Pc
 
         return PExt, K_VIJ
 
@@ -793,8 +865,8 @@ class NonlinearQuasistaticSolver:
             convergedFlux = fluxResidualRel < fluxTolRel if nonZeroFlux else True
             convergedFlux = convergedFlux or fluxResidualAbs < fluxTolAbs
 
-            # if iterations == 0:
-            #     convergedFlux = False
+            if iterations == 0:
+                convergedFlux = False
 
             iterationMessage += iterationMessageTemplate.format(
                 fluxResidualAbs,
