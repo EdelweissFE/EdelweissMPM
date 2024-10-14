@@ -209,7 +209,7 @@ def run_sim():
         prettytable.min_table_width = theJournal.linewidth
         theJournal.printPrettyTable(prettytable, "Summary")
 
-    return theModel
+    return theModel, fieldOutputController
 
 
 @pytest.fixture(autouse=True)
@@ -230,20 +230,23 @@ def test_sim():
 
     warnings.filterwarnings("ignore")
 
-    lastStiffness = run_sim()
+    theModel, fieldOutputController = run_sim()
+
+    res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
 
     gold = np.loadtxt("gold.csv")
 
     # assert np.isclose(lastStiffness, gold).all()
-    assert np.isclose(np.linalg.norm(lastStiffness.flatten()), np.linalg.norm(gold.flatten()))
+    assert np.isclose(np.linalg.norm(res.flatten()), np.linalg.norm(gold.flatten()))
 
 
 if __name__ == "__main__":
-    lastStiffness = run_sim()
+    theModel, fieldOutputController = run_sim()
+    res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
     args = parser.parse_args()
 
     if args.create_gold:
-        np.savetxt("gold.csv", lastStiffness)
+        np.savetxt("gold.csv", res)
