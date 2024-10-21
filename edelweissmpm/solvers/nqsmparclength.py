@@ -45,6 +45,7 @@ from edelweissmpm.stepactions.base.arclengthcontrollerbase import (
 )
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
+from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
 
 
 class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
@@ -71,9 +72,11 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         dirichlets: list[DirichletBase] = [],
         bodyLoads: list[MPMBodyLoadBase] = [],
         distributedLoads: list[MPMDistributedLoadBase] = [],
+        particleDistributedLoads: list[ParticleDistributedLoad] = [],
         constraints: list[ConstraintBase] = [],
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
+        vciManagers: list = [],
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -128,9 +131,11 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             dirichlets=dirichlets,
             bodyLoads=bodyLoads,
             distributedLoads=distributedLoads,
+            particleDistributedLoads=particleDistributedLoads,
             constraints=constraints,
             outputManagers=outputManagers,
             userIterationOptions=userIterationOptions,
+            vciManagers=vciManagers,
         )
 
     @performancetiming.timeit("newton iteration")
@@ -139,6 +144,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         dirichlets: list,
         bodyLoads: list,
         distributedLoads: list,
+        particleDistributedLoads: list,
         reducedNodeSets: list,
         elements: list,
         Un: DofVector,
@@ -203,6 +209,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
                 dirichlets,
                 bodyLoads,
                 distributedLoads,
+                particleDistributedLoads,
                 reducedNodeSets,
                 elements,
                 Un,
@@ -256,20 +263,29 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             self._computeElements(
                 elements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
+            self._computeParticles(
+                particles, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            )
             self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
 
             PExt_0, K_VIJ_0 = self._computeBodyLoads(
                 bodyLoads, PExt_0, K_VIJ_0, zeroTimeStep, theDofManager, activeCells
             )
-            PExt_0, K_VIJ_0 = self._computeDistributedLoads(
+            PExt_0, K_VIJ_0 = self._computeCellDistributedLoads(
                 distributedLoads, PExt_0, K_VIJ_0, zeroTimeStep, theDofManager
+            )
+            PExt_0, K_VIJ_0 = self._computeParticleDistributedLoads(
+                particleDistributedLoads, PExt_0, K_VIJ_0, zeroTimeStep, theDofManager
             )
 
             PExt_f, K_VIJ_f = self._computeBodyLoads(
                 bodyLoads, PExt_f, K_VIJ_f, referenceTimeStep, theDofManager, activeCells
             )
-            PExt_f, K_VIJ_f = self._computeDistributedLoads(
+            PExt_f, K_VIJ_f = self._computeCellDistributedLoads(
                 distributedLoads, PExt_f, K_VIJ_f, referenceTimeStep, theDofManager
+            )
+            PExt_f, K_VIJ_f = self._computeParticleDistributedLoads(
+                particleDistributedLoads, PExt_f, K_VIJ_f, referenceTimeStep, theDofManager
             )
 
             PExt_f -= PExt_0  # and subtract the dead part, since we are only interested in the homogeneous linear part
