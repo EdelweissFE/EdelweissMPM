@@ -211,7 +211,8 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
 
             if hasChanged or kernelFunctions != set(p.kernelFunctions):
                 hasChanged = True
-                p.assignKernelFunctions(list(kernelFunctions))
+            # TODO: WE NEED TO CHANGE THE BEHAVIOR OF THE PARTICELS, AS THEY ARE CURRENTLY EVALUATION SHAPE FUNCTIONS ONLY ONCE!!!!!
+            p.assignKernelFunctions(list(kernelFunctions))
 
         return hasChanged
 

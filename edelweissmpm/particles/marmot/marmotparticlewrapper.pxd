@@ -156,6 +156,8 @@ cdef class MarmotParticleWrapper:
 
     cdef public double[::1] _stateVars
     cdef public double[::1] _stateVarsTemp
+    cdef public double[::1] _stateVarsOld
+
     cdef int _nStateVars
     cdef int _nDim
 

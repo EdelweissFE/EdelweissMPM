@@ -43,7 +43,6 @@ from edelweissfe.utils.exceptions import (
     ReachedMaxIncrements,
     ReachedMaxIterations,
     ReachedMinIncrementSize,
-    StepFailed,
 )
 from edelweissfe.utils.fieldoutput import FieldOutputController
 from numpy import ndarray
@@ -171,6 +170,8 @@ class NonlinearQuasistaticSolver:
 
         newtonCache = None
         theDofManager = None
+
+        possibleReverts = 0
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -303,11 +304,26 @@ class NonlinearQuasistaticSolver:
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
 
+                except ReachedMinIncrementSize:
+                    if possibleReverts > 0:
+
+                        self.journal.errorMessage("!!!Reverting time step!!!", self.identification)
+
+                        model.goToPreviousTimeStep()
+                        timeStepper.goToPreviousTimeStep()
+
+                        possibleReverts -= 1
+
+                    else:
+                        raise
+
                 else:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
                     U += dU
+
+                    possibleReverts = 1
 
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in reducedNodeFields.values():
@@ -326,7 +342,6 @@ class NonlinearQuasistaticSolver:
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)
-            raise StepFailed()
 
         except ConditionalStop:
             self.journal.message("Conditional Stop", self.identification)
