@@ -346,6 +346,10 @@ class NonlinearQuasistaticSolver:
         except ConditionalStop:
             self.journal.message("Conditional Stop", self.identification)
 
+        except RuntimeError as e:
+            self.journal.errorMessage(str(e), self.identification)
+            raise StepFailed()
+
         self._applyStepActionsAtStepEnd(model, dirichlets + bodyLoads + distributedLoads)
 
         fieldOutputController.finalizeStep()
