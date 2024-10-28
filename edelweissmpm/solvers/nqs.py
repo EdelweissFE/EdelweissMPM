@@ -43,6 +43,7 @@ from edelweissfe.utils.exceptions import (
     ReachedMaxIncrements,
     ReachedMaxIterations,
     ReachedMinIncrementSize,
+    StepFailed,
 )
 from edelweissfe.utils.fieldoutput import FieldOutputController
 from numpy import ndarray
@@ -171,7 +172,7 @@ class NonlinearQuasistaticSolver:
         newtonCache = None
         theDofManager = None
 
-        possibleReverts = 0
+        possibleReverts = 1
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -299,31 +300,35 @@ class NonlinearQuasistaticSolver:
 
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
-                    timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+
+                    try:
+                        timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+                    except ReachedMinIncrementSize:
+                        if possibleReverts >= 2:
+
+                            self.journal.errorMessage("!!!Reverting time step!!!", self.identification)
+
+                            model.goToPreviousTimeStep()
+                            timeStepper.goToPreviousTimeStep()
+
+                            possibleReverts -= 2
+
+                        else:
+                            raise
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
-
-                except ReachedMinIncrementSize:
-                    if possibleReverts > 0:
-
-                        self.journal.errorMessage("!!!Reverting time step!!!", self.identification)
-
-                        model.goToPreviousTimeStep()
-                        timeStepper.goToPreviousTimeStep()
-
-                        possibleReverts -= 1
-
-                    else:
-                        raise
 
                 else:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
+                    timeStepper.acceptPreviousTimeStep()
+
                     U += dU
 
-                    possibleReverts = 1
+                    possibleReverts += 1
+                    possibleReverts = min(2, possibleReverts)
 
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in reducedNodeFields.values():
