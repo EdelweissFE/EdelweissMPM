@@ -27,6 +27,7 @@
 
 
 import edelweissfe.utils.performancetiming as performancetiming
+import h5py
 import numpy as np
 from edelweissfe.constraints.base.constraintbase import ConstraintBase
 from edelweissfe.journal.journal import Journal
@@ -112,6 +113,8 @@ class NonlinearQuasistaticSolver:
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
         vciManagers: list = [],
+        restartInterval: int = 0,
+        fallBackToLastRestart: bool = False,
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -141,6 +144,12 @@ class NonlinearQuasistaticSolver:
             The list of OutputManagerBase instances.
         userIterationOptions
             The dict controlling the Newton cycle(s).
+        vciManagers
+            The list of VariationallyConsistentIntegrationManager instances.
+        restartInterval
+            The increment interval for writing restart files.
+        fallBackToLastRestart
+            If True, the solver will revert to the last successful increment in case of a failed increment with min. increment size reached.
 
         Returns
         -------
@@ -171,6 +180,8 @@ class NonlinearQuasistaticSolver:
 
         newtonCache = None
         theDofManager = None
+
+        writtenRestarts = []
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -296,9 +307,25 @@ class NonlinearQuasistaticSolver:
                         newtonCache,
                     )
 
+                    if timeStep.number == 2:
+                        raise RuntimeError("Test")
+
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
-                    timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+                    try:
+                        timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+
+                    except ReachedMinIncrementSize:
+
+                        if writtenRestarts and fallBackToLastRestart:
+                            previousRestartFile = writtenRestarts.pop()
+                            self.journal.message("Reverting to last successful increment", self.identification)
+
+                            self.readRestart(previousRestartFile, timeStepper, model)
+                            timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+
+                        else:
+                            raise
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
@@ -317,6 +344,13 @@ class NonlinearQuasistaticSolver:
                         model.nodeFields[field.name].copyEntriesFromOther(field)
 
                     model.advanceToTime(timeStep.totalTime)
+
+                    if restartInterval and timeStep.number % restartInterval == 0:
+                        self.journal.message("Writing restart file", self.identification)
+
+                        theFileName = "restart_{:}.h5".format(timeStep.number)
+                        self._writeRestart(model, timeStepper, theFileName)
+                        writtenRestarts.append(theFileName)
 
                     self.journal.message(
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
@@ -1405,3 +1439,43 @@ class NonlinearQuasistaticSolver:
         newtonCache = (K_VIJ, csrGenerator, dU, Rhs, F, PInt, PExt)
 
         return newtonCache
+
+    @performancetiming.timeit("writing restart")
+    def _writeRestart(self, model: MPMModel, timeStepper, fileName):
+        """Write the restart file.
+
+        Parameters
+        ----------
+        model
+            The model to be written.
+        timeStepper
+            The timeStepper to be written.
+        fileName
+            The name of the restart file.
+        """
+        theRestartFile = h5py.File(fileName, "w")
+
+        model.writeRestart(theRestartFile)
+        timeStepper.writeRestart(theRestartFile)
+
+    def readRestart(
+        self,
+        restartFile,
+        timeStepper,
+        model: MPMModel,
+    ):
+        """Read a restart file.
+
+        Parameters
+        ----------
+        restartFile
+            The name of the restart file.
+        timeStepper
+            The timeStepper instance to be read from the restart file.
+        model
+            The full MPMModel instance to be read from the restart file.
+        """
+        theRestartFile = h5py.File(restartFile, "r")
+
+        model.readRestart(theRestartFile)
+        timeStepper.readRestart(theRestartFile)
