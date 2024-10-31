@@ -307,9 +307,6 @@ class NonlinearQuasistaticSolver:
                         newtonCache,
                     )
 
-                    if timeStep.number == 2:
-                        raise RuntimeError("Test")
-
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
                     try:
