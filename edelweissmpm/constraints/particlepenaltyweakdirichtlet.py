@@ -46,6 +46,7 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
         self._fieldSize = getFieldSize(self._field, model.domainSize)
         self._penaltyParameter = penaltyParameter
         self._nodes = dict()
+        self.penaltyForce = np.zeros(self._fieldSize)
 
     @property
     def name(self) -> str:
@@ -115,3 +116,5 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
                     N * self._penaltyParameter * (mpValue - prescribedComponent * timeStep.stepProgressIncrement)
                 )
                 K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
+
+            self.penaltyForce[i] = np.sum(P_i)

@@ -77,7 +77,7 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         string getParticleShape()
 
-        void assignMeshfreeKernelFunctions (const vector[const MarmotMeshfreeKernelFunction*]& meshfreeKernelFunctions)
+        void assignMeshfreeKernelFunctions (const vector[const MarmotMeshfreeKernelFunction*]& meshfreeKernelFunctions) except +
 
         void computePhysicsKernels(   const double* dUc,
                                             double* Pc,
