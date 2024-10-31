@@ -185,6 +185,7 @@ class NonlinearQuasistaticSolver:
 
         writtenRestarts = deque(maxlen=numberOfRestarts)
         currentRestartID = 0
+        justRestarted = False
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -200,6 +201,15 @@ class NonlinearQuasistaticSolver:
                     self.identification,
                     level=1,
                 )
+
+                if not justRestarted and restartInterval and timeStep.number % restartInterval == 0:
+                    self.journal.message("Writing restart file", self.identification)
+
+                    theFileName = "restart_{:}.h5".format(currentRestartID)
+                    self._writeRestart(model, timeStepper, theFileName)
+                    writtenRestarts.append(theFileName)
+
+                    currentRestartID = (currentRestartID + 1) % numberOfRestarts
 
                 connectivityHasChanged = False
 
@@ -312,20 +322,30 @@ class NonlinearQuasistaticSolver:
 
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
-                    try:
-                        timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
 
-                    except ReachedMinIncrementSize:
-
-                        if writtenRestarts and fallBackToLastRestart:
-                            previousRestartFile = writtenRestarts.pop()
-                            self.journal.message("Reverting to last successful increment", self.identification)
-
-                            self.readRestart(previousRestartFile, timeStepper, model)
+                    while True:
+                        try:
                             timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+                            break
 
-                        else:
-                            raise
+                        except ReachedMinIncrementSize:
+
+                            if writtenRestarts and fallBackToLastRestart:
+                                previousRestartFile = writtenRestarts.pop()
+                                currentRestartID = currentRestartID - 1
+                                if currentRestartID < 0:
+                                    currentRestartID = numberOfRestarts - 1
+
+                                self.journal.message("Reverting to last successful increment", self.identification)
+                                self.readRestart(previousRestartFile, timeStepper, model)
+                                justRestarted = True
+                                self.journal.message(
+                                    "Restart successful at converged time {:}".format(model.time), self.identification
+                                )
+                                continue
+
+                            else:
+                                raise
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
@@ -345,20 +365,13 @@ class NonlinearQuasistaticSolver:
 
                     model.advanceToTime(timeStep.totalTime)
 
-                    if restartInterval and timeStep.number % restartInterval == 0:
-                        self.journal.message("Writing restart file", self.identification)
-
-                        theFileName = "restart_{:}.h5".format(currentRestartID)
-                        self._writeRestart(model, timeStepper, theFileName)
-                        writtenRestarts.append(theFileName)
-
-                        currentRestartID = (currentRestartID + 1) % numberOfRestarts
-
                     self.journal.message(
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
                     )
 
                     self._finalizeIncrementOutput(fieldOutputController, outputManagers)
+
+                    justRestarted = False
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)
