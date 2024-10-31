@@ -25,6 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+from collections import deque
 
 import edelweissfe.utils.performancetiming as performancetiming
 import h5py
@@ -115,6 +116,7 @@ class NonlinearQuasistaticSolver:
         vciManagers: list = [],
         restartInterval: int = 0,
         fallBackToLastRestart: bool = False,
+        numberOfRestarts=3,
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -181,7 +183,8 @@ class NonlinearQuasistaticSolver:
         newtonCache = None
         theDofManager = None
 
-        writtenRestarts = []
+        writtenRestarts = deque(maxlen=numberOfRestarts)
+        currentRestartID = 0
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -345,9 +348,11 @@ class NonlinearQuasistaticSolver:
                     if restartInterval and timeStep.number % restartInterval == 0:
                         self.journal.message("Writing restart file", self.identification)
 
-                        theFileName = "restart_{:}.h5".format(timeStep.number)
+                        theFileName = "restart_{:}.h5".format(currentRestartID)
                         self._writeRestart(model, timeStepper, theFileName)
                         writtenRestarts.append(theFileName)
+
+                        currentRestartID = (currentRestartID + 1) % numberOfRestarts
 
                     self.journal.message(
                         "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
