@@ -328,3 +328,23 @@ class BaseParticle(BaseNodeCouplingEntity):
         vciConstraint
             The VCI constraint.
         """
+
+    @abstractmethod
+    def getRestartData(self) -> np.ndarray:
+        """Get the restart data in  form of a numpy array.
+
+        Returns
+        -------
+        np.ndarray
+            The restart data.
+        """
+
+    @abstractmethod
+    def readRestartData(self, restartData: np.ndarray):
+        """Set the restart data.
+
+        Parameters
+        ----------
+        restartData
+            The restart data.
+        """

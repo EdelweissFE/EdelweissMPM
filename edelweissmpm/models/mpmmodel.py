@@ -27,6 +27,8 @@
 
 import copy
 
+import h5py
+import numpy as np
 from edelweissfe.config.phenomena import getFieldSize, phenomena
 from edelweissfe.journal.journal import Journal
 from edelweissfe.models.femodel import FEModel
@@ -330,3 +332,40 @@ class MPMModel(FEModel):
         prettytable.align = "l"
 
         return prettytable
+
+    def writeRestart(self, restartFile: h5py.File):
+        """Write the current state of the model to a restart file.
+
+        Parameters
+        ----------
+        fileName
+            The name of the restart file.
+        """
+
+        super().writeRestart(restartFile)
+
+        f = restartFile
+
+        # particles
+        f.create_group("particles")
+        for p in self.particles.values():
+            theData = p.getRestartData()
+            f["particles"].create_dataset(str(p.number), data=theData)
+
+    def readRestart(self, restartFile: h5py.File):
+        """Read the state of the model from a restart file.
+
+        Parameters
+        ----------
+        fileName
+            The name of the restart file.
+        """
+
+        super().readRestart(restartFile)
+
+        f = restartFile
+
+        # particles
+        for p in self.particles.values():
+            theData = f["particles"][str(p.number)]
+            p.readRestartData(np.asarray(theData))

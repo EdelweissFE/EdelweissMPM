@@ -273,5 +273,12 @@ cdef class MarmotParticleWrapper:
     def assignShapeFunctionCorrectionTerm(self, double[::1] correctionTerm, int vciConstraint):
         self._marmotParticle.assignShapeFunctionCorrectionTerms(&correctionTerm[0], vciConstraint)
 
+    def getRestartData(self,):
+        return self._stateVars
+
+    def readRestartData(self, data):
+        np.asarray(self._stateVars)[:] = data[:]
+        self._initializeStateVarsTemp()
+
     def __dealloc__(self):
         del self._marmotParticle

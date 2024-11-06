@@ -25,6 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+from collections import deque
 
 import edelweissfe.utils.performancetiming as performancetiming
 from edelweissfe.constraints.base.constraintbase import ConstraintBase
@@ -105,6 +106,9 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
         vciManagers: list = [],
+        restartInterval: int = 0,
+        fallBackToLastRestart: bool = False,
+        numberOfRestarts=3,
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -134,6 +138,12 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
             The list of OutputManagerBase instances.
         userIterationOptions
             The dict controlling the Newton cycle(s).
+        vciManagers
+            The list of VariationallyConsistentIntegrationManager instances.
+        restartInterval
+            The increment interval for writing restart files.
+        fallBackToLastRestart
+            If True, the solver will revert to the last successful increment in case of a failed increment with min. increment size reached.
 
         Returns
         -------
@@ -165,7 +175,9 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         newtonCache = None
         theDofManager = None
 
-        possibleReverts = 1
+        writtenRestarts = deque(maxlen=numberOfRestarts)
+        currentRestartID = 0
+        justRestarted = False
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -181,6 +193,15 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     self.identification,
                     level=1,
                 )
+
+                if not justRestarted and restartInterval and timeStep.number % restartInterval == 0:
+                    self.journal.message("Writing restart file", self.identification)
+
+                    theFileName = "restart_{:}.h5".format(currentRestartID)
+                    self._writeRestart(model, timeStepper, theFileName)
+                    writtenRestarts.append(theFileName)
+
+                    currentRestartID = (currentRestartID + 1) % numberOfRestarts
 
                 connectivityHasChanged = False
 
@@ -294,20 +315,29 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
 
-                    try:
-                        timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
-                    except ReachedMinIncrementSize:
-                        if possibleReverts >= 2:
+                    while True:
+                        try:
+                            timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
+                            break
 
-                            self.journal.errorMessage("!!!Reverting time step!!!", self.identification)
+                        except ReachedMinIncrementSize:
 
-                            model.goToPreviousTimeStep()
-                            timeStepper.goToPreviousTimeStep()
+                            if writtenRestarts and fallBackToLastRestart:
+                                previousRestartFile = writtenRestarts.pop()
+                                currentRestartID = currentRestartID - 1
+                                if currentRestartID < 0:
+                                    currentRestartID = numberOfRestarts - 1
 
-                            possibleReverts -= 2
+                                self.journal.message("Reverting to last successful increment", self.identification)
+                                self.readRestart(previousRestartFile, timeStepper, model)
+                                justRestarted = True
+                                self.journal.message(
+                                    "Restart successful at converged time {:}".format(model.time), self.identification
+                                )
+                                continue
 
-                        else:
-                            raise
+                            else:
+                                raise
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
@@ -319,9 +349,6 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     timeStepper.acceptPreviousTimeStep()
 
                     U += dU
-
-                    possibleReverts += 1
-                    possibleReverts = min(2, possibleReverts)
 
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in reducedNodeFields.values():
@@ -337,6 +364,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     )
 
                     self._finalizeIncrementOutput(fieldOutputController, outputManagers)
+
+                    justRestarted = False
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)

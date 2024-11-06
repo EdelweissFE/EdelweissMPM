@@ -28,6 +28,7 @@
 from abc import abstractmethod
 
 import edelweissfe.utils.performancetiming as performancetiming
+import h5py
 import numpy as np
 from edelweissfe.constraints.base.constraintbase import ConstraintBase
 from edelweissfe.journal.journal import Journal
@@ -1121,3 +1122,43 @@ class NonlinearImplicitSolverBase:
         newtonCache = (K_VIJ, csrGenerator, dU, Rhs, F, PInt, PExt)
 
         return newtonCache
+
+    @performancetiming.timeit("writing restart")
+    def _writeRestart(self, model: MPMModel, timeStepper, fileName):
+        """Write the restart file.
+
+        Parameters
+        ----------
+        model
+            The model to be written.
+        timeStepper
+            The timeStepper to be written.
+        fileName
+            The name of the restart file.
+        """
+        theRestartFile = h5py.File(fileName, "w")
+
+        model.writeRestart(theRestartFile)
+        timeStepper.writeRestart(theRestartFile)
+
+    def readRestart(
+        self,
+        restartFile,
+        timeStepper,
+        model: MPMModel,
+    ):
+        """Read a restart file.
+
+        Parameters
+        ----------
+        restartFile
+            The name of the restart file.
+        timeStepper
+            The timeStepper instance to be read from the restart file.
+        model
+            The full MPMModel instance to be read from the restart file.
+        """
+        theRestartFile = h5py.File(restartFile, "r")
+
+        model.readRestart(theRestartFile)
+        timeStepper.readRestart(theRestartFile)

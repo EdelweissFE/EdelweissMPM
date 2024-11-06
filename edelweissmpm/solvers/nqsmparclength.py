@@ -77,6 +77,8 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
         vciManagers: list = [],
+        restartInterval: int = 0,
+        fallBackToLastRestart: bool = False,
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -136,6 +138,8 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             outputManagers=outputManagers,
             userIterationOptions=userIterationOptions,
             vciManagers=vciManagers,
+            restartInterval=restartInterval,
+            fallBackToLastRestart=fallBackToLastRestart,
         )
 
     @performancetiming.timeit("newton iteration")
