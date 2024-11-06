@@ -54,7 +54,30 @@ from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedL
 from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
 
 
-class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
+class RestartHistoryManager(deque):
+
+    def __init__(self, restartBaseName, maxsize):
+        super().__init__(maxlen=maxsize)
+        self._restartBaseName = restartBaseName
+        self._maxsize = maxsize
+        self._currentCount = 0
+
+    def append(self, item):
+        super().append(item)
+        self._currentCount = (self._currentCount + 1) % self._maxsize
+
+    def pop(self):
+        self._currentCount = self._currentCount - 1 if self._currentCount > 0 else self._maxsize - 1
+        return super().pop()
+
+    def getNextRestartFileName(
+        self,
+    ):
+        theFileName = "{:}_{:}.h5".format(self._restartBaseName, self._currentCount)
+        return theFileName
+
+
+class NonlinearQuasistaticSolver:
     """This is the serial nonlinear implicit quasi static solver.
 
 
@@ -106,9 +129,10 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
         vciManagers: list = [],
-        restartInterval: int = 0,
-        fallBackToLastRestart: bool = False,
-        numberOfRestarts=3,
+        restartWriteInterval: int = 0,
+        allowFallBackToRestart: bool = False,
+        numberOfRestartsToStore=3,
+        restartBaseName: str = "restart",
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -140,10 +164,14 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
             The dict controlling the Newton cycle(s).
         vciManagers
             The list of VariationallyConsistentIntegrationManager instances.
-        restartInterval
-            The increment interval for writing restart files.
-        fallBackToLastRestart
-            If True, the solver will revert to the last successful increment in case of a failed increment with min. increment size reached.
+        restartWriteInterval
+            The interval at which restart files are written.
+        allowFallBackToRestart
+            The flag to allow a fallback to restart files in case time incrementation fails.
+        numberOfRestartsToStore
+            The number of restart files to store.
+        restartBaseName
+            The base name of the restart files.
 
         Returns
         -------
@@ -175,9 +203,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         newtonCache = None
         theDofManager = None
 
-        writtenRestarts = deque(maxlen=numberOfRestarts)
-        currentRestartID = 0
-        justRestarted = False
+        restartHistoryManager = RestartHistoryManager(restartBaseName, numberOfRestartsToStore)
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -193,15 +219,6 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     self.identification,
                     level=1,
                 )
-
-                if not justRestarted and restartInterval and timeStep.number % restartInterval == 0:
-                    self.journal.message("Writing restart file", self.identification)
-
-                    theFileName = "restart_{:}.h5".format(currentRestartID)
-                    self._writeRestart(model, timeStepper, theFileName)
-                    writtenRestarts.append(theFileName)
-
-                    currentRestartID = (currentRestartID + 1) % numberOfRestarts
 
                 connectivityHasChanged = False
 
@@ -315,29 +332,15 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
 
-                    while True:
-                        try:
-                            timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
-                            break
+                    try:
+                        timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
 
-                        except ReachedMinIncrementSize:
+                    except ReachedMinIncrementSize:
 
-                            if writtenRestarts and fallBackToLastRestart:
-                                previousRestartFile = writtenRestarts.pop()
-                                currentRestartID = currentRestartID - 1
-                                if currentRestartID < 0:
-                                    currentRestartID = numberOfRestarts - 1
+                        if not allowFallBackToRestart:
+                            raise
 
-                                self.journal.message("Reverting to last successful increment", self.identification)
-                                self.readRestart(previousRestartFile, timeStepper, model)
-                                justRestarted = True
-                                self.journal.message(
-                                    "Restart successful at converged time {:}".format(model.time), self.identification
-                                )
-                                continue
-
-                            else:
-                                raise
+                        self._tryFallbackWithRestartFiles(restartHistoryManager, timeStepper, model, iterationOptions)
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
@@ -365,7 +368,12 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
                     self._finalizeIncrementOutput(fieldOutputController, outputManagers)
 
-                    justRestarted = False
+                    if restartWriteInterval and timeStep.number % restartWriteInterval == 0:
+                        self.journal.message("Writing restart file", self.identification)
+
+                        restartFileName = restartHistoryManager.getNextRestartFileName()
+                        self._writeRestart(model, timeStepper, restartFileName)
+                        restartHistoryManager.append(restartFileName)
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)

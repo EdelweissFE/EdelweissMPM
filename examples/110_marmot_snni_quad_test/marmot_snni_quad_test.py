@@ -171,7 +171,7 @@ def run_sim():
         dirichletRight,
     ]
 
-    incSize = 1e-1
+    incSize = 5e-1
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 1000, theJournal)
 
     nonlinearSolver = NQSParallelForMarmot(theJournal)

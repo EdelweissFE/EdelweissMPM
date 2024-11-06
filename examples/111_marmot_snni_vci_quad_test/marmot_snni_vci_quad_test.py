@@ -171,7 +171,7 @@ def run_sim():
         dirichletRight,
     ]
 
-    incSize = 5e-2
+    incSize = 5e-1
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 1000, theJournal)
 
     nonlinearSolver = NQSParallelForMarmot(theJournal)
@@ -249,7 +249,7 @@ def test_sim():
 
     theModel, fieldOutputController = run_sim()
 
-    res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
+    res = fieldOutputController.fieldOutputs["deformation gradient"].getLastResult()
 
     gold = np.loadtxt("gold.csv")
 
@@ -259,7 +259,7 @@ def test_sim():
 
 if __name__ == "__main__":
     theModel, fieldOutputController = run_sim()
-    res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
+    res = fieldOutputController.fieldOutputs["deformation gradient"].getLastResult()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")

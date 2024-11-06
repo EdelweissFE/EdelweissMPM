@@ -1162,3 +1162,36 @@ class NonlinearImplicitSolverBase:
 
         model.readRestart(theRestartFile)
         timeStepper.readRestart(theRestartFile)
+
+    def _tryFallbackWithRestartFiles(self, writtenRestarts, timeStepper, model, iterationOptions):
+        """Fallback to a previous converged increment using the written restart files.
+
+        Parameters
+        ----------
+        writtenRestarts
+            The list of written restart files.
+        timeStepper
+            The timeStepper instance.
+        model
+            The full MPMModel instance.
+        iterationOptions
+            The dictionary containing the iteration options.
+        """
+
+        while True:
+            try:
+                previousRestartFile = writtenRestarts.pop()
+            except IndexError:
+                raise StepFailed("No more restart files available for fallback")
+
+            self.readRestart(previousRestartFile, timeStepper, model)
+            self.journal.message(
+                "Reverting to last successful increment at time {:}".format(model.time), self.identification
+            )
+
+            try:
+                timeStepper.reduceNextIncrement(iterationOptions["failed increment cutback factor"])
+            except ReachedMinIncrementSize:
+                continue
+
+            break
