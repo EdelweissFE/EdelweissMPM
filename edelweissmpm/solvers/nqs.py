@@ -77,7 +77,7 @@ class RestartHistoryManager(deque):
         return theFileName
 
 
-class NonlinearQuasistaticSolver:
+class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
     """This is the serial nonlinear implicit quasi static solver.
 
 
