@@ -34,6 +34,7 @@ from edelweissfe.numerics.dofmanager import DofManager, DofVector, VIJSystemMatr
 from edelweissmpm.solvers.base.parallelization import (
     computeMarmotCellsInParallel,
     computeMarmotMaterialPointsInParallel,
+    computeMarmotParticlesInParallel,
 )
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
 
@@ -104,9 +105,8 @@ class NQSParallelForMarmot(NonlinearQuasistaticSolver):
         time: float,
         dT: float,
         theDofManager: DofManager,
-        numThreads: int,
     ):
-        return computeMarmotMaterialPointsInParallel(
+        return computeMarmotParticlesInParallel(
             particles_,
             dU,
             P,
