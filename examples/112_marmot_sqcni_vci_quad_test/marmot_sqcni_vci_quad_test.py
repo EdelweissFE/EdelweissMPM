@@ -173,7 +173,7 @@ def run_sim():
         "left", theModel, theModel.particleSets["rectangular_grid_left"], "displacement", {0: 0, 1: 0}, 1e6
     )
     dirichletRight = ParticlePenaltyWeakDirichlet(
-        "right", theModel, theModel.particleSets["rectangular_grid_right"], "displacement", {0: -2, 1: 4}, 1e6
+        "right", theModel, theModel.particleSets["rectangular_grid_right"], "displacement", {0: -1, 1: 2}, 1e6
     )
 
     dirichlets = [
@@ -181,7 +181,7 @@ def run_sim():
         dirichletRight,
     ]
 
-    incSize = 1e-1
+    incSize = 1e-0
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 1000, theJournal)
 
     nonlinearSolver = NQSParallelForMarmot(theJournal)
