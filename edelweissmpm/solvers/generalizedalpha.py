@@ -13,6 +13,7 @@
 #  2023 - today
 #
 #  Matthias Neuner matthias.neuner@uibk.ac.at
+#  Alexander Dummer alexander.dummer@uibk.ac.at
 #
 #  This file is part of EdelweissMPM.
 #
@@ -25,12 +26,16 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-
 import edelweissfe.utils.performancetiming as performancetiming
+import numpy as np
+import scipy
 from edelweissfe.constraints.base.constraintbase import ConstraintBase
 from edelweissfe.journal.journal import Journal
 from edelweissfe.numerics.dofmanager import DofManager, DofVector
 from edelweissfe.outputmanagers.base.outputmanagerbase import OutputManagerBase
+from edelweissfe.solvers.nonlinearimplicitdynamic import (
+    computeParamentersForGeneralizedAlpha,
+)
 from edelweissfe.stepactions.base.dirichletbase import DirichletBase
 from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.utils.exceptions import (
@@ -53,7 +58,7 @@ from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedL
 from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
 
 
-class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
+class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
     """This is the serial nonlinear implicit quasi static solver.
 
 
@@ -63,7 +68,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         The journal instance for logging.
     """
 
-    identification = "MPM-NQS-Solver"
+    identification = "MPM-GeneralizedAlpha-Solver"
 
     validOptions = {
         "max. iterations": 10,
@@ -84,8 +89,19 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         "spec. absolute field correction tolerances": dict(),
         "failed increment cutback factor": 0.25,
     }
+    # specific options for generalized alpha method
+    validGeneralizedAlphaOptions = {
+        "rho": 0.9,
+        "alphaM": np.nan,
+        "alphaF": np.nan,
+        "beta": np.nan,
+        "gamma": np.nan,
+        "alphaR": 0.0,
+        "betaR": 0.0,
+    }
 
     def __init__(self, journal: Journal):
+        self.solverOptions = self.validGeneralizedAlphaOptions.copy()
         super().__init__(journal)
 
     @performancetiming.timeit("solve step")
@@ -235,6 +251,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     )
 
                     U = theDofManager.constructDofVector()
+                    V = theDofManager.constructDofVector()
+                    A = theDofManager.constructDofVector()
 
                     # TODO 3
                     # if len(activeNodesWithPersistentData) > 0:
@@ -270,7 +288,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 self.journal.message(iterationHeader2, self.identification, level=2)
 
                 try:
-                    dU, P, iterationHistory, newtonCache = self._newtonSolve(
+                    dU, V, A, P, iterationHistory, newtonCache = self._newtonSolve(
                         dirichlets,
                         bodyLoads,
                         distributedLoads,
@@ -278,6 +296,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                         reducedNodeSets,
                         elements,
                         U,
+                        V,
+                        A,
                         activeCells,
                         model.cellElements.values(),
                         materialPoints,
@@ -364,6 +384,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         reducedNodeSets: list,
         elements: list,
         Un: DofVector,
+        Vn: DofVector,
+        An: DofVector,
         activeCells: list,
         cellElements: list,
         materialPoints: list,
@@ -375,8 +397,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         timeStep: TimeStep,
         model: MPMModel,
         newtonCache: tuple = None,
-    ) -> tuple[DofVector, DofVector, dict, tuple]:
-        """Standard Newton-Raphson scheme to solve for an increment.
+    ) -> tuple[DofVector, DofVector, DofVector, DofVector, dict, tuple]:
+        """Generalized-Alpha method to solve for an increment.
 
         Parameters
         ----------
@@ -438,43 +460,138 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         dU[:] = 0.0
         ddU = None
 
+        # time integration parameters
+        alphaM, alphaF, beta, gamma = computeParamentersForGeneralizedAlpha(
+            self.solverOptions.get("rho"),
+            self.solverOptions.get("alphaM"),
+            self.solverOptions.get("alphaF"),
+            self.solverOptions.get("beta"),
+            self.solverOptions.get("gamma"),
+        )
+
+        # Rayleigh damping parameters
+        alphaR = self.solverOptions.get("alphaR")
+        betaR = self.solverOptions.get("betaR")
+
+        # initialize intermediate and end entities for generalized alpha method
+        dU_int = theDofManager.constructDofVector()
+        A_int = theDofManager.constructDofVector()
+        V_int = theDofManager.constructDofVector()
+        U_np = theDofManager.constructDofVector()
+        A_np = theDofManager.constructDofVector()
+        V_np = theDofManager.constructDofVector()
+
+        # intialize lumped mass matrix
+        M = theDofManager.constructDofVector()
+
+        # initialize time step for intermediate step
+        timeStep_int = TimeStep(
+            timeStep.number,
+            timeStep.stepProgressIncrement,
+            timeStep.stepProgress,
+            timeStep.timeIncrement * (1 - alphaF),
+            timeStep.stepTime,
+            timeStep.totalTime - (1 - alphaF) * timeStep.timeIncrement,
+        )
+        dT = timeStep.timeIncrement
+
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
 
         while True:
+
+            U_np[:] = Un
+            U_np += dU
+
+            # update acceleration
+            A_np[:] = An
+            if dT != 0:
+                A_np[:] *= -(0.5 - beta) / beta
+                A_np[:] += 1 / beta / dT / dT * dU
+                A_np[:] -= 1 / beta / dT * Vn
+            A_int[:] = (1 - alphaM) * A_np + alphaM * An
+
+            # update velocity
+            V_np[:] = Vn
+            V_np[:] += (1 - gamma) * dT * An
+            V_np[:] += gamma * dT * A_np
+            V_int[:] = (1 - alphaF) * V_np + alphaF * Vn
+
+            # inetrmediate displacement increment
+            dU_int[:] = (1 - alphaF) * U_np + alphaF * Un - Un
+
             PInt[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
 
-            self._prepareMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
-            self._interpolateFieldsToMaterialPoints(activeCells, dU)
-            self._interpolateFieldsToMaterialPoints(cellElements, dU)
-            self._computeMaterialPoints(materialPoints, timeStep.totalTime, timeStep.timeIncrement)
+            self._prepareMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
+            self._interpolateFieldsToMaterialPoints(activeCells, dU_int)
+            self._interpolateFieldsToMaterialPoints(cellElements, dU_int)
+            self._computeMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
 
-            self._computeCells(
-                activeCells, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            self._computeCellsWithInertia(
+                activeCells,
+                dU_int,
+                PInt,
+                F,
+                M,
+                K_VIJ,
+                timeStep_int.totalTime,
+                timeStep_int.timeIncrement,
+                theDofManager,
             )
 
-            self._computeElements(
-                elements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+            self._computeElementsWithInertia(
+                elements,
+                dU_int,
+                Un,
+                PInt,
+                F,
+                M,
+                K_VIJ,
+                timeStep_int.totalTime,
+                timeStep_int.timeIncrement,
+                theDofManager,
             )
 
             self._computeCellElements(
-                cellElements, dU, Un, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+                cellElements,
+                dU_int,
+                Un,
+                PInt,
+                F,
+                K_VIJ,
+                timeStep_int.totalTime,
+                timeStep_int.timeIncrement,
+                theDofManager,
             )
 
             self._computeParticles(
-                particles, dU, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+                particles, dU_int, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
             )
 
-            self._computeConstraints(constraints, dU, PInt, K_VIJ, timeStep)
+            self._computeConstraints(constraints, dU_int, PInt, K_VIJ, timeStep)
 
-            PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep, theDofManager, activeCells)
-            PExt, K = self._computeCellDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep, theDofManager)
+            PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep_int, theDofManager, activeCells)
+            PExt, K = self._computeCellDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep_int, theDofManager)
 
             PExt, K = self._computeParticleDistributedLoads(
-                particleDistributedLoads, PExt, K_VIJ, timeStep, theDofManager
+                particleDistributedLoads, PExt, K_VIJ, timeStep_int, theDofManager
             )
 
             Rhs[:] = -PInt
             Rhs -= PExt
+
+            K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
+            Rhs[:] = Rhs - M.T * (A_int + alphaR * V_int) - K_CSR * V_int * betaR
+
+            # check for zero increment
+            if dT != 0:
+                K_CSR *= 1 - alphaF
+                K_CSR += (1 - alphaF) * (1 + gamma) / beta / dT * K_CSR * betaR
+                K_CSR = self.addVectorToCSRDiagonal(
+                    K_CSR,
+                    (1 - alphaM) * (1.0 / beta / dT / dT + gamma / beta / dT * alphaR) * M,
+                )
+
+            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
 
             if iterationCounter == 0 and dirichlets:
                 Rhs = self._applyDirichlet(timeStep, Rhs, dirichlets, reducedNodeSets, theDofManager)
@@ -489,6 +606,54 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 converged = self._checkConvergence(iterationCounter, incrementResidualHistory, iterationOptions)
 
                 if converged:
+                    # evaluate cells an particle states
+                    PInt[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
+
+                    self._prepareMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
+                    self._interpolateFieldsToMaterialPoints(activeCells, dU_int)
+                    self._interpolateFieldsToMaterialPoints(cellElements, dU_int)
+                    self._computeMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
+
+                    self._computeCellsWithInertia(
+                        activeCells,
+                        dU_int,
+                        PInt,
+                        F,
+                        M,
+                        K_VIJ,
+                        timeStep.totalTime,
+                        timeStep.timeIncrement,
+                        theDofManager,
+                    )
+
+                    self._computeElementsWithInertia(
+                        elements,
+                        dU_int,
+                        Un,
+                        PInt,
+                        F,
+                        M,
+                        K_VIJ,
+                        timeStep.totalTime,
+                        timeStep.timeIncrement,
+                        theDofManager,
+                    )
+
+                    self._computeCellElements(
+                        cellElements,
+                        dU_int,
+                        Un,
+                        PInt,
+                        F,
+                        K_VIJ,
+                        timeStep.totalTime,
+                        timeStep.timeIncrement,
+                        theDofManager,
+                    )
+
+                    self._computeParticles(
+                        particles, dU_int, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
+                    )
                     break
 
                 if self._checkDivergingSolution(incrementResidualHistory, nAllowedResidualGrowths):
@@ -499,8 +664,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     self._printResidualOutlierNodes(incrementResidualHistory)
                     raise ReachedMaxIterations("Reached max. iterations in current increment, cutting back")
 
-            K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
-            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
+            # K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
 
             ddU = self._linearSolve(K_CSR, Rhs, linearSolver)
             dU += ddU
@@ -508,4 +672,16 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
         iterationHistory = {"iterations": iterationCounter, "incrementResidualHistory": incrementResidualHistory}
 
-        return dU, PInt, iterationHistory, newtonCache
+        return dU, V_np, A_np, PInt, iterationHistory, newtonCache
+
+    def addVectorToCSRDiagonal(self, csr: scipy.sparse.csr_matrix, vec: DofVector):
+
+        indices_ = csr.indices
+        indptr_ = csr.indptr
+        data_ = csr.data
+
+        for i in range(vec.size):  # for each node dof in the BC
+            for j in range(indptr_[i], indptr_[i + 1]):  # iterate along row
+                if i == indices_[j]:
+                    data_[j] += vec[i]  # diagonal entry
+        return csr

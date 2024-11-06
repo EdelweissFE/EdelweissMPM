@@ -77,6 +77,8 @@ cdef extern from "Marmot/MarmotCell.h":
                                             double timeNewTotal,
                                             double dT) except +
 
+        void computeLumpedInertia( double* M ) except +
+
         void computeBodyLoad(               int type,
                                             const double* load,
                                             double* Pc,
@@ -123,6 +125,8 @@ cdef class MarmotCellWrapper:
     cdef list _assignedMaterialPoints
 
     cpdef void computeMaterialPointKernels(self, double[::1] dUc, double[::1] Rhs, double[::1] AMatrix, double timeNew, double dTime, ) nogil
+
+    cpdef void computeLumpedInertia(self, double[::1] M ) nogil
 
     cpdef void interpolateFieldsToMaterialPoints(self,
                      double[::1] dUc ) nogil
