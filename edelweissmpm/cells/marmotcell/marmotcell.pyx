@@ -137,6 +137,10 @@ cdef class MarmotCellWrapper:
     cpdef void computeLumpedInertia( self, double[::1] M ) nogil:
         self._marmotCell.computeLumpedInertia(&M[0])
 
+
+    cpdef void computeConsistentInertia( self, double[::1] M ) nogil:
+        self._marmotCell.computeConsistentInertia(&M[0])
+
     def computeBodyLoad(self,
                          str loadType,
                          double[::1] load,

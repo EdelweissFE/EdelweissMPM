@@ -98,6 +98,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         "gamma": np.nan,
         "alphaR": 0.0,
         "betaR": 0.0,
+        "lumpedMassMatrix": False,
     }
 
     def __init__(self, journal: Journal):
@@ -231,9 +232,12 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                         level=1,
                     )
 
-                    (activeNodesWithPersistentData, activeNodesWithVolatileData, reducedNodeFields, reducedNodeSets) = (
-                        self._assembleActiveDomain(activeCells, model)
-                    )
+                    (
+                        activeNodesWithPersistentData,
+                        activeNodesWithVolatileData,
+                        reducedNodeFields,
+                        reducedNodeSets,
+                    ) = self._assembleActiveDomain(activeCells, model)
 
                     theDofManager = self._createDofManager(
                         reducedNodeFields.values(),
@@ -253,6 +257,8 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     U = theDofManager.constructDofVector()
                     V = theDofManager.constructDofVector()
                     A = theDofManager.constructDofVector()
+
+                    V[:] = A[:] = 0.0
 
                     # TODO 3
                     # if len(activeNodesWithPersistentData) > 0:
@@ -353,7 +359,9 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     model.advanceToTime(timeStep.totalTime)
 
                     self.journal.message(
-                        "Converged in {:} iteration(s)".format(iterationHistory["iterations"]), self.identification, 1
+                        "Converged in {:} iteration(s)".format(iterationHistory["iterations"]),
+                        self.identification,
+                        1,
                     )
 
                     self._finalizeIncrementOutput(fieldOutputController, outputManagers)
@@ -473,6 +481,9 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         alphaR = self.solverOptions.get("alphaR")
         betaR = self.solverOptions.get("betaR")
 
+        # lumped mass matrix
+        useLumpedMassMatrix = self.solverOptions.get("lumpedMassMatrix", False)
+
         # initialize intermediate and end entities for generalized alpha method
         dU_int = theDofManager.constructDofVector()
         A_int = theDofManager.constructDofVector()
@@ -482,7 +493,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         V_np = theDofManager.constructDofVector()
 
         # intialize lumped mass matrix
-        M = theDofManager.constructDofVector()
+        M = theDofManager.constructDofVector() if useLumpedMassMatrix else theDofManager.constructVIJSystemMatrix()
 
         # initialize time step for intermediate step
         timeStep_int = TimeStep(
@@ -493,6 +504,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
             timeStep.stepTime,
             timeStep.totalTime - (1 - alphaF) * timeStep.timeIncrement,
         )
+
         dT = timeStep.timeIncrement
 
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
@@ -519,55 +531,114 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
             # inetrmediate displacement increment
             dU_int[:] = (1 - alphaF) * U_np + alphaF * Un - Un
 
-            PInt[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
+            PInt[:] = K_VIJ[:] = M[:] = F[:] = PExt[:] = 0.0
 
             self._prepareMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
             self._interpolateFieldsToMaterialPoints(activeCells, dU_int)
             self._interpolateFieldsToMaterialPoints(cellElements, dU_int)
             self._computeMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
 
-            self._computeCellsWithInertia(
-                activeCells,
-                dU_int,
-                PInt,
-                F,
-                M,
-                K_VIJ,
-                timeStep_int.totalTime,
-                timeStep_int.timeIncrement,
-                theDofManager,
-            )
+            if useLumpedMassMatrix:
+                self._computeCellsWithLumpedInertia(
+                    activeCells,
+                    dU_int,
+                    PInt,
+                    F,
+                    M,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
 
-            self._computeElementsWithInertia(
-                elements,
-                dU_int,
-                Un,
-                PInt,
-                F,
-                M,
-                K_VIJ,
-                timeStep_int.totalTime,
-                timeStep_int.timeIncrement,
-                theDofManager,
-            )
+                self._computeElementsWithLumpedInertia(
+                    elements,
+                    dU_int,
+                    Un,
+                    PInt,
+                    F,
+                    M,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
 
-            self._computeCellElements(
-                cellElements,
-                dU_int,
-                Un,
-                PInt,
-                F,
-                K_VIJ,
-                timeStep_int.totalTime,
-                timeStep_int.timeIncrement,
-                theDofManager,
-            )
+                self._computeCellElements(
+                    cellElements,
+                    dU_int,
+                    Un,
+                    PInt,
+                    F,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
 
-            self._computeParticles(
-                particles, dU_int, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
-            )
+                self._computeParticlesWithLumpedInertia(
+                    particles,
+                    dU_int,
+                    PInt,
+                    F,
+                    M,
+                    K_VIJ,
+                    timeStep.totalTime,
+                    timeStep.timeIncrement,
+                    theDofManager,
+                )
 
-            self._computeConstraints(constraints, dU_int, PInt, K_VIJ, timeStep)
+            else:
+                self._computeCellsWithConsistentInertia(
+                    activeCells,
+                    dU_int,
+                    PInt,
+                    F,
+                    M,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
+
+                self._computeElementsWithConsistentInertia(
+                    elements,
+                    dU_int,
+                    Un,
+                    PInt,
+                    F,
+                    M,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
+
+                self._computeCellElements(
+                    cellElements,
+                    dU_int,
+                    Un,
+                    PInt,
+                    F,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
+
+                self._computeParticlesWithConsistentInertia(
+                    particles,
+                    dU_int,
+                    PInt,
+                    F,
+                    M,
+                    K_VIJ,
+                    timeStep_int.totalTime,
+                    timeStep_int.timeIncrement,
+                    theDofManager,
+                )
+
+            self._computeConstraints(constraints, dU_int, PInt, K_VIJ, timeStep_int)
 
             PExt, K = self._computeBodyLoads(bodyLoads, PExt, K_VIJ, timeStep_int, theDofManager, activeCells)
             PExt, K = self._computeCellDistributedLoads(distributedLoads, PExt, K_VIJ, timeStep_int, theDofManager)
@@ -579,19 +650,31 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
             Rhs[:] = -PInt
             Rhs -= PExt
 
-            K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
-            Rhs[:] = Rhs - M.T * (A_int + alphaR * V_int) - K_CSR * V_int * betaR
+            if useLumpedMassMatrix:
+                K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
+                Rhs[:] = Rhs - M.T * (A_int + alphaR * V_int) - K_CSR * V_int * betaR
 
-            # check for zero increment
-            if dT != 0:
-                K_CSR *= 1 - alphaF
-                K_CSR += (1 - alphaF) * (1 + gamma) / beta / dT * K_CSR * betaR
-                K_CSR = self.addVectorToCSRDiagonal(
-                    K_CSR,
-                    (1 - alphaM) * (1.0 / beta / dT / dT + gamma / beta / dT * alphaR) * M,
-                )
+                # check for zero increment
+                if dT != 0:
+                    K_CSR *= 1 - alphaF
+                    K_CSR += (1 - alphaF) * (1 + gamma) / beta / dT * K_CSR * betaR
+                    K_CSR = self.addVectorToCSRDiagonal(
+                        K_CSR,
+                        (1 - alphaM) * (1.0 / beta / dT / dT + gamma / beta / dT * alphaR) * M,
+                    )
 
-            K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
+                K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
+            else:
+                K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
+                M_CSR = self._VIJtoCSR(M, csrGenerator)
+
+                Rhs[:] = Rhs - M_CSR * (A_int + alphaR * V_int) - K_CSR * V_int * betaR
+
+                # check for zero increment
+                if dT != 0:
+                    K_CSR *= 1 - alphaF
+                    K_CSR += (1 - alphaF) * (1 + gamma) / beta / dT * K_CSR * betaR
+                    K_CSR += (1 - alphaM) * (1.0 / beta / dT / dT + gamma / beta / dT * alphaR) * M_CSR
 
             if iterationCounter == 0 and dirichlets:
                 Rhs = self._applyDirichlet(timeStep, Rhs, dirichlets, reducedNodeSets, theDofManager)
@@ -607,53 +690,121 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
 
                 if converged:
                     # evaluate cells an particle states
-                    PInt[:] = K_VIJ[:] = F[:] = PExt[:] = 0.0
+                    PInt[:] = K_VIJ[:] = M[:] = F[:] = PExt[:] = 0.0
 
-                    self._prepareMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
+                    self._prepareMaterialPoints(
+                        materialPoints,
+                        timeStep_int.totalTime,
+                        timeStep_int.timeIncrement,
+                    )
                     self._interpolateFieldsToMaterialPoints(activeCells, dU_int)
                     self._interpolateFieldsToMaterialPoints(cellElements, dU_int)
-                    self._computeMaterialPoints(materialPoints, timeStep_int.totalTime, timeStep_int.timeIncrement)
-
-                    self._computeCellsWithInertia(
-                        activeCells,
-                        dU_int,
-                        PInt,
-                        F,
-                        M,
-                        K_VIJ,
-                        timeStep.totalTime,
-                        timeStep.timeIncrement,
-                        theDofManager,
+                    self._computeMaterialPoints(
+                        materialPoints,
+                        timeStep_int.totalTime,
+                        timeStep_int.timeIncrement,
                     )
 
-                    self._computeElementsWithInertia(
-                        elements,
-                        dU_int,
-                        Un,
-                        PInt,
-                        F,
-                        M,
-                        K_VIJ,
-                        timeStep.totalTime,
-                        timeStep.timeIncrement,
-                        theDofManager,
-                    )
+                    if useLumpedMassMatrix:
+                        self._computeCellsWithLumpedInertia(
+                            activeCells,
+                            dU,
+                            PInt,
+                            F,
+                            M,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
 
-                    self._computeCellElements(
-                        cellElements,
-                        dU_int,
-                        Un,
-                        PInt,
-                        F,
-                        K_VIJ,
-                        timeStep.totalTime,
-                        timeStep.timeIncrement,
-                        theDofManager,
-                    )
+                        self._computeElementsWithLumpedInertia(
+                            elements,
+                            dU,
+                            Un,
+                            PInt,
+                            F,
+                            M,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
 
-                    self._computeParticles(
-                        particles, dU_int, PInt, F, K_VIJ, timeStep.totalTime, timeStep.timeIncrement, theDofManager
-                    )
+                        self._computeCellElements(
+                            cellElements,
+                            dU,
+                            Un,
+                            PInt,
+                            F,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
+
+                        self._computeParticlesWithLumpedInertia(
+                            particles,
+                            dU,
+                            PInt,
+                            F,
+                            M,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
+
+                    else:
+                        self._computeCellsWithConsistentInertia(
+                            activeCells,
+                            dU,
+                            PInt,
+                            F,
+                            M,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
+
+                        self._computeElementsWithConsistentInertia(
+                            elements,
+                            dU,
+                            Un,
+                            PInt,
+                            F,
+                            M,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
+
+                        self._computeCellElements(
+                            cellElements,
+                            dU,
+                            Un,
+                            PInt,
+                            F,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
+
+                        self._computeParticlesWithConsistentInertia(
+                            particles,
+                            dU,
+                            PInt,
+                            F,
+                            M,
+                            K_VIJ,
+                            timeStep.totalTime,
+                            timeStep.timeIncrement,
+                            theDofManager,
+                        )
+
                     break
 
                 if self._checkDivergingSolution(incrementResidualHistory, nAllowedResidualGrowths):
@@ -670,7 +821,10 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
             dU += ddU
             iterationCounter += 1
 
-        iterationHistory = {"iterations": iterationCounter, "incrementResidualHistory": incrementResidualHistory}
+        iterationHistory = {
+            "iterations": iterationCounter,
+            "incrementResidualHistory": incrementResidualHistory,
+        }
 
         return dU, V_np, A_np, PInt, iterationHistory, newtonCache
 
