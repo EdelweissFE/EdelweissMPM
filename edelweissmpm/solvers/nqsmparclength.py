@@ -77,8 +77,10 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
         vciManagers: list = [],
-        restartInterval: int = 0,
-        fallBackToLastRestart: bool = False,
+        restartWriteInterval: int = 0,
+        allowFallBackToRestart: bool = False,
+        numberOfRestartsToStore=3,
+        restartBaseName: str = "restart",
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -110,6 +112,14 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             The list of OutputManagerBase instances.
         userIterationOptions
             The user specified iteration options.
+        vciManagers
+            The list of VCIManagerBase instances.
+        restartInterval
+            The interval to write restart files.
+        fallBackToLastRestart
+            The flag to allow falling back to the last restart.
+        restartBaseName
+            The base name for the restart.
 
         Returns
         -------
@@ -138,8 +148,10 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
             outputManagers=outputManagers,
             userIterationOptions=userIterationOptions,
             vciManagers=vciManagers,
-            restartInterval=restartInterval,
-            fallBackToLastRestart=fallBackToLastRestart,
+            restartWriteInterval=restartWriteInterval,
+            allowFallBackToRestart=allowFallBackToRestart,
+            numberOfRestartsToStore=numberOfRestartsToStore,
+            restartBaseName=restartBaseName,
         )
 
     @performancetiming.timeit("newton iteration")

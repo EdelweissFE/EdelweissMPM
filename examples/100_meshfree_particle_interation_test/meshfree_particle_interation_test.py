@@ -49,7 +49,7 @@ def run_sim():
 
     # create 4 kernel functions
 
-    supportRadii = [5.0, 5.0, 5.0, 5.0]
+    supportRadii = [2.0, 2.0, 2.0, 2.0]
 
     # we set all node coordinates to zero. In principle, we could set them to any value here,
     # but we will move the kernel functions later on to different positions to demonsrate the moving of kernel functions.
@@ -73,7 +73,7 @@ def run_sim():
         MarmotMeshfreeApproximationWrapper,
     )
 
-    theApproximation = MarmotMeshfreeApproximationWrapper("ReproducingKernel", dimension, completenessOrder=1)
+    theApproximation = MarmotMeshfreeApproximationWrapper("ReproducingKernel", dimension, completenessOrder=0)
 
     # We need a dummy material for the mateiral point
     theMaterial = {

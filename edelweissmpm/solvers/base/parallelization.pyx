@@ -185,8 +185,6 @@ def computeMarmotCellsInParallel(
                                                     dT)
 
         #successful activeCells evaluation: condense oversize Pe buffer -> P
-        P_mView[:] = 0.0
-        F_mView[:] = 0.0
         for i in range(nActiveCells):
             cellIdxInVIJ =    cellIndicesInVIJ[i]
             cellIdxInPe =     cellIndexInPe[i]
@@ -296,8 +294,6 @@ def computeMarmotParticlesInParallel(
                                                     dT)
 
         #successful particles evaluation: condense oversize Pe buffer -> P
-        P_mView[:] = 0.0
-        F_mView[:] = 0.0
         for i in range(nActiveParticles):
             particleIdxInVIJ =    particleIndicesInVIJ[i]
             particleIdxInPe =     particleIndexInPe[i]
