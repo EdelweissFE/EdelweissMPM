@@ -215,6 +215,7 @@ cdef class MarmotParticleWrapper:
 
     def acceptStateAndPosition(self,):
         self._marmotMaterialPoint.acceptStateAndPosition()
+        self._marmotParticle.acceptStateAndPosition()
         self._stateVars[:] = self._stateVarsTemp
 
     def initializeYourself(self):

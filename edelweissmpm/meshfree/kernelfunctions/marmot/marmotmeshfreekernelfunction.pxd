@@ -46,9 +46,14 @@ cdef extern from "Marmot/MarmotMeshfreeKernelFunction.h" namespace "Marmot::Mesh
 
         void moveTo ( const double *coordinates )
 
-cdef extern from "Marmot/MarmotMeshfreeKernelFunctionBSplineBoxed.h" namespace "Marmot::Meshfree":
-    cdef cppclass MarmotMeshfreeKernelFunctionBSplineBoxed nogil:
-        MarmotMeshfreeKernelFunctionBSplineBoxed(double *coord, int dim, double supportRadius, int continuityOrder)
+cdef extern from "Marmot/MarmotMeshfreeKernelFunctionBSpline2ndOrderBoxed.h" namespace "Marmot::Meshfree":
+    cdef cppclass MarmotMeshfreeKernelFunctionBSpline2ndOrderBoxed nogil:
+        MarmotMeshfreeKernelFunctionBSpline2ndOrderBoxed(double *coord, int dim, double supportRadius)
+
+cdef extern from "Marmot/MarmotMeshfreeKernelFunctionBSpline3rdOrderBoxed.h" namespace "Marmot::Meshfree":
+    cdef cppclass MarmotMeshfreeKernelFunctionBSpline3rdOrderBoxed nogil:
+        MarmotMeshfreeKernelFunctionBSpline3rdOrderBoxed(double *coord, int dim, double supportRadius)
+
 
 cdef class MarmotMeshfreeKernelFunctionWrapper:
 

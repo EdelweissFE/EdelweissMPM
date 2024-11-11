@@ -1496,7 +1496,9 @@ class NonlinearQuasistaticSolver:
         model.readRestart(theRestartFile)
         timeStepper.readRestart(theRestartFile)
 
-    def _tryFallbackWithRestartFiles(self, writtenRestarts, timeStepper, model, iterationOptions):
+    def _tryFallbackWithRestartFiles(
+        self, writtenRestarts: RestartHistoryManager, timeStepper, model: MPMModel, iterationOptions: dict
+    ):
         """Fallback to a previous converged increment using the written restart files.
 
         Parameters
