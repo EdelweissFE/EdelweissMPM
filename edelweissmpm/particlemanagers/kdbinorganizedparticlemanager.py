@@ -209,9 +209,12 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
                 if sf.isCoordinateInCurrentSupport(coordinate)
             }
 
-            if hasChanged or kernelFunctions != set(p.kernelFunctions):
+            # we need to sort the kernel functions using their node number to ensure that the order is always the same
+            kernelFunctions = list(sorted(kernelFunctions, key=lambda x: x.node.label))
+
+            if hasChanged or kernelFunctions != p.kernelFunctions:
                 hasChanged = True
-            p.assignKernelFunctions(list(kernelFunctions))
+            p.assignKernelFunctions(kernelFunctions)
 
         return hasChanged
 
