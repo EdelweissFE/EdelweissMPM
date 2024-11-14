@@ -51,6 +51,10 @@ cdef extern from "Marmot/MarmotMeshfreeReproducingKernelApproximation.h" namespa
     cdef cppclass MarmotMeshfreeReproducingKernelApproximation nogil:
         MarmotMeshfreeReproducingKernelApproximation(int dim, int completenessOrder)
 
+cdef extern from "Marmot/MarmotMeshfreeReproducingKernelApproximationImplicit.h" namespace "Marmot::Meshfree":
+    cdef cppclass MarmotMeshfreeReproducingKernelApproximationImplicit nogil:
+        MarmotMeshfreeReproducingKernelApproximationImplicit(int dim, int completenessOrder)
+
 
 cdef class MarmotMeshfreeApproximationWrapper:
 
