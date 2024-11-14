@@ -144,12 +144,12 @@ def run_sim():
         theModel.particleSets["all"],
         "displacement",
     )
-    # fieldOutputController.addPerParticleFieldOutput(
-    #     "vertex displacements",
-    #     theModel.particleSets["all"],
-    #     "vertex displacements",
-    #     f_x=lambda x: np.pad(np.reshape(x, (-1, 2)), ((0, 0), (0, 1)), mode="constant", constant_values=0),
-    # )
+    fieldOutputController.addPerParticleFieldOutput(
+        "vertex displacements",
+        theModel.particleSets["all"],
+        "vertex displacements",
+        f_x=lambda x: np.pad(np.reshape(x, (-1, 2)), ((0, 0), (0, 1)), mode="constant", constant_values=0),
+    )
     fieldOutputController.addPerParticleFieldOutput(
         "deformation gradient",
         theModel.particleSets["all"],
@@ -160,10 +160,10 @@ def run_sim():
 
     ensightOutput = EnsightOutputManager("ensight", theModel, fieldOutputController, theJournal, None)
     ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perElement")
-    # ensightOutput.updateDefinition(
-    #     fieldOutput=fieldOutputController.fieldOutputs["vertex displacements"],
-    #     create="perNode",
-    # )
+    ensightOutput.updateDefinition(
+        fieldOutput=fieldOutputController.fieldOutputs["vertex displacements"],
+        create="perNode",
+    )
     ensightOutput.updateDefinition(
         fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perElement"
     )
@@ -177,7 +177,7 @@ def run_sim():
         dirichletLeft,
     ]
 
-    incSize = 1e0
+    incSize = 1e-0
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 20, theJournal)
 
     # nonlinearSolver = NQSParallelForMarmot(theJournal)
