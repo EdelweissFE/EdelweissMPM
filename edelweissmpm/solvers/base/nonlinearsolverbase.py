@@ -26,6 +26,7 @@
 #  ---------------------------------------------------------------------
 
 from abc import abstractmethod
+from collections import deque
 
 import edelweissfe.utils.performancetiming as performancetiming
 import h5py
@@ -1393,3 +1394,26 @@ class NonlinearImplicitSolverBase:
                 continue
 
             break
+
+
+class RestartHistoryManager(deque):
+
+    def __init__(self, restartBaseName, maxsize):
+        super().__init__(maxlen=maxsize)
+        self._restartBaseName = restartBaseName
+        self._maxsize = maxsize
+        self._currentCount = 0
+
+    def append(self, item):
+        super().append(item)
+        self._currentCount = (self._currentCount + 1) % self._maxsize
+
+    def pop(self):
+        self._currentCount = self._currentCount - 1 if self._currentCount > 0 else self._maxsize - 1
+        return super().pop()
+
+    def getNextRestartFileName(
+        self,
+    ):
+        theFileName = "{:}_{:}.h5".format(self._restartBaseName, self._currentCount)
+        return theFileName

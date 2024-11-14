@@ -25,7 +25,6 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
-from collections import deque
 
 import edelweissfe.utils.performancetiming as performancetiming
 from edelweissfe.constraints.base.constraintbase import ConstraintBase
@@ -48,33 +47,13 @@ from prettytable import PrettyTable
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
 from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
-from edelweissmpm.solvers.base.nonlinearsolverbase import NonlinearImplicitSolverBase
+from edelweissmpm.solvers.base.nonlinearsolverbase import (
+    NonlinearImplicitSolverBase,
+    RestartHistoryManager,
+)
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
-
-
-class RestartHistoryManager(deque):
-
-    def __init__(self, restartBaseName, maxsize):
-        super().__init__(maxlen=maxsize)
-        self._restartBaseName = restartBaseName
-        self._maxsize = maxsize
-        self._currentCount = 0
-
-    def append(self, item):
-        super().append(item)
-        self._currentCount = (self._currentCount + 1) % self._maxsize
-
-    def pop(self):
-        self._currentCount = self._currentCount - 1 if self._currentCount > 0 else self._maxsize - 1
-        return super().pop()
-
-    def getNextRestartFileName(
-        self,
-    ):
-        theFileName = "{:}_{:}.h5".format(self._restartBaseName, self._currentCount)
-        return theFileName
 
 
 class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
@@ -348,8 +327,6 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 else:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
-
-                    timeStepper.acceptPreviousTimeStep()
 
                     U += dU
 

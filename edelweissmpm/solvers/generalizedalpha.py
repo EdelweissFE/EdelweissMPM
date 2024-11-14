@@ -52,7 +52,10 @@ from prettytable import PrettyTable
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
 from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
-from edelweissmpm.solvers.base.nonlinearsolverbase import NonlinearImplicitSolverBase
+from edelweissmpm.solvers.base.nonlinearsolverbase import (
+    NonlinearImplicitSolverBase,
+    RestartHistoryManager,
+)
 from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedLoadBase
 from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
@@ -122,6 +125,10 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         outputManagers: list[OutputManagerBase] = [],
         userIterationOptions: dict = {},
         vciManagers: list = [],
+        restartWriteInterval: int = 0,
+        allowFallBackToRestart: bool = False,
+        numberOfRestartsToStore=3,
+        restartBaseName: str = "restart",
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -182,7 +189,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         newtonCache = None
         theDofManager = None
 
-        possibleReverts = 1
+        restartHistoryManager = RestartHistoryManager(restartBaseName, numberOfRestartsToStore)
 
         try:
             for timeStep in timeStepper.generateTimeStep():
@@ -261,9 +268,11 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     V[:] = A[:] = 0.0
 
                     # TODO 3
-                    # if len(activeNodesWithPersistentData) > 0:
-                    #     for field in model.nodeFields.values():
-                    #         theDofManager.writeNodeFieldToDofVector(U, field, "U", activeNodesWithPersistentData)
+                    if len(activeNodesWithPersistentData) > 0:
+                        for field in model.nodeFields.values():
+                            theDofManager.writeNodeFieldToDofVector(U, field, "U", activeNodesWithPersistentData)
+                            theDofManager.writeNodeFieldToDofVector(V, field, "V", activeNodesWithPersistentData)
+                            theDofManager.writeNodeFieldToDofVector(A, field, "A", activeNodesWithPersistentData)
 
                     self.journal.message(
                         "resulting equation system has a size of {:}".format(theDofManager.nDof),
@@ -323,17 +332,11 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     try:
                         timeStepper.discardAndChangeIncrement(iterationOptions["failed increment cutback factor"])
                     except ReachedMinIncrementSize:
-                        if possibleReverts >= 2:
 
-                            self.journal.errorMessage("!!!Reverting time step!!!", self.identification)
-
-                            model.goToPreviousTimeStep()
-                            timeStepper.goToPreviousTimeStep()
-
-                            possibleReverts -= 2
-
-                        else:
+                        if not allowFallBackToRestart:
                             raise
+
+                        self._tryFallbackWithRestartFiles(restartHistoryManager, timeStepper, model, iterationOptions)
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
@@ -342,17 +345,14 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
-                    timeStepper.acceptPreviousTimeStep()
-
                     U += dU
-
-                    possibleReverts += 1
-                    possibleReverts = min(2, possibleReverts)
 
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in reducedNodeFields.values():
                         theDofManager.writeDofVectorToNodeField(dU, field, "dU")
                         theDofManager.writeDofVectorToNodeField(U, field, "U")
+                        theDofManager.writeDofVectorToNodeField(U, field, "V")
+                        theDofManager.writeDofVectorToNodeField(U, field, "A")
                         theDofManager.writeDofVectorToNodeField(P, field, "P")
                         model.nodeFields[field.name].copyEntriesFromOther(field)
 
@@ -365,6 +365,13 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     )
 
                     self._finalizeIncrementOutput(fieldOutputController, outputManagers)
+
+                    if restartWriteInterval and timeStep.number % restartWriteInterval == 0:
+                        self.journal.message("Writing restart file", self.identification)
+
+                        restartFileName = restartHistoryManager.getNextRestartFileName()
+                        self._writeRestart(model, timeStepper, restartFileName)
+                        restartHistoryManager.append(restartFileName)
 
         except (ReachedMaxIncrements, ReachedMinIncrementSize):
             self.journal.errorMessage("Incrementation failed", self.identification)
@@ -657,7 +664,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                 # check for zero increment
                 if dT != 0:
                     K_CSR *= 1 - alphaF
-                    K_CSR += (1 - alphaF) * (1 + gamma) / beta / dT * K_CSR * betaR
+                    K_CSR += (1 - alphaF) * (1 - alphaM) * (1 + gamma) / beta / dT * K_CSR * betaR
                     K_CSR = self.addVectorToCSRDiagonal(
                         K_CSR,
                         (1 - alphaM) * (1.0 / beta / dT / dT + gamma / beta / dT * alphaR) * M,
@@ -673,7 +680,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                 # check for zero increment
                 if dT != 0:
                     K_CSR *= 1 - alphaF
-                    K_CSR += (1 - alphaF) * (1 + gamma) / beta / dT * K_CSR * betaR
+                    K_CSR += (1 - alphaM) * (1 + gamma) / beta / dT * K_CSR * betaR
                     K_CSR += (1 - alphaM) * (1.0 / beta / dT / dT + gamma / beta / dT * alphaR) * M_CSR
 
             if iterationCounter == 0 and dirichlets:
@@ -697,12 +704,12 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                         timeStep_int.totalTime,
                         timeStep_int.timeIncrement,
                     )
-                    self._interpolateFieldsToMaterialPoints(activeCells, dU_int)
-                    self._interpolateFieldsToMaterialPoints(cellElements, dU_int)
+                    self._interpolateFieldsToMaterialPoints(activeCells, dU)
+                    self._interpolateFieldsToMaterialPoints(cellElements, dU)
                     self._computeMaterialPoints(
                         materialPoints,
-                        timeStep_int.totalTime,
-                        timeStep_int.timeIncrement,
+                        timeStep.totalTime,
+                        timeStep.timeIncrement,
                     )
 
                     if useLumpedMassMatrix:
