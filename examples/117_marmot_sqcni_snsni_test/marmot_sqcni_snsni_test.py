@@ -83,19 +83,21 @@ def run_sim():
     y0 = -1
     height = 1
     length = 8
-    nX = 8 * 4
-    nY = 1 * 4
-    supportRadius = 0.5
+    nX = 8 * 8
+    nY = 1 * 8
+    supportRadius = 0.2
 
     def theMeshfreeKernelFunctionFactory(node):
-        return MarmotMeshfreeKernelFunctionWrapper(node, "BSplineBoxed", supportRadius=supportRadius, continuityOrder=2)
+        return MarmotMeshfreeKernelFunctionWrapper(node, "BSplineBoxed", supportRadius=supportRadius, continuityOrder=3)
 
     theModel = generateRectangularKernelFunctionGrid(
         theModel, theJournal, theMeshfreeKernelFunctionFactory, x0=x0, y0=y0, h=height, l=length, nX=nX, nY=nY
     )
 
     # let's define the type of approximation: We would like to have a reproducing kernel approximation of completeness order 1
-    theApproximation = MarmotMeshfreeApproximationWrapper("ReproducingKernel", dimension, completenessOrder=1)
+    theApproximation = MarmotMeshfreeApproximationWrapper(
+        "ReproducingKernelImplicitGradient", dimension, completenessOrder=1
+    )
 
     # We need a dummy material for the material point
     theMaterial = {
@@ -105,7 +107,7 @@ def run_sim():
 
     def TheParticleFactory(number, vertexCoordinates, volume):
         return MarmotParticleWrapper(
-            "GradientEnhancedMicropolarSQCNI/PlaneStrain/Quad",
+            "GradientEnhancedMicropolarSQCNIxNSNI/PlaneStrain/Quad",
             number,
             vertexCoordinates,
             volume,
@@ -177,8 +179,8 @@ def run_sim():
         dirichletLeft,
     ]
 
-    incSize = 1e-0
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 20, theJournal)
+    incSize = 1e-1
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1, 50, theJournal)
 
     # nonlinearSolver = NQSParallelForMarmot(theJournal)
     nonlinearSolver = NonlinearQuasistaticSolver(theJournal)
@@ -215,7 +217,7 @@ def run_sim():
         theJournal,
         theModel.particleSets["rectangular_grid_top"],
         "pressure",
-        np.array([-2]),
+        np.array([5.0]),
         surfaceID=3,
     )
 

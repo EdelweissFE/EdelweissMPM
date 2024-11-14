@@ -52,13 +52,14 @@ cdef class MarmotMeshfreeKernelFunctionWrapper:
         self._boundingBoxMax = np.zeros(self._dimension)
 
         if kernelType == "BSplineBoxed":
-            # cdef double supportRadius = kwargs.get("supportRadius", 1.0)
-            # cdef int continuityOrder = kwargs.get("continuityOrder", 2)
 
-            self._marmotMeshfreeKernelFunction = <MarmotMeshfreeKernelFunction*> (new MarmotMeshfreeKernelFunctionBSplineBoxed( &center[0], self._dimension,
-                                                                                              kwargs.get("supportRadius", 1.0),
-                                                                                              kwargs.get("continuityOrder", 2)
-                                                                                              ))
+            continuityOrder = int ( kwargs.get("continuityOrder", 2) )
+            if continuityOrder == 2:
+                self._marmotMeshfreeKernelFunction = <MarmotMeshfreeKernelFunction*> (new MarmotMeshfreeKernelFunctionBSpline2ndOrderBoxed( &center[0], self._dimension, kwargs.get("supportRadius", 1.0),))
+            elif continuityOrder == 3:
+                self._marmotMeshfreeKernelFunction = <MarmotMeshfreeKernelFunction*> (new MarmotMeshfreeKernelFunctionBSpline3rdOrderBoxed( &center[0], self._dimension, kwargs.get("supportRadius", 1.0),))
+            else:
+                raise ValueError("Unknown continuity order {:d}, supported orders are 2 and 3".format(continuityOrder))
         else:
             raise ValueError("Unknown kernel type {:s}, supported types are 'BSplineBoxed'".format(kernelType))
 

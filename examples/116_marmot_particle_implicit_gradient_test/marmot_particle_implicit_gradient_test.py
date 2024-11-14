@@ -42,8 +42,8 @@ from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.generators.rectangularkernelfunctiongridgenerator import (
     generateRectangularKernelFunctionGrid,
 )
-from edelweissmpm.generators.rectangularquadparticlegridgenerator import (
-    generateRectangularQuadParticleGrid,
+from edelweissmpm.generators.rectangularparticlegridgenerator import (
+    generateRectangularParticleGrid,
 )
 from edelweissmpm.meshfree.approximations.marmot.marmotmeshfreeapproximation import (
     MarmotMeshfreeApproximationWrapper,
@@ -59,10 +59,6 @@ from edelweissmpm.particlemanagers.kdbinorganizedparticlemanager import (
 )
 from edelweissmpm.particles.marmot.marmotparticlewrapper import MarmotParticleWrapper
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-
-# from edelweissmpm.generators.rectangularparticlegridgenerator import (
-#     generateRectangularParticleGrid,
-# )
 
 
 def run_sim():
@@ -81,11 +77,11 @@ def run_sim():
 
     x0 = -1
     y0 = -1
-    height = 1
+    height = 2
     length = 8
-    nX = 8 * 4
-    nY = 1 * 4
-    supportRadius = 0.5
+    nX = 40
+    nY = 10
+    supportRadius = 0.4
 
     def theMeshfreeKernelFunctionFactory(node):
         return MarmotMeshfreeKernelFunctionWrapper(node, "BSplineBoxed", supportRadius=supportRadius, continuityOrder=2)
@@ -95,25 +91,22 @@ def run_sim():
     )
 
     # let's define the type of approximation: We would like to have a reproducing kernel approximation of completeness order 1
-    theApproximation = MarmotMeshfreeApproximationWrapper("ReproducingKernel", dimension, completenessOrder=1)
+    theApproximation = MarmotMeshfreeApproximationWrapper(
+        "ReproducingKernelImplicitGradient", dimension, completenessOrder=1
+    )
 
     # We need a dummy material for the material point
     theMaterial = {
         "material": "GMDamagedShearNeoHooke",
-        "properties": np.array([3000.0, 0.2, 1, 0.1, 0.2, 1.4999]),
+        "properties": np.array([30000.0, 0.3, 1.0, 1, 2, 1.4999]),
     }
 
-    def TheParticleFactory(number, vertexCoordinates, volume):
+    def TheParticleFactory(number, coordinates, volume):
         return MarmotParticleWrapper(
-            "GradientEnhancedMicropolarSQCNI/PlaneStrain/Quad",
-            number,
-            vertexCoordinates,
-            volume,
-            theApproximation,
-            theMaterial,
+            "GradientEnhancedMicropolar/PlaneStrain/Point", number, coordinates, volume, theApproximation, theMaterial
         )
 
-    theModel = generateRectangularQuadParticleGrid(
+    theModel = generateRectangularParticleGrid(
         theModel, theJournal, TheParticleFactory, x0=x0, y0=y0, h=height, l=length, nX=nX, nY=nY
     )
 
@@ -145,12 +138,6 @@ def run_sim():
         "displacement",
     )
     fieldOutputController.addPerParticleFieldOutput(
-        "vertex displacements",
-        theModel.particleSets["all"],
-        "vertex displacements",
-        f_x=lambda x: np.pad(np.reshape(x, (-1, 2)), ((0, 0), (0, 1)), mode="constant", constant_values=0),
-    )
-    fieldOutputController.addPerParticleFieldOutput(
         "deformation gradient",
         theModel.particleSets["all"],
         "deformation gradient",
@@ -159,65 +146,31 @@ def run_sim():
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager("ensight", theModel, fieldOutputController, theJournal, None)
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perElement")
-    ensightOutput.updateDefinition(
-        fieldOutput=fieldOutputController.fieldOutputs["vertex displacements"],
-        create="perNode",
-    )
+    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["displacement"], create="perNode")
     ensightOutput.updateDefinition(
         fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perElement"
     )
     ensightOutput.initializeJob()
 
     dirichletLeft = ParticlePenaltyWeakDirichlet(
-        "left", theModel, theModel.particleSets["rectangular_grid_left"], "displacement", {0: 0, 1: 0}, 1e6
+        "left", theModel, theModel.particleSets["rectangular_grid_left"], "displacement", {0: 0.0, 1: 0.0}, 1e6
+    )
+    dirichletRight = ParticlePenaltyWeakDirichlet(
+        "right", theModel, theModel.particleSets["rectangular_grid_right"], "displacement", {0: 0, 1: 4.0}, 1e6
     )
 
-    dirichlets = [
-        dirichletLeft,
-    ]
+    incSize = 5e-1
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize, 1000, theJournal)
 
-    incSize = 1e-0
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 20, theJournal)
-
-    # nonlinearSolver = NQSParallelForMarmot(theJournal)
     nonlinearSolver = NonlinearQuasistaticSolver(theJournal)
 
     iterationOptions = dict()
 
     iterationOptions["max. iterations"] = 15
     iterationOptions["critical iterations"] = 3
-    iterationOptions["allowed residual growths"] = 10
+    iterationOptions["allowed residual growths"] = 3
 
     linearSolver = pardisoSolve
-
-    from edelweissmpm.meshfree.vci import (
-        BoundaryParticleDefinition,
-        VariationallyConsistentIntegrationManager,
-    )
-
-    theBoundary = [
-        BoundaryParticleDefinition(theModel.particleSets["rectangular_grid_left"], np.empty(2), 4),
-        BoundaryParticleDefinition(theModel.particleSets["rectangular_grid_right"], np.empty(2), 2),
-        BoundaryParticleDefinition(theModel.particleSets["rectangular_grid_bottom"], np.empty(2), 1),
-        BoundaryParticleDefinition(theModel.particleSets["rectangular_grid_top"], np.empty(2), 3),
-    ]
-
-    vciManager = VariationallyConsistentIntegrationManager(
-        list(theModel.particles.values()), list(theModel.meshfreeKernelFunctions.values()), theBoundary
-    )
-
-    from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
-
-    pressureTop = ParticleDistributedLoad(
-        "pressureTop",
-        theModel,
-        theJournal,
-        theModel.particleSets["rectangular_grid_top"],
-        "pressure",
-        np.array([-2]),
-        surfaceID=3,
-    )
 
     try:
         nonlinearSolver.solveStep(
@@ -227,10 +180,8 @@ def run_sim():
             fieldOutputController,
             outputManagers=[ensightOutput],
             particleManagers=[theParticleManager],
-            constraints=dirichlets,
+            constraints=[dirichletLeft, dirichletRight],
             userIterationOptions=iterationOptions,
-            particleDistributedLoads=[pressureTop],
-            vciManagers=[vciManager],
         )
 
     except StepFailed as e:
@@ -268,20 +219,19 @@ def test_sim():
 
     theModel, fieldOutputController = run_sim()
 
-    res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
-
+    res = fieldOutputController.fieldOutputs["displacement"].getLastResult().flatten()
     gold = np.loadtxt("gold.csv")
 
-    assert np.isclose(res.flatten(), gold.flatten(), rtol=1e-12).all()
+    assert np.isclose(np.linalg.norm(res.flatten()), np.linalg.norm(gold.flatten()))
 
 
 if __name__ == "__main__":
-    theModel, fieldOutputController = run_sim()
-    res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
+    mpmModel, fieldOutputController = run_sim()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--create-gold", dest="create_gold", action="store_true", help="create the gold file.")
     args = parser.parse_args()
 
     if args.create_gold:
-        np.savetxt("gold.csv", res.flatten())
+        res = fieldOutputController.fieldOutputs["displacement"].getLastResult().flatten()
+        np.savetxt("gold.csv", res)

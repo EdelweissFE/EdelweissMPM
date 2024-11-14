@@ -59,6 +59,29 @@ from edelweissmpm.stepactions.base.mpmdistributedloadbase import MPMDistributedL
 from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
 
 
+class RestartHistoryManager(deque):
+
+    def __init__(self, restartBaseName, maxsize):
+        super().__init__(maxlen=maxsize)
+        self._restartBaseName = restartBaseName
+        self._maxsize = maxsize
+        self._currentCount = 0
+
+    def append(self, item):
+        super().append(item)
+        self._currentCount = (self._currentCount + 1) % self._maxsize
+
+    def pop(self):
+        self._currentCount = self._currentCount - 1 if self._currentCount > 0 else self._maxsize - 1
+        return super().pop()
+
+    def getNextRestartFileName(
+        self,
+    ):
+        theFileName = "{:}_{:}.h5".format(self._restartBaseName, self._currentCount)
+        return theFileName
+
+
 class NonlinearImplicitSolverBase:
     """This is the base class for nonlinear implicit solvers.
 
@@ -1362,7 +1385,9 @@ class NonlinearImplicitSolverBase:
         model.readRestart(theRestartFile)
         timeStepper.readRestart(theRestartFile)
 
-    def _tryFallbackWithRestartFiles(self, writtenRestarts, timeStepper, model, iterationOptions):
+    def _tryFallbackWithRestartFiles(
+        self, writtenRestarts: RestartHistoryManager, timeStepper, model: MPMModel, iterationOptions: dict
+    ):
         """Fallback to a previous converged increment using the written restart files.
 
         Parameters
@@ -1394,26 +1419,3 @@ class NonlinearImplicitSolverBase:
                 continue
 
             break
-
-
-class RestartHistoryManager(deque):
-
-    def __init__(self, restartBaseName, maxsize):
-        super().__init__(maxlen=maxsize)
-        self._restartBaseName = restartBaseName
-        self._maxsize = maxsize
-        self._currentCount = 0
-
-    def append(self, item):
-        super().append(item)
-        self._currentCount = (self._currentCount + 1) % self._maxsize
-
-    def pop(self):
-        self._currentCount = self._currentCount - 1 if self._currentCount > 0 else self._maxsize - 1
-        return super().pop()
-
-    def getNextRestartFileName(
-        self,
-    ):
-        theFileName = "{:}_{:}.h5".format(self._restartBaseName, self._currentCount)
-        return theFileName
