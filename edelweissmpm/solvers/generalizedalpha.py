@@ -513,6 +513,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         )
 
         dT = timeStep.timeIncrement
+        dT_int = timeStep_int.timeIncrement
 
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
 
@@ -697,6 +698,11 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
 
                 if converged:
                     # evaluate cells an particle states
+
+                    # no update of particles and cells needed if dT was dT_int
+                    if dT == dT_int:
+                        break
+
                     PInt[:] = K_VIJ[:] = M[:] = F[:] = PExt[:] = 0.0
 
                     self._prepareMaterialPoints(
