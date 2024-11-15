@@ -73,8 +73,6 @@ cdef class MarmotParticleWrapper:
 
         #TODO: This this crap:
         mpCenter =  np.mean( vertexCoordinates, axis=0).reshape(-1, vertexCoordinates.shape[1])
-        # print("center for mp")
-        # print(mpCenter)
 
         self._mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", particleNumber, mpCenter , volume, material)
 
@@ -105,6 +103,7 @@ cdef class MarmotParticleWrapper:
 
         self._stateVars =            np.zeros(self._nStateVars)
         self._stateVarsTemp =        np.zeros(self._nStateVars)
+        self._stateVarsOld =            np.zeros(self._nStateVars)
 
         self._marmotParticle.assignStateVars(&self._stateVarsTemp[0], self._nStateVars)
 
@@ -158,37 +157,43 @@ cdef class MarmotParticleWrapper:
         return None
 
     cpdef void computePhysicsKernels(self,
-                         double[::1] dUc,
-                         double[::1] Pc,
-                         double[::1] Kc,
-                         double timeNew,
-                         double dTime, ) nogil:
+                                     double[::1] dUc,
+                                     double[::1] Pc,
+                                     double[::1] Kc,
+                                     double timeNew,
+                                     double dTime, ) nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
         self._initializeStateVarsTemp()
         self._marmotParticle.computePhysicsKernels(&dUc[0], &Pc[0], &Kc[0], timeNew, dTime)
 
+    cpdef void computeLumpedInertia( self, double[::1] M ) nogil:
+        self._marmotParticle.computeLumpedInertia(&M[0])
+
+    cpdef void computeConsistentInertia( self, double[::1] M ) nogil:
+        self._marmotParticle.computeConsistentInertia(&M[0])
+
     cpdef void _initializeStateVarsTemp(self, ) nogil:
         self._stateVarsTemp[:] = self._stateVars
 
     def computeBodyLoad(self,
-                         str loadType,
-                         double[::1] load,
-                         double[::1] Pc,
-                         double[::1] Kc,
-                         double timeNew,
-                         double dTime):
+                        str loadType,
+                        double[::1] load,
+                        double[::1] Pc,
+                        double[::1] Kc,
+                        double timeNew,
+                        double dTime):
 
         self._marmotParticle.computeBodyLoad( self._supportedBodyLoads[loadType.upper()], &load[0], &Pc[0], &Kc[0], timeNew, dTime)
 
     def computeDistributedLoad(self,
-                         str loadType,
-                         int surfaceID,
-                         double[::1] load,
-                         double[::1] Pc,
-                         double[::1] Kc,
-                         double timeNew,
-                         double dTime):
+                               str loadType,
+                               int surfaceID,
+                               double[::1] load,
+                               double[::1] Pc,
+                               double[::1] Kc,
+                               double timeNew,
+                               double dTime):
 
         self._marmotParticle.computeDistributedLoad( self._supportedDistributedLoads[loadType.upper()], surfaceID, &load[0], &Pc[0], &Kc[0], timeNew, dTime)
 
@@ -214,6 +219,7 @@ cdef class MarmotParticleWrapper:
         self._fields = [ self._baseFields for n in self._nodes ]
 
     def acceptStateAndPosition(self,):
+        self._marmotMaterialPoint.acceptStateAndPosition()
         self._marmotParticle.acceptStateAndPosition()
         self._stateVars[:] = self._stateVarsTemp
 
@@ -221,6 +227,10 @@ cdef class MarmotParticleWrapper:
         self._stateVarsTemp[:] = self._stateVars
         self._marmotParticle.initializeYourself()
         self.acceptStateAndPosition()
+
+    def revertToPreviousState(self):
+        self._stateVars[:] = self._stateVarsOld
+        self._stateVarsTemp[:] = self._stateVarsOld
 
     def getResultArray(self, result:str, getPersistentView:bool=True):
         """Get the array of a result, possibly as a persistent view which is continiously

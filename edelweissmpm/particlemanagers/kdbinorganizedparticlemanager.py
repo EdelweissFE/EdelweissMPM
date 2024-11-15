@@ -214,6 +214,7 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
 
             if hasChanged or kernelFunctions != p.kernelFunctions:
                 hasChanged = True
+
             p.assignKernelFunctions(kernelFunctions)
 
         return hasChanged

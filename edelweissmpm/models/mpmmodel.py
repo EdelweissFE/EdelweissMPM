@@ -211,7 +211,16 @@ class MPMModel(FEModel):
         for p in self.particles.values():
             p.acceptStateAndPosition()
 
+        self.previousTime = self.time
+
         return super().advanceToTime(time)
+
+    def goToPreviousTimeStep(self):
+
+        for p in self.particles.values():
+            p.revertToPreviousState()
+
+        self.time = self.previousTime
 
     def _createNodeFieldsFromNodes(self, nodes: list, nodeSets: list) -> dict[str, MPMNodeField]:
         """Bundle nodal FieldVariables together in contiguous NodeFields.

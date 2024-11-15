@@ -62,7 +62,7 @@ def MarmotExtension(pyxpath, *args, **kwargs):
         sources=[
             pyxpath,
         ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        include_dirs=[join(marmot_dir, "include"), join(marmot_dir, "include", "eigen3"), numpy.get_include()],
         libraries=["Marmot"],
         library_dirs=[join(marmot_dir, "lib")],
         runtime_library_dirs=[join(marmot_dir, "lib")],
@@ -116,9 +116,9 @@ extensions += [
     Extension(
         "*",
         sources=[
-            "edelweissmpm/solvers/nqsmarmotparallel.pyx",
+            "edelweissmpm/solvers/base/parallelization.pyx",
         ],
-        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        include_dirs=[join(marmot_dir, "include"), join(marmot_dir, "include", "eigen3"), numpy.get_include()],
         language="c++",
         extra_compile_args=[
             "-fopenmp",
