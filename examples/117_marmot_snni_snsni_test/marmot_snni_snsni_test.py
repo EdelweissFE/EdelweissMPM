@@ -107,7 +107,7 @@ def run_sim():
 
     def TheParticleFactory(number, vertexCoordinates, volume):
         return MarmotParticleWrapper(
-            "GradientEnhancedMicropolarSQCNIxNSNI/PlaneStrain/Quad",
+            "GradientEnhancedMicropolarSNNIxNSNI/PlaneStrain/Quad",
             number,
             vertexCoordinates,
             volume,

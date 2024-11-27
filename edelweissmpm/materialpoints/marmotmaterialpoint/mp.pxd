@@ -45,65 +45,65 @@ cdef extern from "Marmot/MarmotUtils.h":
 cdef extern from "Marmot/MarmotElementProperty.h":
     cdef cppclass MarmotElementProperty nogil:
         pass
-    
+
     cdef cppclass MarmotMaterialSection(MarmotElementProperty) nogil:
         MarmotMaterialSection(int materialCode, const double* materialProperties, int nMaterialProperties)
-        
+
 cdef extern from "Marmot/MarmotMPMLibrary.h" namespace "MarmotLibrary" nogil:
-    
+
     cdef cppclass MarmotMaterialPointFactory:
         @staticmethod
-        MarmotMaterialPoint* createMaterialPoint(const string& materialPointName, 
+        MarmotMaterialPoint* createMaterialPoint(const string& materialPointName,
                                                  int materialPointNumber,
                                                  const double* vertexCoordinates,
                                                  int sizeVertexCoordinates,
                                                  double volume
                                                  ) except +ValueError
 
-        
+
 cdef extern from "Marmot/MarmotMaterialPoint.h":
     cdef cppclass MarmotMaterialPoint nogil:
 
-        int getNumberOfRequiredStateVars() 
+        int getNumberOfRequiredStateVars()
 
-        string getMaterialPointShape() 
+        string getMaterialPointShape()
 
-        void assignStateVars( double* stateVars, int nStateVars ) 
+        void assignStateVars( double* stateVars, int nStateVars )
 
         void assignMaterial( const MarmotMaterialSection& property ) except +
 
-        void initializeYourself() 
+        void initializeYourself()
 
-        void prepareYourself(double timeNew, double dT) 
+        void prepareYourself(double timeNew, double dT)
 
         void computeYourself(double timeNew, double dT) except +
 
         void acceptStateAndPosition()
 
-        StateView getStateView( const string& stateName ) 
+        StateView getStateView( const string& stateName )
 
         int getDimension()
 
-        int getNumberOfVertices() 
+        int getNumberOfVertices()
 
-        void getVertexCoordinates(double* ) 
+        void getVertexCoordinates(double* )
 
-        void getCenterCoordinates(double* ) 
+        void getCenterCoordinates(double* )
 
-        double getVolume() 
-        
+        double getVolume()
+
 cdef class MarmotMaterialPointWrapper:
-    
+
     cdef MarmotMaterialPoint* _marmotMaterialPoint
-    cdef int _number, 
-    cdef str _materialPointType, 
+    cdef int _number,
+    cdef str _materialPointType,
     cdef str _ensightType
     cdef int _nVertices
-    
+
     cdef public double[::1] _stateVars
-    cdef public double[::1] _stateVarsTemp  
+    cdef public double[::1] _stateVarsTemp
     cdef int _nStateVars
-    cdef int _nDim 
+    cdef int _nDim
 
     cdef public list _assignedCells
 
@@ -111,7 +111,7 @@ cdef class MarmotMaterialPointWrapper:
 
     cdef public np.ndarray _centerCoordinates
     cdef public np.ndarray _vertexCoordinates
-    
+
     cdef double[::1] _centerCoordinatesView
     cdef double[:,::1] _vertexCoordinatesView
 
@@ -119,8 +119,8 @@ cdef class MarmotMaterialPointWrapper:
 
     cpdef void _initializeStateVarsTemp(self, ) nogil
 
-    cpdef void computeYourself(self, 
-                     double timeNew, 
+    cpdef void computeYourself(self,
+                     double timeNew,
                      double dTime, ) except * nogil
 
     cdef double[::1] getStateView(self, string stateName)

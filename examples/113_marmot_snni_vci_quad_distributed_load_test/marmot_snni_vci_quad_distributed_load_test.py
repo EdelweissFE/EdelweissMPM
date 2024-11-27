@@ -88,16 +88,14 @@ def run_sim():
     supportRadius = 0.5
 
     def theMeshfreeKernelFunctionFactory(node):
-        return MarmotMeshfreeKernelFunctionWrapper(node, "BSplineBoxed", supportRadius=supportRadius, continuityOrder=3)
+        return MarmotMeshfreeKernelFunctionWrapper(node, "BSplineBoxed", supportRadius=supportRadius, continuityOrder=2)
 
     theModel = generateRectangularKernelFunctionGrid(
         theModel, theJournal, theMeshfreeKernelFunctionFactory, x0=x0, y0=y0, h=height, l=length, nX=nX, nY=nY
     )
 
     # let's define the type of approximation: We would like to have a reproducing kernel approximation of completeness order 1
-    theApproximation = MarmotMeshfreeApproximationWrapper(
-        "ReproducingKernelImplicitGradient", dimension, completenessOrder=1
-    )
+    theApproximation = MarmotMeshfreeApproximationWrapper("ReproducingKernel", dimension, completenessOrder=1)
 
     # We need a dummy material for the material point
     theMaterial = {
@@ -107,7 +105,7 @@ def run_sim():
 
     def TheParticleFactory(number, vertexCoordinates, volume):
         return MarmotParticleWrapper(
-            "GradientEnhancedMicropolarSQCNIxNSNI/PlaneStrain/Quad",
+            "GradientEnhancedMicropolarSNNI/PlaneStrain/Quad",
             number,
             vertexCoordinates,
             volume,
@@ -179,8 +177,8 @@ def run_sim():
         dirichletLeft,
     ]
 
-    incSize = 2e-1
-    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1, 50, theJournal)
+    incSize = 5e-1
+    adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1e3, 20, theJournal)
 
     # nonlinearSolver = NQSParallelForMarmot(theJournal)
     nonlinearSolver = NonlinearQuasistaticSolver(theJournal)
@@ -217,7 +215,7 @@ def run_sim():
         theJournal,
         theModel.particleSets["rectangular_grid_top"],
         "pressure",
-        np.array([-5.0]),
+        np.array([-2]),
         surfaceID=3,
     )
 
