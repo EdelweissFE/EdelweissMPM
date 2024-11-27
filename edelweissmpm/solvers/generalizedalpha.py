@@ -230,8 +230,9 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
 
                 if connectivityHasChanged or not theDofManager:
                     activeCells = set()
-                    for man in mpmManagers:
-                        activeCells |= man.getActiveCells()
+                    if mpmManagers:
+                        for man in mpmManagers:
+                            activeCells |= man.getActiveCells()
 
                     self.journal.message(
                         "active domain has changed, (re)initializing equation system & clearing cache",
