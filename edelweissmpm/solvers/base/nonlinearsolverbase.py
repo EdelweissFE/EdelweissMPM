@@ -274,22 +274,12 @@ class NonlinearImplicitSolverBase:
             for p in distributedLoad.particles:
                 Pc = np.zeros(p.nDof)
                 Kc = K_VIJ[p]
-                Kc2 = np.zeros_like(Kc)
                 p.computeDistributedLoad(
                     distributedLoad.loadType,
                     surfaceID,
                     loadVector,
                     Pc,
                     Kc,
-                    timeStep.totalTime,
-                    timeStep.timeIncrement,
-                )
-                p.computeDistributedLoad(
-                    distributedLoad.loadType,
-                    surfaceID,
-                    loadVector,
-                    Pc,
-                    Kc2,
                     timeStep.totalTime,
                     timeStep.timeIncrement,
                 )

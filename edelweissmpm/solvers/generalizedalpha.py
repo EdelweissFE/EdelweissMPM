@@ -188,6 +188,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
 
         newtonCache = None
         theDofManager = None
+        A, V, U = None, None, None
 
         restartHistoryManager = RestartHistoryManager(restartBaseName, numberOfRestartsToStore)
 
@@ -262,18 +263,18 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                         particles,
                     )
 
-                    U = theDofManager.constructDofVector()
-                    V = theDofManager.constructDofVector()
-                    A = theDofManager.constructDofVector()
+                    if A is None:
 
-                    V[:] = A[:] = 0.0
+                        U = theDofManager.constructDofVector()
+                        V = theDofManager.constructDofVector()
+                        A = theDofManager.constructDofVector()
+
+                        V[:] = A[:] = 0.0
 
                     # TODO 3
                     if len(activeNodesWithPersistentData) > 0:
                         for field in model.nodeFields.values():
                             theDofManager.writeNodeFieldToDofVector(U, field, "U", activeNodesWithPersistentData)
-                            theDofManager.writeNodeFieldToDofVector(V, field, "V", activeNodesWithPersistentData)
-                            theDofManager.writeNodeFieldToDofVector(A, field, "A", activeNodesWithPersistentData)
 
                     self.journal.message(
                         "resulting equation system has a size of {:}".format(theDofManager.nDof),
@@ -282,6 +283,11 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     )
 
                     newtonCache = None
+
+                if timeStep.number > 0:
+                    for field in model.nodeFields.values():
+                        theDofManager.writeNodeFieldToDofVector(V, field, "V")
+                        theDofManager.writeNodeFieldToDofVector(A, field, "A")
 
                 presentVariableNames = list(theDofManager.idcsOfFieldsInDofVector.keys())
 
@@ -352,10 +358,12 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
                     for field in reducedNodeFields.values():
                         theDofManager.writeDofVectorToNodeField(dU, field, "dU")
                         theDofManager.writeDofVectorToNodeField(U, field, "U")
-                        theDofManager.writeDofVectorToNodeField(U, field, "V")
-                        theDofManager.writeDofVectorToNodeField(U, field, "A")
                         theDofManager.writeDofVectorToNodeField(P, field, "P")
                         model.nodeFields[field.name].copyEntriesFromOther(field)
+
+                    for field in model.nodeFields.values():
+                        theDofManager.writeDofVectorToNodeField(A, field, "A")
+                        theDofManager.writeDofVectorToNodeField(V, field, "V")
 
                     model.advanceToTime(timeStep.totalTime)
 
@@ -496,7 +504,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
         dU_int = theDofManager.constructDofVector()
         A_int = theDofManager.constructDofVector()
         V_int = theDofManager.constructDofVector()
-        U_np = theDofManager.constructDofVector()
+        # U_np = theDofManager.constructDofVector()
         A_np = theDofManager.constructDofVector()
         V_np = theDofManager.constructDofVector()
 
@@ -518,10 +526,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
 
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
 
-        while True:
-
-            U_np[:] = Un
-            U_np += dU
+        while dT > 1e-16:
 
             # update acceleration
             A_np[:] = An
@@ -538,7 +543,7 @@ class NonlinearDynamicSolver(NonlinearImplicitSolverBase):
             V_int[:] = (1 - alphaF) * V_np + alphaF * Vn
 
             # inetrmediate displacement increment
-            dU_int[:] = (1 - alphaF) * U_np + alphaF * Un - Un
+            dU_int[:] = (1 - alphaF) * dU
 
             PInt[:] = K_VIJ[:] = M[:] = F[:] = PExt[:] = 0.0
 
