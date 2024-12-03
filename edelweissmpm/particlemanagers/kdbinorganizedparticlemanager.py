@@ -188,12 +188,11 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
                 "ParticleManager",
             )
             for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
-                partileCoordinates = particle.getCenterCoordinates()
+                particleCoordinates = particle.getCenterCoordinates()
                 randdisp = np.array([np.random.rand() - 0.5, np.random.rand() - 0.5]) * 2e-2
-                # print(randdisp)
-                partileCoordinates += randdisp
+                particleCoordinates += randdisp
 
-                kernelFunction.moveTo(partileCoordinates)
+                kernelFunction.moveTo(particleCoordinates)
 
             self.signalizeKernelFunctionUpdate()
 
