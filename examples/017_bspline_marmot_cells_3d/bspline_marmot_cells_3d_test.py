@@ -72,7 +72,10 @@ def run_sim(logFile=None, order: int = 2):
         order=order,
     )
 
-    gmNeoHooke = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 0.1, 0.2, 1.4999])}
+    gmNeoHooke = {
+        "material": "GMDAMAGEDSHEARNEOHOOKE",
+        "properties": np.array([300.0, 0.3, 1.0, 0.1, 0.2, 1.4999, 1.0]),
+    }
 
     boxmpgenerator.generateModelData(
         mpmModel,

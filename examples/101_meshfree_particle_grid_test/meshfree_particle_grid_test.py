@@ -73,7 +73,7 @@ def run_sim():
     # We need a dummy material for the mateiral point
     theMaterial = {
         "material": "GMDamagedShearNeoHooke",
-        "properties": np.array([30000.0, 0.3, 1, 1, 2, 1.4999]),
+        "properties": np.array([30000.0, 0.3, 1, 1, 2, 1.4999, 1.0]),
     }
     mpCoordinates = np.array([-0.0, 0.0]).reshape(-1, dimension)
     mpVolume = 1.0

@@ -71,7 +71,10 @@ def run_sim():
         cellType="GradientEnhancedMicropolar/BSpline/2",
         order=2,
     )
-    gmNeoHooke = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 0.1, 0.2, 1.4999])}
+    gmNeoHooke = {
+        "material": "GMDAMAGEDSHEARNEOHOOKE",
+        "properties": np.array([300.0, 0.3, 1.0, 0.1, 0.2, 1.4999, 1.0]),
+    }
 
     rectangularmpgenerator.generateModelData(
         mpmModel,

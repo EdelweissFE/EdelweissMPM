@@ -101,7 +101,7 @@ def run_sim():
     # We need a dummy material for the material point
     theMaterial = {
         "material": "GMDamagedShearNeoHooke",
-        "properties": np.array([30000.0, 0.3, 0.0, 1e-15, 2e-15, 1.4999]),
+        "properties": np.array([30000.0, 0.3, 0.0, 1e-15, 2e-15, 1.4999, 1.0]),
     }
 
     def TheParticleFactory(number, coordinates, volume):
