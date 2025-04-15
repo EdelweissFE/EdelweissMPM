@@ -136,6 +136,13 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         void assignShapeFunctionCorrectionTerms(const double* correctionTerms, int vciConstraint)
 
+        void setProperties( const double* properties, int nProperties )
+
+        void setProperty( const string& propertyName, const double* property )
+
+        vector[ string ] getPropertyNames() const
+
+
 
 
 cdef class MarmotParticleWrapper:

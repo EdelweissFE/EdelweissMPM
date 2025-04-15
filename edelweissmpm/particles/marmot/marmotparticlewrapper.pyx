@@ -137,6 +137,24 @@ cdef class MarmotParticleWrapper:
         return self._fields
 
     @property
+    def propertyNames(self) -> list[str]:
+        """Get the list of valid properties for this particle."""
+
+        return self._marmotParticle.getPropertyNames()
+
+    def setProperty(self, str propertyName, value):
+        """Set a property of the particle."""
+
+        cdef double[::1] _value = np.array(value, dtype=np.float64).reshape((1,))
+
+        self._marmotParticle.setProperty(propertyName.encode('utf-8'), &_value[0])
+
+    def setProperties(self, double[::1] properties):
+        """Set a list of properties of the particle."""
+        self._marmotParticle.setProperties(&properties[0], len(properties))
+
+
+    @property
     def nDof(self):
         return self._nBaseDof * self._nAssignedKernelFunctions
 

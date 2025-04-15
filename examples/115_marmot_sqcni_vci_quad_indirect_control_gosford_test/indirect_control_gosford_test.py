@@ -129,7 +129,7 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
                 +11,
                 1.4e3,
                 1,
-                # a1,   a2,     a3,     a4,   softeningModulus,        maxDamage,  nonLocalRadius
+                # a1,   a2,     a3,     a4,   softeningModulus,        maxDamage,  nonLocalRadius, density
                 0.5,
                 0.0,
                 0.5,
@@ -137,6 +137,7 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
                 1.1e-1,
                 0.99,
                 1,
+                1.0,
             ]
         ),
     }

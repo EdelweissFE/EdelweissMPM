@@ -74,7 +74,7 @@ def run_sim():
     center = np.array([50.0 + 1e-3, 1e-3, 1e-3])
     cylinderHeight = 100.0
     cylinderRadius = 50.0
-    gmNeoHookean = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 2, 4, 1.4999])}
+    gmNeoHookean = {"material": "GMDAMAGEDSHEARNEOHOOKE", "properties": np.array([300.0, 0.3, 1.0, 2, 4, 1.4999, 1.0])}
 
     cylindermpgenerator.generateModelData(
         mpmModel,

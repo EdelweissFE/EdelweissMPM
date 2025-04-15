@@ -68,7 +68,7 @@ def run_sim():
 
     gmDamagedShearNeoHooke = {
         "material": "GMDamagedShearNeoHooke",
-        "properties": np.array([30000.0, 0.3, 1, 1, 2, 1.4999]),
+        "properties": np.array([30000.0, 0.3, 1, 1, 2, 1.4999, 1.0]),
     }
 
     rectangularmpgenerator.generateModelData(

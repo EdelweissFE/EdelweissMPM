@@ -68,6 +68,34 @@ class BaseParticle(BaseNodeCouplingEntity):
 
     @property
     @abstractmethod
+    def propertyNames(self) -> list[str]:
+        """Defines which properties are valid for the particle."""
+
+    @abstractmethod
+    def setProperty(self, propertyName: str, propertyValue: np.ndarray):
+        """Set a single property of the particle.
+        Parameters
+        ----------
+        propertyName
+            The name of the property to be set.
+        propertyValue
+            The value of the property to be set.
+        """
+
+    @abstractmethod
+    def setProperties(self, properties: np.ndarray):
+        """Set all properties of the particle.
+        The order of the properties is defined by the order of the
+        :attr:`propertyNames` property.
+
+        Parameters
+        ----------
+        properties
+            The properties to be set.
+        """
+
+    @property
+    @abstractmethod
     def kernelFunctions(self) -> list[BaseMeshfreeKernelFunction]:
         """The kernel functions assigned to the particle."""
 
@@ -126,18 +154,6 @@ class BaseParticle(BaseNodeCouplingEntity):
         -------
         np.ndarray
             The result.
-        """
-
-    @abstractmethod
-    def setProperties(self, propertyName: str, elementProperties: np.ndarray):
-        """Assign a set of properties to the element.
-
-        Parameters
-        ----------
-        propertyName
-            The name of the property to be set.
-        elementProperties
-            A numpy array containing the element properties.
         """
 
     @abstractmethod
