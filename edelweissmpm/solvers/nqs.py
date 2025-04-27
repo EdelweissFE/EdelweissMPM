@@ -216,6 +216,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                         self.identification,
                         level=1,
                     )
+                    self._prepareParticles(particles, timeStep.totalTime, timeStep.timeIncrement)
                     connectivityHasChanged |= self._updateConnectivity(particleManagers)
 
                 for c in constraints:

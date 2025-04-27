@@ -752,6 +752,22 @@ class NonlinearImplicitSolverBase:
         for mp in materialPoints:
             mp.prepareYourself(time, dT)
 
+    @performancetiming.timeit("preparation particles")
+    def _prepareParticles(self, particles: list, time: float, dT: float):
+        """Let the material points know that a new time step begins.
+
+        Parameters
+        ----------
+        particles
+            The list of particles to be prepared.
+        time
+            The current time.
+        dT
+            The current time increment.
+        """
+        for p in particles:
+            p.prepareYourself(time, dT)
+
     @performancetiming.timeit("interpolation to mps")
     def _interpolateFieldsToMaterialPoints(self, activeCells: list, dU: DofVector):
         """Let the solution be interpolated to all material points using the cells.
