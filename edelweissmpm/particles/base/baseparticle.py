@@ -165,6 +165,10 @@ class BaseParticle(BaseNodeCouplingEntity):
         """Initalize the particle to be ready for computing."""
 
     @abstractmethod
+    def prepareYourself(self, timeTotal: float, dTime: float):
+        """Prepare the particle to be ready for computing."""
+
+    @abstractmethod
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         """Assign initial conditions.
 

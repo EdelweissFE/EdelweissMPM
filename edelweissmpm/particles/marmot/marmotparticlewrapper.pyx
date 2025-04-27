@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#Initalize  -*- coding: utf-8 -*-
 #  ---------------------------------------------------------------------
 #
 #  _____    _      _              _         __  __ ____  __  __
@@ -110,7 +110,6 @@ cdef class MarmotParticleWrapper:
 
         self._stateVars =            np.zeros(self._nStateVars)
         self._stateVarsTemp =        np.zeros(self._nStateVars)
-        self._stateVarsOld =            np.zeros(self._nStateVars)
 
         self._marmotParticle.assignStateVars(&self._stateVarsTemp[0], self._nStateVars)
 
@@ -243,19 +242,18 @@ cdef class MarmotParticleWrapper:
         self._nodes = [kf.node for kf in self._assignedKernelFunctions]
         self._fields = [ self._baseFields for n in self._nodes ]
 
+    def prepareYourself(self, timeTotal: float, dTime: float):
+        self._marmotParticle.acceptStateAndPosition() # this is to set the state of the particle to "ready"
+        self._stateVarsTemp[:] = self._stateVars
+
     def acceptStateAndPosition(self,):
-        # self._marmotMaterialPoint.acceptStateAndPosition()
-        self._marmotParticle.acceptStateAndPosition()
+        self._marmotParticle.acceptStateAndPosition() # this is to set the state of the particle to "ready"
         self._stateVars[:] = self._stateVarsTemp
 
     def initializeYourself(self):
         self._stateVarsTemp[:] = self._stateVars
         self._marmotParticle.initializeYourself()
         self.acceptStateAndPosition()
-
-    def revertToPreviousState(self):
-        self._stateVars[:] = self._stateVarsOld
-        self._stateVarsTemp[:] = self._stateVarsOld
 
     def getResultArray(self, result:str, getPersistentView:bool=True, qp:int=0):
         """Get the array of a result, possibly as a persistent view which is continiously
