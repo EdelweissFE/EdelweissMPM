@@ -121,7 +121,7 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         void acceptStateAndPosition()
 
-        StateView getStateView( const string& stateName )
+        StateView getStateView( const string& stateName, int qp)
 
         int getDimension()
 
@@ -203,4 +203,4 @@ cdef class MarmotParticleWrapper:
 
     cpdef void _initializeStateVarsTemp(self, ) nogil
 
-    cdef double[::1] getStateView(self, string stateName)
+    cdef double[::1] getStateView(self, string stateName, int qp)

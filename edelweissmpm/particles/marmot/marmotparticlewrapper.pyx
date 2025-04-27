@@ -257,17 +257,17 @@ cdef class MarmotParticleWrapper:
         self._stateVars[:] = self._stateVarsOld
         self._stateVarsTemp[:] = self._stateVarsOld
 
-    def getResultArray(self, result:str, getPersistentView:bool=True):
+    def getResultArray(self, result:str, getPersistentView:bool=True, qp:int=0):
         """Get the array of a result, possibly as a persistent view which is continiously
         updated by the underlying MarmotParticle."""
 
         cdef string result_ =  result.encode('UTF-8')
-        return np.array(  self.getStateView(result_ ), copy= not getPersistentView)
+        return np.array(  self.getStateView(result_, qp), copy= not getPersistentView, )
 
-    cdef double[::1] getStateView(self, string result ):
+    cdef double[::1] getStateView(self, string result, int qp):
         """Directly access the state vars of the underlying MarmotElement"""
 
-        cdef StateView res = self._marmotParticle.getStateView(result)
+        cdef StateView res = self._marmotParticle.getStateView(result, qp)
 
         return <double[:res.stateSize]> ( res.stateLocation )
 
