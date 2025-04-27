@@ -71,10 +71,10 @@ cdef class MarmotParticleWrapper:
                   ):
 
 
-        #TODO: This this crap:
-        mpCenter =  np.mean( vertexCoordinates, axis=0).reshape(-1, vertexCoordinates.shape[1])
+        ##TODO: This this crap:
+        # mpCenter =  np.mean( vertexCoordinates, axis=0).reshape(-1, vertexCoordinates.shape[1])
 
-        self._mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", particleNumber, mpCenter , volume, material)
+        # self._mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", particleNumber, mpCenter , volume, material)
 
         self._vertexCoordinates = np.copy(vertexCoordinates)
         self._vertexCoordinatesView = self._vertexCoordinates
@@ -82,10 +82,15 @@ cdef class MarmotParticleWrapper:
         self._centerCoordinates = np.zeros(vertexCoordinates.shape[1])
         self._centerCoordinatesView = self._centerCoordinates
 
-        self._marmotMaterialPoint = <MarmotMaterialPoint*> self._mp._marmotMaterialPoint
+        # self._marmotMaterialPoint = <MarmotMaterialPoint*> self._mp._marmotMaterialPoint
         self._marmotMeshfreeApproximation = <MarmotMeshfreeApproximation* > marmotMeshfreeApproximationWrapper._marmotMeshfreeApproximation
 
         self._assignedKernelFunctions = list()
+
+        cdef str materialName = material['material']
+        self.materialProperties = material['properties']
+        self.materialPropertiesView = self.materialProperties
+        cdef int nMaterialProperties = len(self.materialProperties)
 
         try:
             self._marmotParticle = MarmotParticleFactory.createParticle(particleType.encode('utf-8'),
@@ -93,8 +98,10 @@ cdef class MarmotParticleWrapper:
                                                                                        &self._vertexCoordinatesView[0,0],
                                                                                        self._vertexCoordinates.size,
                                                                                        volume,
-                                                                                       self._marmotMaterialPoint[0],
-                                                                                       self._marmotMeshfreeApproximation[0]
+                                                                                       materialName.upper().encode('utf-8'),
+                                                                                       &self.materialPropertiesView[0],
+                                                                                       nMaterialProperties,
+                                                                                       self._marmotMeshfreeApproximation[0],
                                                                                        )
         except IndexError:
             raise NotImplementedError("Failed to create instance of MarmotParticle {:}.".format(particleType))
@@ -250,17 +257,17 @@ cdef class MarmotParticleWrapper:
         self._stateVars[:] = self._stateVarsOld
         self._stateVarsTemp[:] = self._stateVarsOld
 
-    def getResultArray(self, result:str, getPersistentView:bool=True):
+    def getResultArray(self, result:str, getPersistentView:bool=True, qp:int=0):
         """Get the array of a result, possibly as a persistent view which is continiously
         updated by the underlying MarmotParticle."""
 
         cdef string result_ =  result.encode('UTF-8')
-        return np.array(  self.getStateView(result_ ), copy= not getPersistentView)
+        return np.array(  self.getStateView(result_, qp), copy= not getPersistentView, )
 
-    cdef double[::1] getStateView(self, string result ):
+    cdef double[::1] getStateView(self, string result, int qp):
         """Directly access the state vars of the underlying MarmotElement"""
 
-        cdef StateView res = self._marmotParticle.getStateView(result)
+        cdef StateView res = self._marmotParticle.getStateView(result, qp)
 
         return <double[:res.stateSize]> ( res.stateLocation )
 
