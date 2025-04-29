@@ -243,6 +243,7 @@ cdef class MarmotParticleWrapper:
         self._fields = [ self._baseFields for n in self._nodes ]
 
     def prepareYourself(self, timeTotal: float, dTime: float):
+        self._stateVarsTemp[:] = self._stateVars
         self._marmotParticle.acceptStateAndPosition() # this is to set the state of the particle to "ready"
         self._stateVarsTemp[:] = self._stateVars
 
