@@ -83,13 +83,6 @@ def run_sim():
     particleCoordinates = np.array([-0.0, 0.0]).reshape(-1, dimension)
     particleVolume = 1.0
 
-    # let's instance the material point
-    # from edelweissmpm.materialpoints.marmotmaterialpoint.mp import (
-    #     MarmotMaterialPointWrapper,
-    # )
-
-    # mp = MarmotMaterialPointWrapper("GradientEnhancedMicropolar/PlaneStrain", 1, mpCoordinates, mpVolume, theMaterial)
-
     # and finally .. create the particle. The particle hosts the material point, which again hosts the material.
     from edelweissmpm.particles.marmot.marmotparticlewrapper import (
         MarmotParticleWrapper,

@@ -92,8 +92,6 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
     height = 80
     nX = int(length / particleSize)
     nY = int(height / particleSize)
-    print(nX)
-    print(nY)
 
     def theMeshfreeKernelFunctionFactory(node):
         return MarmotMeshfreeKernelFunctionWrapper(
@@ -111,35 +109,8 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
 
     # We need a dummy material for the material point
     theMaterial = {
-        "material": "GosfordSandstone",
-        "properties": np.array(
-            [
-                # E,     nu,    GcToG,  lb,   lt,       lj2,        polarRatio,               cohesion,   phi,    psi,    A,          hExpDelta,      hExp,   hDilationExp
-                13000,
-                0.35,
-                1,
-                1,
-                2,
-                1,
-                1.49999,
-                8,
-                30,
-                20,
-                1.00,
-                +11,
-                1.4e3,
-                1,
-                # a1,   a2,     a3,     a4,   softeningModulus,        maxDamage,  nonLocalRadius, density
-                0.5,
-                0.0,
-                0.5,
-                0.0,
-                1.1e-1,
-                0.99,
-                1,
-                1.0,
-            ]
-        ),
+        "material": "GMDamagedShearNeoHooke",
+        "properties": np.array([3000.0, 0.2, 1, 0.01, 0.02, 1.4999, 1.0]),
     }
 
     def TheParticleFactory(number, vertexCoordinates, volume):
@@ -232,16 +203,6 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
         theModel.particleSets["all"],
         "deformation gradient",
     )
-    fieldOutputController.addPerParticleFieldOutput(
-        "alphaP",
-        theModel.particleSets["all"],
-        "alphaP",
-    )
-    fieldOutputController.addPerParticleFieldOutput(
-        "omega",
-        theModel.particleSets["all"],
-        "omega",
-    )
 
     fieldOutputController.addExpressionFieldOutput(
         None, lambda: dirichletBottom.penaltyForce, "reaction force bottom", export=exportName + "_RF"
@@ -258,11 +219,9 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
     ensightOutput.updateDefinition(
         fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perElement"
     )
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["alphaP"], create="perElement")
-    ensightOutput.updateDefinition(fieldOutput=fieldOutputController.fieldOutputs["omega"], create="perElement")
     ensightOutput.initializeJob()
 
-    incSize = 1e-0
+    incSize = 5e-1
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize, 2000, theJournal)
 
     nonlinearSolver = NonlinearQuasistaticMarmotArcLengthSolver(theJournal)
@@ -355,7 +314,7 @@ def test_sim():
 
     warnings.filterwarnings("ignore")
 
-    theModel, fieldOutputController = run_sim(4.0, 4.0, 2, 1)
+    theModel, fieldOutputController = run_sim(2.0, 4.0, 2, 1)
 
     res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
 
@@ -366,7 +325,7 @@ def test_sim():
 
 if __name__ == "__main__":
 
-    theModel, fieldOutputController = run_sim(4.0, 4.0, 2, 1)
+    theModel, fieldOutputController = run_sim(2.0, 4.0, 2, 1)
     res = fieldOutputController.fieldOutputs["displacement"].getLastResult()
 
     parser = argparse.ArgumentParser()
