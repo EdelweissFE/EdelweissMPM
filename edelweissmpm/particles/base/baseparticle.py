@@ -139,7 +139,7 @@ class BaseParticle(BaseNodeCouplingEntity):
         """Accept the computed state (in nonlinear iteration schemes) and the position."""
 
     @abstractmethod
-    def getResultArray(self, result: str, getPersistentView: bool = True) -> np.ndarray:
+    def getResultArray(self, result: str, getPersistentView: bool = True, qp: int = 0) -> np.ndarray:
         """Get the array of a result, possibly as a persistent view which is continiously
         updated by a MaterialPoint.
 
@@ -149,6 +149,8 @@ class BaseParticle(BaseNodeCouplingEntity):
             The name of the result.
         getPersistentView
             If true, the returned array should be continiously updated by the element.
+        qp
+            The quadrature point index. This is only relevant for higher order particles.
 
         Returns
         -------
@@ -161,6 +163,10 @@ class BaseParticle(BaseNodeCouplingEntity):
         self,
     ):
         """Initalize the particle to be ready for computing."""
+
+    @abstractmethod
+    def prepareYourself(self, timeTotal: float, dTime: float):
+        """Prepare the particle to be ready for computing."""
 
     @abstractmethod
     def setInitialCondition(self, stateType: str, values: np.ndarray):

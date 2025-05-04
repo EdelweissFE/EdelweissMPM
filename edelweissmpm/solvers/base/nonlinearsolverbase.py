@@ -456,10 +456,10 @@ class NonlinearImplicitSolverBase:
         bool
             The truth value of convergence."""
 
-        iterationMessage = ""
-        convergedAtAll = True
+        # iterationMessage = ""
+        # convergedAtAll = True
 
-        iterationMessageTemplate = "{:11.2e}{:1}{:11.2e}{:1} "
+        # iterationMessageTemplate = "{:11.2e}{:1}{:11.2e}{:1} "
 
         useStrictFluxTolerances = iterations < iterationOptions["iterations for alt. tolerances"]
 
@@ -504,17 +504,20 @@ class NonlinearImplicitSolverBase:
             if iterations == 0:
                 convergedFlux = False
 
-            iterationMessage += iterationMessageTemplate.format(
-                fluxResidualAbs,
-                "✓" if convergedFlux else " ",
-                correctionAbs,
-                "✓" if convergedCorrection else " ",
-            )
-            convergedAtAll = convergedAtAll and convergedCorrection and convergedFlux
+            fieldIncrementResidualHistory[-1]["converged flux"] = convergedFlux
+            fieldIncrementResidualHistory[-1]["converged correction"] = convergedCorrection
 
-        self.journal.message(iterationMessage, self.identification)
+            # iterationMessage += iterationMessageTemplate.format(
+            #     fluxResidualAbs,
+            #     "✓" if convergedFlux else " ",
+            #     correctionAbs,
+            #     "✓" if convergedCorrection else " ",
+            # )
+            # convergedAtAll = convergedAtAll and convergedCorrection and convergedFlux
 
-        return convergedAtAll
+        # self.journal.message(iterationMessage, self.identification)
+
+        return incrementResidualHistory
 
     @performancetiming.timeit("linear solve")
     def _linearSolve(self, A: csr_matrix, b: DofVector, linearSolver) -> ndarray:
@@ -596,8 +599,12 @@ class NonlinearImplicitSolverBase:
 
         for history in incrementResidualHistory.values():
             nGrew = 0
-            for i in range(len(history)):
-                if history[i]["relative flux residual"] > history[i - 1]["relative flux residual"]:
+            for i in range(len(history) - 1):
+                if (
+                    history[i + 1]["converged flux"] and history[i + 1]["converged correction"]
+                ):  # don't count converged iterations
+                    continue
+                if history[i + 1]["absolute flux residual"] > history[i]["absolute flux residual"]:
                     nGrew += 1
 
             if nGrew > maxGrowingIter:
@@ -751,6 +758,22 @@ class NonlinearImplicitSolverBase:
         """
         for mp in materialPoints:
             mp.prepareYourself(time, dT)
+
+    @performancetiming.timeit("preparation particles")
+    def _prepareParticles(self, particles: list, time: float, dT: float):
+        """Let the material points know that a new time step begins.
+
+        Parameters
+        ----------
+        particles
+            The list of particles to be prepared.
+        time
+            The current time.
+        dT
+            The current time increment.
+        """
+        for p in particles:
+            p.prepareYourself(time, dT)
 
     @performancetiming.timeit("interpolation to mps")
     def _interpolateFieldsToMaterialPoints(self, activeCells: list, dU: DofVector):

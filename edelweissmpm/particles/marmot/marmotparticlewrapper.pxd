@@ -61,7 +61,10 @@ cdef extern from "Marmot/MarmotParticleLibrary.h" namespace "MarmotLibrary" nogi
                                const double* particleCoordinates,
                                int sizeParticleCoordinates,
                                double volume,
-                               MarmotMaterialPoint& mp,
+                               # MarmotMaterialPoint& mp,
+                               const string& materialName,
+                               const double* materialProperties,
+                               int sizeMaterialProperties,
                                const MarmotMeshfreeApproximation& approximation) except +ValueError
 
 cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
@@ -118,7 +121,7 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         void acceptStateAndPosition()
 
-        StateView getStateView( const string& stateName )
+        StateView getStateView( const string& stateName, int qp)
 
         int getDimension()
 
@@ -147,15 +150,18 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
 cdef class MarmotParticleWrapper:
 
-    cdef MarmotMaterialPointWrapper _mp
+    # cdef MarmotMaterialPointWrapper _mp
     cdef MarmotParticle* _marmotParticle
-    cdef MarmotMaterialPoint* _marmotMaterialPoint
+    # cdef MarmotMaterialPoint* _marmotMaterialPoint
     cdef MarmotMeshfreeApproximation* _marmotMeshfreeApproximation
 
     cpdef void computePhysicsKernels(self, double[::1] dUc, double[::1] Rhs, double[::1] AMatrix, double timeNew, double dTime, ) nogil
 
     cpdef void computeLumpedInertia( self, double[::1] M ) nogil
     cpdef void computeConsistentInertia( self,  double[::1] M ) nogil
+
+    cdef np.ndarray materialProperties
+    cdef double[::1] materialPropertiesView
 
 
     cdef int _number,
@@ -197,4 +203,4 @@ cdef class MarmotParticleWrapper:
 
     cpdef void _initializeStateVarsTemp(self, ) nogil
 
-    cdef double[::1] getStateView(self, string stateName)
+    cdef double[::1] getStateView(self, string stateName, int qp)
