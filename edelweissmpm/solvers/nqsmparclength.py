@@ -330,7 +330,28 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
                     Rhs_0, ddU, dU, F, incrementResidualHistory, theDofManager
                 )
 
-                converged = self._checkConvergence(iterationCounter, incrementResidualHistory, iterationOptions)
+                incrementResidualHistory = self._checkConvergence(
+                    iterationCounter, incrementResidualHistory, iterationOptions
+                )
+
+                iterationMessageTemplate = "{:11.2e}{:1}{:11.2e}{:1} "
+                iterationMessage = ""
+
+                converged = True
+                for field, residuals in incrementResidualHistory.items():
+
+                    convergedFlux = residuals[-1]["converged flux"]
+                    convergedCorrection = residuals[-1]["converged correction"]
+                    converged = converged and convergedCorrection and convergedFlux
+
+                    iterationMessage += iterationMessageTemplate.format(
+                        residuals[-1]["absolute flux residual"],
+                        "✓" if convergedFlux else " ",
+                        residuals[-1]["absolute correction"],
+                        "✓" if convergedCorrection else " ",
+                    )
+
+                self.journal.message(iterationMessage, self.identification)
 
                 if converged:
                     break
