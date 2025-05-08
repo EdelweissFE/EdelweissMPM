@@ -24,8 +24,9 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
+from collections.abc import Callable
+
 import numpy as np
-import sympy as sp
 from edelweissfe.journal.journal import Journal
 from edelweissfe.timesteppers.timestep import TimeStep
 
@@ -49,7 +50,7 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
         materialPoints: MaterialPointSet,
         distributedLoadType: str,
         loadVector: np.ndarray,
-        **kwargs
+        f_t: Callable[[float], float] = None,
     ):
         self.name = name
 
@@ -62,9 +63,8 @@ class MaterialPointPointWiseDistributedLoad(MPMDistributedLoadBase):
             raise Exception("BodyForce {:}: load vector has wrong dimension!".format(self.name))
 
         self._delta = self._loadVector
-        if "f_t" in kwargs:
-            t = sp.symbols("t")
-            self._amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t"]), "numpy")
+        if f_t is not None:
+            self._amplitude = f_t
         else:
             self._amplitude = lambda x: x
 

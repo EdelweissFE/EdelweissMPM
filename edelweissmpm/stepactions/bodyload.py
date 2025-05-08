@@ -25,7 +25,6 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import numpy as np
-import sympy as sp
 from edelweissfe.timesteppers.timestep import TimeStep
 
 from edelweissmpm.sets.cellset import CellSet
@@ -34,6 +33,28 @@ from edelweissmpm.stepactions.base.mpmbodyloadbase import MPMBodyLoadBase
 
 class BodyLoad(MPMBodyLoadBase):
     def __init__(self, name, model, journal, cells, bodyLoadType: str, loadVector, **kwargs):
+        """
+        This is a classical body load for MPM models.
+
+        Parameters
+        ----------
+        name : str
+            Name of the distributed load.
+        model : MPMModel
+            The MPM model tree.
+        journal : Journal
+            The journal to write messages to.
+        cells: CellSet
+            The cells to apply the distributed load to.
+        bodyLoadType: str
+            The type of the body load, e.g., "gravity".
+        loadVector : np.ndarray
+            The load vector to apply to the particles.
+        **kwargs
+            Additional keyword arguments. The following are supported:
+            - f_t : Callable[[float], float]
+                The amplitude function of the distributed load.
+        """
         self.name = name
 
         self._loadVector = loadVector
@@ -46,8 +67,7 @@ class BodyLoad(MPMBodyLoadBase):
 
         self._delta = self._loadVector
         if "f_t" in kwargs:
-            t = sp.symbols("t")
-            self._amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t)"]), "numpy")
+            self._amplitude = kwargs["f_t"]
         else:
             self._amplitude = lambda x: x
 
@@ -63,7 +83,7 @@ class BodyLoad(MPMBodyLoadBase):
 
     def applyAtStepEnd(self, model, stepMagnitude=None):
         if not self._idle:
-            if stepMagnitude == None:
+            if stepMagnitude is None:
                 # standard case
                 self._loadAtStepStart += self._delta * self._amplitude(1.0)
             else:
@@ -74,7 +94,7 @@ class BodyLoad(MPMBodyLoadBase):
             self._idle = True
 
     def getCurrentLoad(self, timeStep: TimeStep):
-        if self._idle == True:
+        if self._idle:
             t = 1.0
         else:
             t = timeStep.stepProgress
