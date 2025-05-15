@@ -165,6 +165,8 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
         surfaceID=3,
     )
 
+    import sympy as sp
+
     disturbance = ParticleDistributedLoad(
         "disturbance",
         theModel,
@@ -173,7 +175,10 @@ def run_sim(particleSize, supportRadius, continuityOrder, completenessOrder):
         "pressure",
         np.array([-10.0 * nY / 80]),
         surfaceID=2,
-        f_t=1.0,
+        f_t=sp.lambdify(
+            sp.symbols("t"),
+            sp.sympify("Heaviside(t)"),
+        ),
     )
 
     rigidBodyTop = [

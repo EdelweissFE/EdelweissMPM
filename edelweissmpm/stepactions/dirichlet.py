@@ -27,17 +27,42 @@
 #  ---------------------------------------------------------------------
 
 
+from collections.abc import Callable
+
 import numpy as np
-import sympy as sp
 from edelweissfe.config.phenomena import getFieldSize
 from edelweissfe.stepactions.base.dirichletbase import DirichletBase
 from edelweissfe.timesteppers.timestep import TimeStep
 
 
 class Dirichlet(DirichletBase):
-    """Dirichlet boundary condition, based on a node set"""
 
-    def __init__(self, name, nSet, field, values, model, journal, **kwargs):
+    def __init__(self, name, nSet, field, values, model, journal, f_t: Callable[[float], float] = None):
+        """
+        This is a classical dirichlet boundary condition for MPM models.
+
+        Parameters
+        ----------
+        name : str
+            Name of the distributed load.
+        nSet : NodeSet
+            The node set to apply the BC to.
+        field : str
+            The field to apply the BC to.
+
+        model : MPMModel
+            The MPM model tree.
+        journal : Journal
+            The journal to write messages to.
+        cells: CellSet
+            The cells to apply the distributed load to.
+        bodyLoadType: str
+            The type of the body load, e.g., "gravity".
+        loadVector : np.ndarray
+            The load vector to apply to the particles.
+        f_t : Callable[[float], float]
+                The amplitude function of the distributed load.
+        """
         self.name = name
         self._journal = journal
         self._domainSize = model.domainSize
@@ -47,7 +72,7 @@ class Dirichlet(DirichletBase):
         self.nSet = nSet
         self.fieldSize = getFieldSize(self.field, self._domainSize)
 
-        self.updateStepAction(values, **kwargs)
+        self.updateStepAction(values, f_t)
 
     @property
     def components(self) -> np.ndarray:
@@ -56,14 +81,17 @@ class Dirichlet(DirichletBase):
     def applyAtStepEnd(self, model):
         self.active = False
 
-    def updateStepAction(self, values, **kwargs):
+    def updateStepAction(self, values, f_t: Callable[[float], float] = None):
         self.active = True
 
         self._components = np.array([i for i in values.keys()])
 
         self._delta = np.array([values for values in values.values()])
 
-        self._amplitude = self._getAmplitude(**kwargs)
+        if f_t is not None:
+            self._amplitude = f_t
+        else:
+            self._amplitude = lambda x: x
 
     def getDelta(self, timeStep: TimeStep, nodes):
         if self.active:
@@ -75,25 +103,3 @@ class Dirichlet(DirichletBase):
             )
         else:
             return np.tile(np.zeros_like(self._delta), len(nodes))
-
-    def _getAmplitude(self, **kwargs: dict) -> callable:
-        """Determine the amplitude for the step, depending on a potentially specified function.
-
-        Parameters
-        ----------
-        action
-            The dictionary defining this step action.
-
-        Returns
-        -------
-        callable
-            The function defining the amplitude depending on the step propress.
-        """
-
-        if "f_t" in kwargs:
-            t = sp.symbols("t")
-            amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t"]), "numpy")
-        else:
-            amplitude = lambda x: x
-
-        return amplitude

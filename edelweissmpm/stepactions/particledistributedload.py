@@ -25,7 +25,6 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 import numpy as np
-import sympy as sp
 from edelweissfe.journal.journal import Journal
 from edelweissfe.timesteppers.timestep import TimeStep
 
@@ -53,7 +52,7 @@ class ParticleDistributedLoad:
         The load vector to apply to the particles.
     **kwargs
         Additional keyword arguments. The following are supported:
-        - f_t : Callable
+        - f_t : Callable[[float], float]
             The amplitude function of the distributed load.
         - surface_ID : int
             The surface ID of the particles to apply the distributed load to.
@@ -78,8 +77,7 @@ class ParticleDistributedLoad:
 
         self._delta = self._loadVector
         if "f_t" in kwargs:
-            t = sp.symbols("t")
-            self._amplitude = sp.lambdify(t, sp.sympify(kwargs["f_t"]), "numpy")
+            self._amplitude = kwargs["f_t"]
         else:
             self._amplitude = lambda x: x
 

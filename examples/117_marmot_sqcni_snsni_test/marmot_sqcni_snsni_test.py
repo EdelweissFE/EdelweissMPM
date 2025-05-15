@@ -172,14 +172,20 @@ def run_sim():
     ensightOutput.initializeJob()
 
     dirichletLeft = ParticlePenaltyWeakDirichlet(
-        "left", theModel, theModel.particleSets["rectangular_grid_left"], "displacement", {0: 0, 1: 0}, 1e6
+        "left",
+        theModel,
+        theModel.particleSets["rectangular_grid_left"],
+        "displacement",
+        {0: 0, 1: 0},
+        1e6,
+        constrain=[0, 3],  # constrain first and last vertex = "left" side
     )
 
     dirichlets = [
         dirichletLeft,
     ]
 
-    incSize = 2e-1
+    incSize = 1e-1
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1, 50, theJournal)
 
     # nonlinearSolver = NQSParallelForMarmot(theJournal)

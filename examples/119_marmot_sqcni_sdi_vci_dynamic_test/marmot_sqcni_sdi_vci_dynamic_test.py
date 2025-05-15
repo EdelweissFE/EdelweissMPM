@@ -223,7 +223,7 @@ def run_sim():
         "pressure",
         np.array([-0.50]),
         surfaceID=3,
-        f_t=1,
+        f_t=lambda t: 1.0,
     )
 
     try:

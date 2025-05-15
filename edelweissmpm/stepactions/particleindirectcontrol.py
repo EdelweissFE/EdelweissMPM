@@ -25,6 +25,8 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 
+from collections.abc import Callable
+
 import numpy as np
 from edelweissfe.config.phenomena import getFieldSize
 from edelweissfe.journal.journal import Journal
@@ -61,6 +63,8 @@ class IndirectControl(ArcLengthControllerBase):
         The field for which the arc length parameter is computed.
     journal
         The journal instance for logging purposes.
+    f_t
+        A function for the time dependent scaling of the arc length parameter.
         """
 
     def __init__(
@@ -72,6 +76,7 @@ class IndirectControl(ArcLengthControllerBase):
         cMatrix: np.ndarray,
         field: str,
         journal: Journal,
+        f_t: Callable[[float], float] = None,
     ):
         self._name = name
         self._journal = journal
@@ -83,6 +88,11 @@ class IndirectControl(ArcLengthControllerBase):
         self._field = field
         self._fieldSize = getFieldSize(self._field, model.domainSize)
         self._c = cMatrix.flatten()
+
+        if f_t is None:
+            self._f_t = lambda t: 1.0
+        else:
+            self._f_t = f_t
 
     def computeDDLambda(
         self, dU: DofVector, ddU_0: DofVector, ddU_f: DofVector, timeStep: TimeStep, dofManager: DofManager
@@ -119,7 +129,8 @@ class IndirectControl(ArcLengthControllerBase):
 
         Ns = [np.asarray(p.getInterpolationVector(p.getCenterCoordinates())).flatten() for p in self._particles]
 
-        dL = timeStep.stepProgressIncrement * (self._L - self._currentL0)
+        dT = self._f_t(timeStep.stepProgress + timeStep.stepProgressIncrement) - self._f_t(timeStep.stepProgress)
+        dL = dT * (self._L - self._currentL0)
 
         ddUMP_f = np.asarray([N @ ddU_f[idcs].reshape((-1, self._fieldSize)) for N, idcs in zip(Ns, mpIndices)])
         ddUMP_0 = np.asarray([N @ ddU_0[idcs].reshape((-1, self._fieldSize)) for N, idcs in zip(Ns, mpIndices)])
