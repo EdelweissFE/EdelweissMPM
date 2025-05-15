@@ -27,6 +27,9 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
         The dictionary containing the prescribed bc components for the field in the present load step.
     penaltyParameter
         The penalty parameter value.
+    constrain
+        Either constrain the center of the particle or a list of vertex indices for particles with multiple vertices.
+        If "center", the center of the particle is constrained. If a list, the vertices at the given indices are constrained.
     """
 
     def __init__(
@@ -37,6 +40,7 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
         field: str,
         prescribedStepDelta: dict,
         penaltyParameter: float,
+        constrain: str | list[int] = "center",
     ):
         self._name = name
         self._model = model
@@ -46,6 +50,15 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
         self._fieldSize = getFieldSize(self._field, model.domainSize)
         self._penaltyParameter = penaltyParameter
         self._nodes = dict()
+        if constrain == "center":
+            self._constrainVertices = None
+        else:
+            if not isinstance(constrain, list):
+                raise ValueError("Constrain must be 'center' or a list of vertex indices.")
+            if len(constrain) > 0 and not all(isinstance(i, int) for i in constrain):
+                raise ValueError("Constrain must be 'center' or a list of vertex indices.")
+            self._constrainVertices = constrain
+
         self.penaltyForce = np.zeros(self._fieldSize)
 
     @property
@@ -103,18 +116,22 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
             K_ij = V.reshape((self.nDof, self.nDof))[i :: self._fieldSize, i :: self._fieldSize]
 
             for p in self._constrainedParticles:
-                center = p.getCenterCoordinates()
+                if self._constrainVertices:
+                    constrainedCoordinates = p.getVertexCoordinates()[self._constrainVertices]
+                else:
+                    constrainedCoordinates = [p.getCenterCoordinates()]
 
-                # for c in p.assignedCells:
-                N = p.getInterpolationVector(center)
+                for constrainedCoordinate in constrainedCoordinates:
 
-                nodeIdcs = [self._nodes[kf.node] for kf in p.kernelFunctions]
+                    N = p.getInterpolationVector(constrainedCoordinate)
 
-                mpValue = N @ dU_j[nodeIdcs]
+                    nodeIdcs = [self._nodes[kf.node] for kf in p.kernelFunctions]
 
-                P_i[nodeIdcs] += (
-                    N * self._penaltyParameter * (mpValue - prescribedComponent * timeStep.stepProgressIncrement)
-                )
-                K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
+                    mpValue = N @ dU_j[nodeIdcs]
+
+                    P_i[nodeIdcs] += (
+                        N * self._penaltyParameter * (mpValue - prescribedComponent * timeStep.stepProgressIncrement)
+                    )
+                    K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
 
             self.penaltyForce[i] = np.sum(P_i)
