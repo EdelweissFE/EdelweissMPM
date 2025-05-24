@@ -37,6 +37,7 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         field: str,
         prescribedStepDelta: dict,
         penaltyParameter: float,
+        **kwargs
     ):
         self._name = name
         self._model = model
@@ -46,6 +47,11 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         self._fieldSize = getFieldSize(self._field, model.domainSize)
         self._penaltyParameter = penaltyParameter
         self._nodes = dict()
+
+        if "f_t" in kwargs:
+            self._amplitude = kwargs["f_t"]
+        else:
+            self._amplitude = lambda x: x
 
     @property
     def name(self) -> str:
@@ -112,6 +118,8 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
                     mpValue = N @ dU_j[nodeIdcs]
 
                     P_i[nodeIdcs] += (
-                        N * self._penaltyParameter * (mpValue - prescribedComponent * timeStep.stepProgressIncrement)
+                        N
+                        * self._penaltyParameter
+                        * (mpValue - prescribedComponent * self._f_t(timeStep.stepProgressIncrement))
                     )
                     K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter

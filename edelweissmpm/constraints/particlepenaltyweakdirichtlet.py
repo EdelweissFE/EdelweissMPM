@@ -41,6 +41,7 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
         prescribedStepDelta: dict,
         penaltyParameter: float,
         constrain: str | list[int] = "center",
+        **kwargs
     ):
         self._name = name
         self._model = model
@@ -60,6 +61,11 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
             self._constrainVertices = constrain
 
         self.penaltyForce = np.zeros(self._fieldSize)
+
+        if "f_t" in kwargs:
+            self._f_t = kwargs["f_t"]
+        else:
+            self._f_t = lambda x: x
 
     @property
     def name(self) -> str:
@@ -130,7 +136,16 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
                     mpValue = N @ dU_j[nodeIdcs]
 
                     P_i[nodeIdcs] += (
-                        N * self._penaltyParameter * (mpValue - prescribedComponent * timeStep.stepProgressIncrement)
+                        N
+                        * self._penaltyParameter
+                        * (
+                            mpValue
+                            - prescribedComponent
+                            * (
+                                self._f_t(timeStep.stepProgress)
+                                - self._f_t(timeStep.stepProgress - timeStep.stepProgressIncrement)
+                            )
+                        )
                     )
                     K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter
 
