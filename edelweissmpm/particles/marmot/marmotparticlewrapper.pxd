@@ -129,15 +129,17 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         int getNBaseDof()
 
-        int getNumberOfVCIConstraints()
+        int vci_getNumberOfConstraints()
 
-        void computeTestFunctionBoundaryIntegral(double* fInt, const double* boundarySurfaceVector, int boundaryFaceID, int vciConstraint)
+        void vci_compute_Test_P_BoundaryIntegral(double* f_AiC_RowMajor, const double* boundarySurfaceVector, int boundaryFaceID)
 
-        void computeTestFuntionGradientVolumeIntegral(double* fInt, int vciConstraint)
+        void vci_compute_TestGradient_P_Integral(double* f_AiC_RowMajor)
 
-        void computeKernelLocalizationIntegral(double* fInt, int vciConstraint)
+        void vci_compute_Test_PGradient_Integral(double* f_AiC_RowMajor)
 
-        void assignShapeFunctionCorrectionTerms(const double* correctionTerms, int vciConstraint)
+        void vci_compute_MMatrix(double* MMatrix_ACD_RowMajor)
+
+        void vci_assignTestFunctionCorrectionTerms(const double* eta_AjC_RowMajor)
 
         void setProperties( const double* properties, int nProperties )
 

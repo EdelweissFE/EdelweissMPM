@@ -285,7 +285,7 @@ class BaseParticle(BaseNodeCouplingEntity):
         """
 
     @abstractmethod
-    def getNumberOfVCIConstraints(
+    def vci_getNumberOfConstraints(
         self,
     ) -> int:
         """Get the number of constraints if a variationally consistent integration is used.
@@ -297,58 +297,61 @@ class BaseParticle(BaseNodeCouplingEntity):
         """
 
     @abstractmethod
-    def computeTestFunctionBoundaryIntegral(
-        self, fInt: np.ndarray, boundarySurfaceVector: np.ndarray, boundaryFaceID: int, vciConstraint: int
+    def vci_compute_Test_P_BoundaryIntegral(
+        self, R_AiC: np.ndarray, boundarySurfaceVector: np.ndarray, boundaryFaceID: int
     ):
         """Compute the boundary integral for the test function.
 
         Parameters
         ----------
-        fInt
+        R_AiC
             The integral.
         boundarySurfaceVector
             The surface vector defining the area and orientation of the boundary.
             For higher order (non point) particles, the surface vector might be omitted and computed internally from the boundary face ID.
         boundaryFaceID
             The ID of the boundary face (for point shaped particles, this one is ignored).
-        vciConstraint
-            The VCI constraint.
         """
 
     @abstractmethod
-    def computeTestFuntionGradientVolumeIntegral(self, fInt: np.ndarray, vciConstraint: int):
+    def vci_compute_TestGradient_P_Integral(self, R_AiC: np.ndarray):
         """Compute the volume integral for the test function gradient.
 
         Parameters
         ----------
-        fInt
+        R_AiC
             The integral.
-        vciConstraint
-            The VCI constraint.
         """
 
     @abstractmethod
-    def computeKernelLocalizationIntegral(self, fInt: np.ndarray, vciConstraint: int):
-        """Compute the kernel localization integral.
+    def vci_compute_Test_PGradient_Integral(self, R_AiC: np.ndarray):
+        """Compute the volume integral for the test function gradient.
 
         Parameters
         ----------
-        fInt
+        R_AiC
             The integral.
-        vciConstraint
-            The VCI constraint.
         """
 
     @abstractmethod
-    def assignShapeFunctionCorrectionTerm(self, correctionTerm: float, vciConstraint: int):
-        """Assign the shape function correction term.
+    def vci_compute_MMatrix(self, M_ACD: np.ndarray):
+        """Compute the symmetric M-matrix.
 
         Parameters
         ----------
-        correctionTerm
-            The correction term.
-        vciConstraint
-            The VCI constraint.
+        M_ACD
+            The M-matrix
+        """
+
+    @abstractmethod
+    def vci_assignTestFunctionCorrectionTerms(self, eta_AjC: np.ndarray):
+        """Assign the shape function correction terms in
+        for of a 3D numpy array.
+
+        Parameters
+        ----------
+        corrections
+            The correction terms.
         """
 
     @abstractmethod

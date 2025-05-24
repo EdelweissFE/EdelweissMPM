@@ -66,6 +66,8 @@ class VariationallyConsistentIntegrationManager:
         The list of kernel functions.
     particleBoundaryDefinitions
         The list of particle boundary definitions used for the boundary integrals.
+    nDim
+        The number of dimensions of the problem (e.g., 2D or 3D).
     """
 
     def __init__(
@@ -73,77 +75,97 @@ class VariationallyConsistentIntegrationManager:
         particles: list[BaseParticle],
         meshfreeKernelFunctions: list[BaseMeshfreeKernelFunction],
         particleBoundaryDefinitions: list[BoundaryParticleDefinition],
+        nDim: int,
     ):
         # TODO: replace with ParticleKernelDomain
         self._particles = particles
         self._kernelFunctions = meshfreeKernelFunctions
         self._particleBoundaryDefinitions = particleBoundaryDefinitions
+        self._nDim = nDim
 
         # we need to know the number of VCI constraints. Since this concept only makes sense for a set of identical particle types,
         # we can just take the first particle
-        #
-        # TODO: We may change this in future, but most likely having a set of particles with different VCI constraints is not useful
-        self._nVCIConstraints = particles[0].getNumberOfVCIConstraints()
+        # Most likely having a set of particles with different VCI constraints is not useful
+        self._nVCIConstraints = particles[0].vci_getNumberOfConstraints()
 
     def computeVCICorrections(self):
 
         # each kernel function has its place in the global vector (similar to a dof vector)
-        kfIndices = {kf: i for i, kf in enumerate(self._kernelFunctions)}
+        global_testFunction_indices = {kf: i for i, kf in enumerate(self._kernelFunctions)}
+
+        nTestFunctions = len(global_testFunction_indices)
+
         # print("Kernel function indices: ", kfIndices)
-        sizeGlobalVec = len(kfIndices)
+        # sizeResiduals = nShape * self._nVCIConstraints * self._nDim # for integrals/residuals in total (global)
 
         # for computing the particles' contributions to the integrals, we employ a larger vector,
-        # which contains the contributions of all particles
-        sizeGatherVec = 0
+        # which contains the contributions of all particles for each kernel function
+        size_gather_for_testFunctions = 0
         for p in self._particles:
-            sizeGatherVec += len(p.kernelFunctions)
+            size_gather_for_testFunctions += len(p.kernelFunctions)
 
         # the relation between the scattered vector and the global vector is given by the indices array
-        indices = np.zeros(sizeGatherVec, dtype=int)
-        particlesGatherLocation = {}
-        currentOffset = 0
+        gather_TestFunction_indices_to_global = np.zeros(size_gather_for_testFunctions, dtype=int)
+
+        particles_testFunction_blocks_in_gather = {}
+        current_block_start = 0
         for p in self._particles:
             kf = p.kernelFunctions
-
-            sizeParticle = len(kf)
-            particlesGatherLocation[p] = slice(currentOffset, currentOffset + sizeParticle)
+            particles_testFunction_blocks_in_gather[p] = slice(current_block_start, current_block_start + len(kf))
             for k in kf:
-                indices[currentOffset] = kfIndices[k]
-                currentOffset += 1
+                gather_TestFunction_indices_to_global[current_block_start] = global_testFunction_indices[k]
+                current_block_start += 1
 
-        for constraint in range(self._nVCIConstraints):
+        for _ in range(1):
 
             # now we can compute the integrals
-            particleBoundaryIntegrals = np.zeros(sizeGatherVec)
-            particleVolumeIntegrals = np.zeros(sizeGatherVec)
-            particleKernelLocalizationIntegrals = np.zeros(sizeGatherVec)
+            gather_PsiGrad_P_Integral = np.zeros((size_gather_for_testFunctions, self._nDim, self._nVCIConstraints))
+            gather_Psi_PGrad_Integral = np.zeros_like(gather_PsiGrad_P_Integral)
+            gather_Psi_P_BoundaryIntegral = np.zeros_like(gather_PsiGrad_P_Integral)
+
+            gather_mMatrices = np.zeros((size_gather_for_testFunctions, self._nVCIConstraints, self._nVCIConstraints))
 
             for p in self._particles:
 
-                loc = particlesGatherLocation[p]
+                particle_testFunction_block_in_gather = particles_testFunction_blocks_in_gather[p]
 
-                p.computeTestFuntionGradientVolumeIntegral(particleVolumeIntegrals[loc], constraint)
-                p.computeKernelLocalizationIntegral(particleKernelLocalizationIntegrals[loc], constraint)
+                p.vci_compute_TestGradient_P_Integral(
+                    gather_PsiGrad_P_Integral[particle_testFunction_block_in_gather, :, :]
+                )  # this works due to the row-major order of the arrays, resulting the individual contributions to be stored in a contiguous block
+                p.vci_compute_Test_PGradient_Integral(
+                    gather_Psi_PGrad_Integral[particle_testFunction_block_in_gather, :, :]
+                )
+                p.vci_compute_MMatrix(gather_mMatrices[particle_testFunction_block_in_gather, :, :])
 
             for particleBoundaryDefinition in self._particleBoundaryDefinitions:
                 for p in particleBoundaryDefinition.particles:
 
-                    loc = particlesGatherLocation[p]
-                    p.computeTestFunctionBoundaryIntegral(
-                        particleBoundaryIntegrals[loc],
+                    particle_testFunction_block_in_gather = particles_testFunction_blocks_in_gather[p]
+                    p.vci_compute_Test_P_BoundaryIntegral(
+                        gather_Psi_P_BoundaryIntegral[particle_testFunction_block_in_gather, :, :],
                         particleBoundaryDefinition.boundarySurfaceVector,
                         particleBoundaryDefinition.boundaryID,
-                        constraint,
                     )
 
-            # now we need to scatter the contributions to the global vector
-            boundaryIntegrals = np.zeros(sizeGlobalVec)
-            volumeIntegrals = np.zeros(sizeGlobalVec)
-            kernelLocalizationIntegrals = np.zeros(sizeGlobalVec)
+            Psi_P_BoundaryIntegral = np.zeros((nTestFunctions, self._nDim, self._nVCIConstraints))
+            PsiGrad_P_Integral = np.zeros_like(Psi_P_BoundaryIntegral)
+            Psi_PGrad_Integral = np.zeros_like(Psi_P_BoundaryIntegral)
+            mMatrices = np.zeros((nTestFunctions, self._nVCIConstraints, self._nVCIConstraints))
 
-            np.add.at(boundaryIntegrals, indices, particleBoundaryIntegrals)
-            np.add.at(volumeIntegrals, indices, particleVolumeIntegrals)
-            np.add.at(kernelLocalizationIntegrals, indices, particleKernelLocalizationIntegrals)
+            # scatter the contributions to the global vector
+
+            # np.add.at(gather_Psi_P_BoundaryIntegral, gather_TestFunction_indices_to_global, Psi_P_BoundaryIntegral)
+            # np.add.at(gather_PsiGrad_P_Integral, gather_TestFunction_indices_to_global, PsiGrad_P_Integral)
+            # np.add.at(gather_Psi_PGrad_Integral, gather_TestFunction_indices_to_global, Psi_PGrad_Integral)
+            # np.add.at(gather_mMatrices, gather_TestFunction_indices_to_global, mMatrices)
+
+            for i in range(size_gather_for_testFunctions):
+                Psi_P_BoundaryIntegral[gather_TestFunction_indices_to_global[i], :, :] += gather_Psi_P_BoundaryIntegral[
+                    i, :, :
+                ]
+                PsiGrad_P_Integral[gather_TestFunction_indices_to_global[i], :, :] += gather_PsiGrad_P_Integral[i, :, :]
+                Psi_PGrad_Integral[gather_TestFunction_indices_to_global[i], :, :] += gather_Psi_PGrad_Integral[i, :, :]
+                mMatrices[gather_TestFunction_indices_to_global[i], :, :] += gather_mMatrices[i, :, :]
 
             # print("Boundary integrals: ", boundaryIntegrals)
             # print("Volume integrals: ", volumeIntegrals)
@@ -151,12 +173,34 @@ class VariationallyConsistentIntegrationManager:
             # print("Kernel localization integrals: ", kernelLocalizationIntegrals)
 
             # now we can compute the correction terms
-            correctionTerms = -np.reciprocal(kernelLocalizationIntegrals) * (volumeIntegrals - boundaryIntegrals)
+            residual = Psi_P_BoundaryIntegral - PsiGrad_P_Integral - Psi_PGrad_Integral
+            # print(residual.reshape( (nTestFunctions, -1)))
+            # residual = PsiGrad_P_Integral
+            # print(residual.reshape( (nTestFunctions, -1)))
+            # print max abs of residual
+            max_residual = np.max(np.abs(residual))
+            print("Max residual: ", max_residual)
 
-            # now we need to scatter the correction terms to the particles
+            # print(mMatrices.flatten())
+
+            if self._nVCIConstraints == 0:
+                eta_AjC = np.einsum(
+                    "ACD,AjD->AjC", np.reciprocal(mMatrices), (Psi_P_BoundaryIntegral - PsiGrad_P_Integral)
+                )
+
+            else:
+                residuals = Psi_P_BoundaryIntegral - PsiGrad_P_Integral - Psi_PGrad_Integral
+                eta_AjC = np.zeros_like(residuals)
+
+                for A in range(nTestFunctions):
+                    # eta_jC = M_A_CD^-1 * residuals_A_jC
+                    eta_AjC[A, :, :] = np.linalg.solve(mMatrices[A, :, :], residuals[A, :, :].T).T
+
             for p in self._particles:
-                loc = particlesGatherLocation[p]
-                p.assignShapeFunctionCorrectionTerm(correctionTerms[indices[loc]], constraint)
+                particle_testFunction_block_in_gather = particles_testFunction_blocks_in_gather[p]
+                p.vci_assignTestFunctionCorrectionTerms(
+                    eta_AjC[gather_TestFunction_indices_to_global[particle_testFunction_block_in_gather], :, :]
+                )
 
     @property
     def meshfreeKernelFunctions(self) -> list[BaseMeshfreeKernelFunction]:

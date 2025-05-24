@@ -288,20 +288,23 @@ cdef class MarmotParticleWrapper:
         pass
 
 
-    def getNumberOfVCIConstraints(self, ):
-        return self._marmotParticle.getNumberOfVCIConstraints()
+    def vci_getNumberOfConstraints(self, ):
+        return self._marmotParticle.vci_getNumberOfConstraints()
 
-    def computeTestFunctionBoundaryIntegral(self, double[::1] fInt, double[::1] boundarySurfaceVector, int boundaryFaceID, int vciConstraint ):
-        self._marmotParticle.computeTestFunctionBoundaryIntegral(&fInt[0], &boundarySurfaceVector[0], boundaryFaceID, vciConstraint)
+    def vci_compute_Test_P_BoundaryIntegral(self, double[:,:,::1] r_AiC, double[::1] boundarySurfaceVector, int boundaryFaceID ):
+        self._marmotParticle.vci_compute_Test_P_BoundaryIntegral(&r_AiC[0,0,0], &boundarySurfaceVector[0], boundaryFaceID )
 
-    def computeTestFuntionGradientVolumeIntegral(self, double[::1]fInt, int vciConstraint):
-        self._marmotParticle.computeTestFuntionGradientVolumeIntegral(&fInt[0], vciConstraint)
+    def vci_compute_TestGradient_P_Integral(self, double[:,:,::1]r_AiC):
+        self._marmotParticle.vci_compute_TestGradient_P_Integral(&r_AiC[0,0,0])
 
-    def computeKernelLocalizationIntegral(self, double[::1] fInt, int vciConstraint):
-        self._marmotParticle.computeKernelLocalizationIntegral(&fInt[0], vciConstraint)
+    def vci_compute_Test_PGradient_Integral(self, double[:,:,::1] r_AiC):
+        self._marmotParticle.vci_compute_Test_PGradient_Integral(&r_AiC[0,0,0])
 
-    def assignShapeFunctionCorrectionTerm(self, double[::1] correctionTerm, int vciConstraint):
-        self._marmotParticle.assignShapeFunctionCorrectionTerms(&correctionTerm[0], vciConstraint)
+    def vci_compute_MMatrix(self, double[:,:,::1] m_ACD):
+        self._marmotParticle.vci_compute_MMatrix(&m_ACD[0,0,0])
+
+    def vci_assignTestFunctionCorrectionTerms(self, double[:,:,::1] eta_AjC):
+        self._marmotParticle.vci_assignTestFunctionCorrectionTerms(&eta_AjC[0,0,0])
 
     def getRestartData(self,):
         return self._stateVars
