@@ -63,6 +63,11 @@ class BaseParticle(BaseNodeCouplingEntity):
 
     @property
     @abstractmethod
+    def dimension(self) -> int:
+        """Defines the dimension of the particle, e.g., 1, 2 or 3."""
+
+    @property
+    @abstractmethod
     def baseFields(self) -> list[str]:
         """Defines which fields are attached to the particle."""
 

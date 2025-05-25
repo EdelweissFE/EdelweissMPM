@@ -135,6 +135,10 @@ cdef class MarmotParticleWrapper:
         return self._nodes
 
     @property
+    def dimension(self):
+        return self._nDim
+
+    @property
     def baseFields(self):
         return self._baseFields
 

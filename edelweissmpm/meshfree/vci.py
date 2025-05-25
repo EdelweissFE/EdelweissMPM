@@ -75,13 +75,12 @@ class VariationallyConsistentIntegrationManager:
         particles: list[BaseParticle],
         meshfreeKernelFunctions: list[BaseMeshfreeKernelFunction],
         particleBoundaryDefinitions: list[BoundaryParticleDefinition],
-        nDim: int,
     ):
         # TODO: replace with ParticleKernelDomain
         self._particles = particles
         self._kernelFunctions = meshfreeKernelFunctions
         self._particleBoundaryDefinitions = particleBoundaryDefinitions
-        self._nDim = nDim
+        self._nDim = particles[0].dimension
 
         # we need to know the number of VCI constraints. Since this concept only makes sense for a set of identical particle types,
         # we can just take the first particle
