@@ -217,7 +217,7 @@ def run_sim():
         theJournal,
         theModel.particleSets["rectangular_grid_top"],
         "pressure",
-        np.array([-10.0]),
+        np.array([-5.0]),
         surfaceID=3,
     )
 
