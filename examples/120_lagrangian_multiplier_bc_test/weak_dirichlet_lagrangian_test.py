@@ -35,7 +35,7 @@ from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from edelweissfe.utils.exceptions import StepFailed
 
-from edelweissmpm.constraints.particlelagrangianweakdirichtlet import (
+from edelweissmpm.constraints.particlelagrangianweakdirichlet import (
     ParticleLagrangianWeakDirichlet,
 )
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
