@@ -74,6 +74,8 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         void getVertexCoordinates(double* )
 
+        void getEvaluationCoordinates(double* )
+
         void getVisualizationVertexCoordinates(double* )
 
         void getCenterCoordinates(double* )
@@ -128,6 +130,8 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
         int getNumberOfVertices()
 
         int getNBaseDof()
+
+        int getNumberOfEvaluationPoints()
 
         int vci_getNumberOfConstraints()
 
@@ -197,6 +201,10 @@ cdef class MarmotParticleWrapper:
 
     cdef np.ndarray _vertexCoordinates
     cdef double[:,::1] _vertexCoordinatesView
+
+    cdef np.ndarray _evaluationCoordinates
+    cdef double[:,::1] _evaluationCoordinatesView
+    cdef int _nEvaluationPoints
 
     cdef np.ndarray _centerCoordinates
     cdef double[::1] _centerCoordinatesView

@@ -193,18 +193,18 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
             self.signalizeKernelFunctionUpdate()
 
         for p in self._particles:
-            vertexCoordinates = p.getVertexCoordinates()
+            evaluationCoordinates = p.getEvaluationCoordinates()
 
             # rough search based on the bounding box of the kernel functions
             kernelFunctionCandidates = {
                 candidate
-                for vertex in vertexCoordinates
+                for vertex in evaluationCoordinates
                 for candidate in self._theBins.getKernelFunctionCandidates(vertex)
             }
             # fine search based on the actual support of the kernel functions
             kernelFunctions = {
                 sf
-                for coordinate in vertexCoordinates
+                for coordinate in evaluationCoordinates
                 for sf in kernelFunctionCandidates
                 if sf.isCoordinateInCurrentSupport(coordinate)
             }

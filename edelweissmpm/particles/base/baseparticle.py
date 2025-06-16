@@ -127,6 +127,17 @@ class BaseParticle(BaseNodeCouplingEntity):
             All coordinates for all bounding vertices."""
 
     @abstractmethod
+    def getEvaluationCoordinates(
+        self,
+    ) -> np.ndarray:
+        """Get the evaluation coordinates of the particle.
+
+        Returns
+        -------
+        np.ndarray
+            All coordinates for all bounding vertices."""
+
+    @abstractmethod
     def getCenterCoordinates(
         self,
     ) -> np.ndarray:
