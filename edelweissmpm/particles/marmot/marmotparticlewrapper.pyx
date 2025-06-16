@@ -79,6 +79,10 @@ cdef class MarmotParticleWrapper:
         self._vertexCoordinates = np.copy(vertexCoordinates)
         self._vertexCoordinatesView = self._vertexCoordinates
 
+
+
+
+
         self._centerCoordinates = np.zeros(vertexCoordinates.shape[1])
         self._centerCoordinatesView = self._centerCoordinates
 
@@ -129,6 +133,11 @@ cdef class MarmotParticleWrapper:
 
         cdef dict supportedDistributedLoads = self._marmotParticle.getSupportedDistributedLoadTypes()
         self._supportedDistributedLoads = {k.decode() :  v for k, v in supportedDistributedLoads.items()  }
+
+        self._nEvaluationPoints = self._marmotParticle.getNumberOfEvaluationPoints()
+
+        self._evaluationCoordinates = np.zeros( ( self._nEvaluationPoints, self._nDim) )
+        self._evaluationCoordinatesView = self._evaluationCoordinates
 
     @property
     def nodes(self):
@@ -280,6 +289,12 @@ cdef class MarmotParticleWrapper:
         self._marmotParticle.getVertexCoordinates(&self._vertexCoordinatesView[0,0])
 
         return self._vertexCoordinates
+
+    def getEvaluationCoordinates(self):
+
+        self._marmotParticle.getEvaluationCoordinates(&self._evaluationCoordinatesView[0,0])
+
+        return self._evaluationCoordinates
 
     def getCenterCoordinates(self):
         """Get the underlying MarmotParticle center coordinates."""
