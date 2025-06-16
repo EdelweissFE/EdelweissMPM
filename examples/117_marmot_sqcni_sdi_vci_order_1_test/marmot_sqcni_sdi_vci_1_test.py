@@ -119,6 +119,9 @@ def run_sim():
         theModel, theJournal, TheParticleFactory, x0=x0, y0=y0, h=height, l=length, nX=nX, nY=nY
     )
 
+    for p in theModel.particles.values():
+        p.setProperty("VCI order", 1)
+
     # let's create the particle kernel domain
     theParticleKernelDomain = ParticleKernelDomain(
         list(theModel.particles.values()), list(theModel.meshfreeKernelFunctions.values())
@@ -217,7 +220,7 @@ def run_sim():
         theJournal,
         theModel.particleSets["rectangular_grid_top"],
         "pressure",
-        np.array([-5.0]),
+        np.array([-10.0]),
         surfaceID=3,
     )
 

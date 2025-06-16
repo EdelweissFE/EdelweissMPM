@@ -35,8 +35,8 @@ from edelweissfe.linsolve.pardiso.pardiso import pardisoSolve
 from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from edelweissfe.utils.exceptions import StepFailed
 
-from edelweissmpm.constraints.particlepenaltyweakdirichtlet import (
-    ParticlePenaltyWeakDirichlet,
+from edelweissmpm.constraints.particlelagrangianweakdirichlet import (
+    ParticleLagrangianWeakDirichlet,
 )
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.generators.rectangularkernelfunctiongridgenerator import (
@@ -59,10 +59,6 @@ from edelweissmpm.particlemanagers.kdbinorganizedparticlemanager import (
 )
 from edelweissmpm.particles.marmot.marmotparticlewrapper import MarmotParticleWrapper
 from edelweissmpm.solvers.nqs import NonlinearQuasistaticSolver
-
-# from edelweissmpm.generators.rectangularparticlegridgenerator import (
-#     generateRectangularParticleGrid,
-# )
 
 
 def run_sim():
@@ -107,7 +103,7 @@ def run_sim():
 
     def TheParticleFactory(number, vertexCoordinates, volume):
         return MarmotParticleWrapper(
-            "GradientEnhancedMicropolarSQCNIxSDIv2/PlaneStrain/Quad",
+            "GradientEnhancedMicropolarSQCNIxNSNI/PlaneStrain/Quad",
             number,
             vertexCoordinates,
             volume,
@@ -136,6 +132,31 @@ def run_sim():
     # We need this model to create the dof manager
     theModel.particleKernelDomains["my_all_with_all"] = theParticleKernelDomain
 
+    vertexSetLeft = {p: [0] for p in theModel.particleSets["rectangular_grid_left"]}
+    vertexSetLeft[theModel.particleSets["rectangular_grid_left"][-1]] = [0, 3]
+
+    vertexSetRight = {p: [1] for p in theModel.particleSets["rectangular_grid_right"]}
+    vertexSetRight[theModel.particleSets["rectangular_grid_right"][-1]] = [1, 2]
+
+    dirichletLeft = ParticleLagrangianWeakDirichlet(
+        "left",
+        vertexSetLeft,
+        "displacement",
+        {0: 0, 1: 2},
+        theModel,
+    )
+
+    dirichletRight = ParticleLagrangianWeakDirichlet(
+        "right",
+        vertexSetRight,
+        "displacement",
+        {0: -3, 1: -2},
+        theModel,
+    )
+
+    theModel.constraints["dirichletLeft"] = dirichletLeft
+    theModel.constraints["dirichletRight"] = dirichletRight
+
     theModel.prepareYourself(theJournal)
     theJournal.printPrettyTable(theModel.makePrettyTableSummary(), "summary")
 
@@ -158,6 +179,10 @@ def run_sim():
         "deformation gradient",
     )
 
+    fieldOutputController.addExpressionFieldOutput(
+        None, lambda: dirichletLeft.reactionForce, "reaction force", export="RF"
+    )
+
     fieldOutputController.initializeJob()
 
     ensightOutput = EnsightOutputManager("ensight", theModel, fieldOutputController, theJournal, None)
@@ -171,18 +196,14 @@ def run_sim():
     )
     ensightOutput.initializeJob()
 
-    dirichletLeft = ParticlePenaltyWeakDirichlet(
-        "left", theModel, theModel.particleSets["rectangular_grid_left"], "displacement", {0: 0, 1: 0}, 1e6
-    )
-
     dirichlets = [
         dirichletLeft,
+        dirichletRight,
     ]
 
     incSize = 1e-1
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1, 50, theJournal)
 
-    # nonlinearSolver = NQSParallelForMarmot(theJournal)
     nonlinearSolver = NonlinearQuasistaticSolver(theJournal)
 
     iterationOptions = dict()
@@ -209,18 +230,6 @@ def run_sim():
         list(theModel.particles.values()), list(theModel.meshfreeKernelFunctions.values()), theBoundary
     )
 
-    from edelweissmpm.stepactions.particledistributedload import ParticleDistributedLoad
-
-    pressureTop = ParticleDistributedLoad(
-        "pressureTop",
-        theModel,
-        theJournal,
-        theModel.particleSets["rectangular_grid_top"],
-        "pressure",
-        np.array([-5.0]),
-        surfaceID=3,
-    )
-
     try:
         nonlinearSolver.solveStep(
             adaptiveTimeStepper,
@@ -231,7 +240,6 @@ def run_sim():
             particleManagers=[theParticleManager],
             constraints=dirichlets,
             userIterationOptions=iterationOptions,
-            particleDistributedLoads=[pressureTop],
             vciManagers=[vciManager],
         )
 
