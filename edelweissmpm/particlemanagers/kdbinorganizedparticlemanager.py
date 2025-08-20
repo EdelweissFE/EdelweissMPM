@@ -189,7 +189,8 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
             )
             for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
                 particleCoordinates = particle.getCenterCoordinates()
-                particleVol = particle.getVolumeUndeformed()
+                # particleVol = particle.getVolumeUndeformed()
+                particleVol = 1.0
                 randdisp = np.array([np.random.rand() - 0.5, np.random.rand() - 0.5]) * np.sqrt(particleVol) * 1e-2
                 particleCoordinates += randdisp
 
