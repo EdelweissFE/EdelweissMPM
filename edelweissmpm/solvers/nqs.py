@@ -86,6 +86,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         "spec. absolute flux residual tolerances": dict(),
         "spec. absolute field correction tolerances": dict(),
         "failed increment cutback factor": 0.25,
+        "fall back to quasi Newton after n residual growths": False,
     }
 
     def __init__(self, journal: Journal):
@@ -531,12 +532,14 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
                 if not quasi_Newton and self._checkDivergingSolution(incrementResidualHistory, nAllowedResidualGrowths):
                     self._printResidualOutlierNodes(incrementResidualHistory)
-                    # raise DivergingSolution("Residual grew {:} times, cutting back".format(nAllowedResidualGrowths))
-                    self.journal.message(
-                        "Residual grew {:} times, switching to quasi-Newton".format(nAllowedResidualGrowths),
-                        self.identification,
-                    )
-                    quasi_Newton = True
+                    if not iterationOptions["fall back to quasi Newton after n residual growths"]:
+                        raise DivergingSolution("Residual grew {:} times, cutting back".format(nAllowedResidualGrowths))
+                    else:
+                        self.journal.message(
+                            "Residual grew {:} times, switching to quasi-Newton".format(nAllowedResidualGrowths),
+                            self.identification,
+                        )
+                        quasi_Newton = True
 
                 if iterationCounter == iterationOptions["max. iterations"]:
                     self._printResidualOutlierNodes(incrementResidualHistory)
@@ -544,13 +547,13 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
             if not quasi_Newton:
                 K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
-                if iterationCounter == 0:
-                    K_CSR_elastic = K_CSR.copy()
+                if iterationOptions["fall back to quasi Newton after n residual growths"]:
+                    if iterationCounter == 0:
+                        K_CSR_elastic = K_CSR.copy()
             else:
                 K_CSR = K_CSR_elastic.copy()
 
             K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
-            # K_CSR = self._applyDirichletKCsr(K_CSR, dirichlets, theDofManager, reducedNodeSets)
 
             ddU = self._linearSolve(K_CSR, Rhs, linearSolver)
             dU += ddU
