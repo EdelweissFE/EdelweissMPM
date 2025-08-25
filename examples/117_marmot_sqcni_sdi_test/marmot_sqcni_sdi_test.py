@@ -95,9 +95,7 @@ def run_sim():
     )
 
     # let's define the type of approximation: We would like to have a reproducing kernel approximation of completeness order 1
-    theApproximation = MarmotMeshfreeApproximationWrapper(
-        "ReproducingKernelImplicitGradient", dimension, completenessOrder=1
-    )
+    theApproximation = MarmotMeshfreeApproximationWrapper("ReproducingKernel", dimension, completenessOrder=1)
 
     # We need a dummy material for the material point
     theMaterial = {
@@ -126,11 +124,7 @@ def run_sim():
 
     # for Semi-Lagrangian particle methods, we assoicate a particle with a kernel function.
     theParticleManager = KDBinOrganizedParticleManager(
-        theParticleKernelDomain,
-        dimension,
-        theJournal,
-        bondParticlesToKernelFunctions=True,
-        randomlyShiftPartliceShapeFunctions=1e-2,
+        theParticleKernelDomain, dimension, theJournal, bondParticlesToKernelFunctions=True
     )
 
     # let's print some details
@@ -194,6 +188,8 @@ def run_sim():
     iterationOptions["max. iterations"] = 15
     iterationOptions["critical iterations"] = 3
     iterationOptions["allowed residual growths"] = 10
+    iterationOptions["default relative flux residual tolerance"] = 1e-10
+    iterationOptions["default absolute field correction tolerance"] = 1e-10
 
     linearSolver = pardisoSolve
 
