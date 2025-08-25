@@ -1,2 +1,20 @@
 [build-system]
 requires = ["setuptools", "Cython", "numpy"]
+
+[project]
+name = "EdelweissMPM"
+version = "25.08"
+description = "EdelweissMPM: A meshfree module for EdelweissFE."
+readme = "README.md"
+authors = [
+    { name = "Matthias Neuner", email = "matthias.neuner@uibk.ac.at" }
+]
+license = { text = "LGPL-2.1" }
+urls = { Homepage = "https://github.com/EdelweissFE/EdelweissMPM" }
+requires-python = ">=3.12"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]

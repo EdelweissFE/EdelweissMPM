@@ -195,12 +195,6 @@ cdef class MarmotParticleWrapper:
         self._initializeStateVarsTemp()
         self._marmotParticle.computePhysicsKernels(&dUc[0], &Pc[0], &Kc[0], timeNew, dTime)
 
-    cpdef void computeLumpedInertia( self, double[::1] M ) nogil:
-        self._marmotParticle.computeLumpedInertia(&M[0])
-
-    cpdef void computeConsistentInertia( self, double[::1] M ) nogil:
-        self._marmotParticle.computeConsistentInertia(&M[0])
-
     cpdef void _initializeStateVarsTemp(self, ) nogil:
         self._stateVarsTemp[:] = self._stateVars
 

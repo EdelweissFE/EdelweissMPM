@@ -103,10 +103,6 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
                                             double timeNewTotal,
                                             double dT) except +
 
-        void computeLumpedInertia( double* M ) except +
-
-        void computeConsistentInertia( double* M ) except +
-
         const unordered_map[string, int]& getSupportedBodyLoadTypes()
 
         const unordered_map[string, int]& getSupportedDistributedLoadTypes()
@@ -158,9 +154,6 @@ cdef class MarmotParticleWrapper:
     cdef MarmotMeshfreeApproximation* _marmotMeshfreeApproximation
 
     cpdef void computePhysicsKernels(self, double[::1] dUc, double[::1] Rhs, double[::1] AMatrix, double timeNew, double dTime, ) nogil
-
-    cpdef void computeLumpedInertia( self, double[::1] M ) nogil
-    cpdef void computeConsistentInertia( self,  double[::1] M ) nogil
 
     cdef np.ndarray materialProperties
     cdef double[::1] materialPropertiesView
