@@ -30,7 +30,7 @@ from os.path import expanduser, join
 
 import numpy
 from Cython.Build import build_ext, cythonize
-from setuptools import find_packages, setup
+from setuptools import setup
 from setuptools.extension import Extension
 
 directives = {
@@ -68,7 +68,7 @@ def MarmotExtension(pyxpath, *args, **kwargs):
         runtime_library_dirs=[join(marmot_dir, "lib")],
         language="c++",
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -144,18 +144,6 @@ extensions += [
 ]
 
 setup(
-    name="EdelweissMPM",
-    version="v24.04",
-    description="EdelweissMPM: A material point solver module for EdelweissFE.",
-    license="LGPL-2.1",
-    packages=find_packages(),
-    include_package_data=True,
-    author="Matthias Neuner",
-    author_email="matthias.neuner@uibk.ac.at",
-    url="https://github.com/EdelweissFE/EdelweissMPM",
     cmdclass={"build_ext": build_ext},
     ext_modules=cythonize(extensions, compiler_directives=directives, annotate=True, language_level=3),
 ),
-
-
-print("Finish!")
