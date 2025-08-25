@@ -126,7 +126,11 @@ def run_sim():
 
     # for Semi-Lagrangian particle methods, we assoicate a particle with a kernel function.
     theParticleManager = KDBinOrganizedParticleManager(
-        theParticleKernelDomain, dimension, theJournal, bondParticlesToKernelFunctions=True
+        theParticleKernelDomain,
+        dimension,
+        theJournal,
+        bondParticlesToKernelFunctions=True,
+        randomlyShiftPartliceShapeFunctions=1e-2,
     )
 
     # let's print some details
@@ -274,7 +278,7 @@ def test_sim():
 
     gold = np.loadtxt("gold.csv")
 
-    assert np.isclose(res.flatten(), gold.flatten(), rtol=1e-12).all()
+    assert np.isclose(np.copy(res.flatten() - gold.flatten()), 0.0, rtol=1e-12).all()
 
 
 if __name__ == "__main__":

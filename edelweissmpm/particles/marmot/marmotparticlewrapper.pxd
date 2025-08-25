@@ -135,6 +135,8 @@ cdef extern from "Marmot/MarmotParticle.h" namespace "Marmot::Meshfree":
 
         int vci_getNumberOfConstraints()
 
+        double getVolumeUndeformed()
+
         void vci_compute_Test_P_BoundaryIntegral(double* f_AiC_RowMajor, const double* boundarySurfaceVector, int boundaryFaceID)
 
         void vci_compute_TestGradient_P_Integral(double* f_AiC_RowMajor)

@@ -107,7 +107,7 @@ def run_sim():
 
     def TheParticleFactory(number, vertexCoordinates, volume):
         return MarmotParticleWrapper(
-            "GradientEnhancedMicropolarSQCNIxSDI/PlaneStrain/Quad",
+            "GradientEnhancedMicropolarSQCNIxSDIv2/PlaneStrain/Quad",
             number,
             vertexCoordinates,
             volume,
@@ -279,7 +279,7 @@ def test_sim():
 
     gold = np.loadtxt("gold.csv")
 
-    assert np.isclose(res.flatten(), gold.flatten(), rtol=1e-12).all()
+    assert np.isclose(np.copy(res.flatten() - gold.flatten()), 0.0, rtol=1e-12).all()
 
 
 if __name__ == "__main__":

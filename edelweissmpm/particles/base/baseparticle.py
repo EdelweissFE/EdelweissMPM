@@ -149,6 +149,17 @@ class BaseParticle(BaseNodeCouplingEntity):
             The center coordinates."""
 
     @abstractmethod
+    def getVolumeUndeformed(
+        self,
+    ) -> float:
+        """Get the undeformed volume of the particle.
+
+        Returns
+        -------
+        float
+            The undeformed volume."""
+
+    @abstractmethod
     def acceptStateAndPosition(
         self,
     ):

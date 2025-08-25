@@ -47,7 +47,7 @@ class _KDBinOrganizer:
         The dimension of the problem.
     """
 
-    def __init__(self, kernelFunctions, dimension):
+    def __init__(self, kernelFunctions, dimension, randomlyShiftPartliceShapeFunctions: bool | float = False):
         self._dimension = dimension
         self._kernelFunctions = kernelFunctions
 
@@ -145,6 +145,15 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
         The list of particles.
     dimension
         The dimension of the problem.
+    journal
+        The journal for logging messages.
+    bondParticlesToKernelFunctions
+        Whether to bond the particles to the kernel functions (one particle per kernel function).
+        If True, the kernel functions are moved to the particle center coordinates at each update.
+    randomlyShiftPartliceShapeFunctions
+        Whether to randomly shift the shape functions a bit to avoid alignment artifacts.
+        If a float value is given, this value is used as the maximum shift factor in each direction, which is scaled with the approximate particle size:
+        randdisp = (np.random.rand(self._dimension) - 0.5) * np.sqrt(particle.getVolumeUndeformed()) * randomlyShiftPartliceShapeFunctions * particleSize
     """
 
     def __init__(
@@ -153,6 +162,7 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
         dimension: int,
         journal: Journal,
         bondParticlesToKernelFunctions: bool = False,
+        randomlyShiftPartliceShapeFunctions: bool | float = False,
     ):
 
         self._meshfreeKernelFunctions = particleKernelDomain.meshfreeKernelFunctions
@@ -161,14 +171,13 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
         self._bondParticlesToKernelFunctions = bondParticlesToKernelFunctions
         self._journal = journal
 
+        if not isinstance(randomlyShiftPartliceShapeFunctions, (bool, float)):
+            raise ValueError("randomlyShiftPartliceShapeFunctions must be a boolean or a float.")
+        self._randomlyShiftPartliceShapeFunctions = randomlyShiftPartliceShapeFunctions
+
         if self._bondParticlesToKernelFunctions:
             if len(self._particles) != len(self._meshfreeKernelFunctions):
                 raise ValueError("The number of particles and kernel functions must be equal.")
-            # for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
-            #     if not np.isclose(particle.getCenterCoordinates(), kernelFunction.center).all():
-            #         raise ValueError(
-            #             f"The particle and kernel function coordinates must be close to each other. {particle.getCenterCoordinates()} != {kernelFunction.center}"
-            #         )
 
         self.signalizeKernelFunctionUpdate()
 
@@ -189,10 +198,17 @@ class KDBinOrganizedParticleManager(BaseParticleManager):
             )
             for particle, kernelFunction in zip(self._particles, self._meshfreeKernelFunctions):
                 particleCoordinates = particle.getCenterCoordinates()
-                # particleVol = particle.getVolumeUndeformed()
-                particleVol = 1.0
-                randdisp = np.array([np.random.rand() - 0.5, np.random.rand() - 0.5]) * np.sqrt(particleVol) * 1e-2
-                particleCoordinates += randdisp
+                if self._randomlyShiftPartliceShapeFunctions:
+                    if isinstance(self._randomlyShiftPartliceShapeFunctions, float):
+                        particleVol = particle.getVolumeUndeformed()
+                        particleSize = np.pow(particleVol, 1.0 / self._dimension)
+                        randdisp = (
+                            (np.random.rand(self._dimension) - 0.5)
+                            * np.sqrt(particle.getVolumeUndeformed())
+                            * self._randomlyShiftPartliceShapeFunctions
+                            * particleSize
+                        )
+                    particleCoordinates += randdisp
 
                 kernelFunction.moveTo(particleCoordinates)
 

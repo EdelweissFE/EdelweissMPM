@@ -303,6 +303,11 @@ cdef class MarmotParticleWrapper:
 
         return self._centerCoordinates
 
+    def getVolumeUndeformed(self):
+        """Get the underlying MarmotParticle undeformed volume."""
+
+        return self._marmotParticle.getVolumeUndeformed()
+
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         pass
 
