@@ -83,6 +83,11 @@ def generateRectangularQuadParticleGrid(
 
     pVolume = l * h / (nX * nY) * thickness
 
+    # check if particle numbers are already used
+    for pN in range(firstParticleNumber, firstParticleNumber + nX * nY):
+        if pN in model.particles:
+            raise ValueError("Particle number {:} already in use.".format(pN))
+
     for x in range(nX):
         for y in range(nY):
             particleVertices = np.asarray([nG[x, y], nG[x + 1, y], nG[x + 1, y + 1], nG[x, y + 1]])

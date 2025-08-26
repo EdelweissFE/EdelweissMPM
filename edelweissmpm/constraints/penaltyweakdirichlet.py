@@ -37,7 +37,7 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
         field: str,
         prescribedStepDelta: dict,
         penaltyParameter: float,
-        **kwargs
+        **kwargs,
     ):
         self._name = name
         self._model = model
@@ -120,6 +120,6 @@ class PenaltyWeakDirichlet(MPMConstraintBase):
                     P_i[nodeIdcs] += (
                         N
                         * self._penaltyParameter
-                        * (mpValue - prescribedComponent * self._f_t(timeStep.stepProgressIncrement))
+                        * (mpValue - prescribedComponent * self._amplitude(timeStep.stepProgressIncrement))
                     )
                     K_ij[np.ix_(nodeIdcs, nodeIdcs)] += np.outer(N, N) * self._penaltyParameter

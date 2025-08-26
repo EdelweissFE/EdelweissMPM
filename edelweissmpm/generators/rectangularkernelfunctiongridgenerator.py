@@ -79,6 +79,11 @@ def generateRectangularKernelFunctionGrid(
 
     nG = np.asarray(nodes).reshape(nX, nY)
 
+    # check if any of the node labels already exist in the model
+    for n in nodes:
+        if n.label in model.nodes:
+            raise ValueError("Node with label {:} already exists in model.".format(n.label))
+
     model.nodes.update({n.label: n for n in nodes})
     model.nodeSets["{:}_left".format(name)] = NodeSet("{:}_left".format(name), [n for n in nG[0, :]])
     model.nodeSets["{:}_right".format(name)] = NodeSet("{:}_right".format(name), [n for n in nG[-1, :]])
