@@ -172,13 +172,13 @@ class VariationallyConsistentIntegrationManager:
             # print("Kernel localization integrals: ", kernelLocalizationIntegrals)
 
             # now we can compute the correction terms
-            residual = Psi_P_BoundaryIntegral - PsiGrad_P_Integral - Psi_PGrad_Integral
+            # residual = Psi_P_BoundaryIntegral - PsiGrad_P_Integral - Psi_PGrad_Integral
             # print(residual.reshape( (nTestFunctions, -1)))
             # residual = PsiGrad_P_Integral
             # print(residual.reshape( (nTestFunctions, -1)))
             # print max abs of residual
-            max_residual = np.max(np.abs(residual))
-            print("Max residual: ", max_residual)
+            # max_residual = np.max(np.abs(residual))
+            # print("Max residual: ", max_residual)
 
             # print(mMatrices.flatten())
 

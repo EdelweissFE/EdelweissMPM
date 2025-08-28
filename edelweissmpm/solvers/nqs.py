@@ -46,6 +46,7 @@ from prettytable import PrettyTable
 
 from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.mpmmanagers.base.mpmmanagerbase import MPMManagerBase
+from edelweissmpm.numerics.predictors.basepredictor import BasePredictor
 from edelweissmpm.particlemanagers.base.baseparticlemanager import BaseParticleManager
 from edelweissmpm.solvers.base.nonlinearsolverbase import (
     NonlinearImplicitSolverBase,
@@ -86,7 +87,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         "spec. absolute flux residual tolerances": dict(),
         "spec. absolute field correction tolerances": dict(),
         "failed increment cutback factor": 0.25,
-        "fall back to quasi Newton after n residual growths": False,
+        "fall back to quasi Newton after allowed residual growths": False,
     }
 
     def __init__(self, journal: Journal):
@@ -113,6 +114,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         allowFallBackToRestart: bool = False,
         numberOfRestartsToStore=3,
         restartBaseName: str = "restart",
+        predictor: BasePredictor = None,
     ) -> tuple[bool, MPMModel]:
         """Public interface to solve for a step.
 
@@ -152,6 +154,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
             The number of restart files to store.
         restartBaseName
             The base name of the restart files.
+        extrapolator
+            The extrapolator instance to be used for making predctions on the next solution increment.
 
         Returns
         -------
@@ -182,6 +186,9 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
         newtonCache = None
         theDofManager = None
+
+        if predictor:
+            predictor.resetHistory()
 
         restartHistoryManager = RestartHistoryManager(restartBaseName, numberOfRestartsToStore)
 
@@ -281,6 +288,13 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 for vciManager in vciManagers:
                     vciManager.computeVCICorrections()
 
+                # if iterationOptions["extrapolation"]:
+                #     dUGuess = self._extrapolator.extrapolateIncrement(extrapolationCache, timeStep)
+
+                dUPrediction = None
+                if predictor:
+                    dUPrediction = predictor.getPrediction(timeStep)
+
                 nVariables = len(presentVariableNames)
                 iterationHeader = ("{:^25}" * nVariables).format(*presentVariableNames)
                 iterationHeader2 = (" {:<10}  {:<10}  ").format("||R||∞", "||ddU||∞") * nVariables
@@ -308,6 +322,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                         timeStep,
                         model,
                         newtonCache,
+                        dUPrediction,
                     )
 
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
@@ -326,11 +341,17 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
 
+                    if predictor:
+                        predictor.resetHistory()
+
                 else:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:
                         timeStepper.preventIncrementIncrease()
 
                     U += dU
+
+                    if predictor:
+                        predictor.updateHistory(dU, timeStep)
 
                     # TODO: Make this optional/flexibel via function arguments (?)
                     for field in reducedNodeFields.values():
@@ -391,6 +412,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         timeStep: TimeStep,
         model: MPMModel,
         newtonCache: tuple = None,
+        initialGuess: DofVector = None,
     ) -> tuple[DofVector, DofVector, dict, tuple]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
@@ -431,6 +453,8 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
         newtonCache
             An arbitrary cache of (expensive) objects, which may be reused across time steps as long as the global system does not change.
             If the system changes, the newtonCache is set to None.
+        initialGuess
+            An initial guess DofVector for the Newton scheme, e.g., obtained using extrapolation.
 
         Returns
         -------
@@ -451,7 +475,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
             newtonCache = self._createNewtonCache(theDofManager)
         K_VIJ, csrGenerator, dU, Rhs, F, PInt, PExt = newtonCache
 
-        dU[:] = 0.0
+        dU[:] = initialGuess if initialGuess is not None else 0.0
         ddU = None
 
         self._applyStepActionsAtIncrementStart(model, timeStep, dirichlets + bodyLoads)
@@ -532,7 +556,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
                 if not quasi_Newton and self._checkDivergingSolution(incrementResidualHistory, nAllowedResidualGrowths):
                     self._printResidualOutlierNodes(incrementResidualHistory)
-                    if not iterationOptions["fall back to quasi Newton after n residual growths"]:
+                    if not iterationOptions["fall back to quasi Newton after allowed residual growths"]:
                         raise DivergingSolution("Residual grew {:} times, cutting back".format(nAllowedResidualGrowths))
                     else:
                         self.journal.message(
@@ -547,7 +571,7 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
             if not quasi_Newton:
                 K_CSR = self._VIJtoCSR(K_VIJ, csrGenerator)
-                if iterationOptions["fall back to quasi Newton after n residual growths"]:
+                if iterationOptions["fall back to quasi Newton after allowed residual growths"]:
                     if iterationCounter == 0:
                         K_CSR_elastic = K_CSR.copy()
             else:

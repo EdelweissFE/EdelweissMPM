@@ -175,6 +175,7 @@ class NonlinearQuasistaticMarmotArcLengthSolver(NQSParallelForMarmot):
         timeStep: TimeStep,
         model: MPMModel,
         newtonCache: tuple = None,
+        dUGuess: DofVector = None,
     ) -> tuple[DofVector, DofVector, dict, tuple]:
         """Standard Newton-Raphson scheme to solve for an increment.
 
