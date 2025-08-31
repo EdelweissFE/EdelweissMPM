@@ -303,27 +303,37 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 self.journal.message(iterationHeader2, self.identification, level=2)
 
                 try:
-                    dU, P, iterationHistory, newtonCache = self._newtonSolve(
-                        dirichlets,
-                        bodyLoads,
-                        distributedLoads,
-                        particleDistributedLoads,
-                        reducedNodeSets,
-                        elements,
-                        U,
-                        activeCells,
-                        model.cellElements.values(),
-                        materialPoints,
-                        particles,
-                        constraints,
-                        theDofManager,
-                        linearSolver,
-                        iterationOptions,
-                        timeStep,
-                        model,
-                        newtonCache,
-                        dUPrediction,
-                    )
+                    for initialGuess in (dUPrediction, None):
+                        try:
+                            dU, P, iterationHistory, newtonCache = self._newtonSolve(
+                                dirichlets,
+                                bodyLoads,
+                                distributedLoads,
+                                particleDistributedLoads,
+                                reducedNodeSets,
+                                elements,
+                                U,
+                                activeCells,
+                                model.cellElements.values(),
+                                materialPoints,
+                                particles,
+                                constraints,
+                                theDofManager,
+                                linearSolver,
+                                iterationOptions,
+                                timeStep,
+                                model,
+                                newtonCache,
+                                initialGuess,
+                            )
+                            break
+                        except Exception:
+                            if initialGuess is not None:
+                                self.journal.message(
+                                    "Prediction failed, trying without prediction", self.identification, level=1
+                                )
+                            else:
+                                raise
 
                 except (RuntimeError, DivergingSolution, ReachedMaxIterations) as e:
                     self.journal.message(str(e), self.identification, 1)
