@@ -145,13 +145,13 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
             masterValue = N_master @ dU_U_j[masterNodeIdcs]
             slaveValue = N_slave @ dU_U_j[slaveNodeIdcs]
 
-            g_j = masterValue - slaveValue
+            g_i = masterValue - slaveValue
             dg_i_dU_j_master = N_master
             dg_i_dU_j_slave = -N_slave
 
             P_U_i[masterNodeIdcs] += dL_i * dg_i_dU_j_master
             P_U_i[slaveNodeIdcs] += dL_i * dg_i_dU_j_slave
-            PExt_L[i] += g_j
+            PExt_L[i] += g_i
 
             K_UL_j[masterNodeIdcs, i] += dg_i_dU_j_master
             K_LU_j[i, masterNodeIdcs] += dg_i_dU_j_master
