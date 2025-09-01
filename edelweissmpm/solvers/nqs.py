@@ -288,9 +288,6 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                 for vciManager in vciManagers:
                     vciManager.computeVCICorrections()
 
-                # if iterationOptions["extrapolation"]:
-                #     dUGuess = self._extrapolator.extrapolateIncrement(extrapolationCache, timeStep)
-
                 dUPrediction = None
                 if predictor:
                     dUPrediction = predictor.getPrediction(timeStep)
@@ -327,8 +324,9 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
                                 initialGuess,
                             )
                             break
-                        except Exception:
+                        except Exception as e:
                             if initialGuess is not None:
+                                self.journal.message(str(e), self.identification, 1)
                                 self.journal.message(
                                     "Prediction failed, trying without prediction", self.identification, level=1
                                 )
@@ -350,9 +348,6 @@ class NonlinearQuasistaticSolver(NonlinearImplicitSolverBase):
 
                     for man in outputManagers:
                         man.finalizeFailedIncrement()
-
-                    if predictor:
-                        predictor.resetHistory()
 
                 else:
                     if iterationHistory["iterations"] >= iterationOptions["critical iterations"]:

@@ -9,8 +9,16 @@ from edelweissmpm.particles.base.baseparticle import BaseParticle
 
 class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
     """
-    This is an implementation of weak Dirichlet boundary conditions using a penalty formulation.
-    It constrains a material point field increment.
+    This is an implementation of an equal value constraint using Lagrangian multipliers.
+    It constrains the field values of two particles to be equal for the specified components.
+    The constraint can be expressed as:
+    g(x) = value_master - value_slave = 0
+    where value_master and value_slave are the interpolated field values at the master and slave particles, respectively.
+    They are computed as:
+    value_master = N_master * U_master
+    value_slave = N_slave * U_slave
+    where N_master and N_slave are the interpolation vectors for the master and slave particles,
+    and U_master and U_slave are the nodal field values.
 
     Parameters
     ----------
@@ -117,7 +125,6 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
         K_UL = K[: -self._nLagrangianMultipliers, -self._nLagrangianMultipliers :]
         K_LU = K[-self._nLagrangianMultipliers :, : -self._nLagrangianMultipliers]
 
-        currentConstraint = 0
         self.reactionForce.fill(0.0)
         for i, component in enumerate(self._components):
 
@@ -127,9 +134,7 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
             K_UL_j = K_UL[i :: self._fieldSize, :]
             K_LU_j = K_LU[:, i :: self._fieldSize]
 
-            c = currentConstraint
-
-            dL_c = dU_L[c]
+            dL_i = dU_L[i]
 
             N_master = self._masterParticle.getInterpolationVector(self._masterParticle.getCenterCoordinates())
             N_slave = self._slaveParticle.getInterpolationVector(self._slaveParticle.getCenterCoordinates())
@@ -144,16 +149,64 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
             dg_i_dU_j_master = N_master
             dg_i_dU_j_slave = -N_slave
 
-            P_U_i[masterNodeIdcs] += dL_c * dg_i_dU_j_master
-            P_U_i[slaveNodeIdcs] += dL_c * dg_i_dU_j_slave
-            PExt_L[c] += g_j
+            P_U_i[masterNodeIdcs] += dL_i * dg_i_dU_j_master
+            P_U_i[slaveNodeIdcs] += dL_i * dg_i_dU_j_slave
+            PExt_L[i] += g_j
 
-            K_UL_j[masterNodeIdcs, c] += dg_i_dU_j_master
-            K_LU_j[c, masterNodeIdcs] += dg_i_dU_j_master
+            K_UL_j[masterNodeIdcs, i] += dg_i_dU_j_master
+            K_LU_j[i, masterNodeIdcs] += dg_i_dU_j_master
 
-            K_UL_j[slaveNodeIdcs, c] += dg_i_dU_j_slave
-            K_LU_j[c, slaveNodeIdcs] += dg_i_dU_j_slave
+            K_UL_j[slaveNodeIdcs, i] += dg_i_dU_j_slave
+            K_LU_j[i, slaveNodeIdcs] += dg_i_dU_j_slave
 
-            self.reactionForce[i] += dL_c
+            self.reactionForce[i] += dL_i
 
-            currentConstraint += 1
+
+def ParticleLagrangianEqualValueConstraintOnParticleSetFactory(
+    name: str,
+    constrainedParticleSet: set[BaseParticle],
+    components: list[int] | int,
+    field: str,
+    model,
+) -> list[ParticleLagrangianEqualValueConstraint]:
+    """
+    Factory function to create a set of ParticleLagrangianEqualValueConstraint instances
+    that constrain all particles in the given set to have equal values for the specified field components.
+
+    Parameters
+    ----------
+    name
+        The base name for the constraints.
+    constrainedParticleSet
+        The set of particles to be constrained.
+    components
+        The components of the field to be constrained.
+    field
+        The field this constraint is acting on.
+    model
+        The full MPMModel instance.
+
+    Returns
+    -------
+    list[ParticleLagrangianEqualValueConstraint]
+        A list of ParticleLagrangianEqualValueConstraint instances.
+    """
+    if len(constrainedParticleSet) < 2:
+        raise ValueError("At least two particles are required to create equal value constraints.")
+
+    constrainedParticleList = list(constrainedParticleSet)
+    masterParticle = constrainedParticleList[0]
+    constraints = []
+    for i, slaveParticle in enumerate(constrainedParticleList[1:]):
+        constraintName = f"{name}_eq_{i}"
+        constraint = ParticleLagrangianEqualValueConstraint(
+            constraintName,
+            masterParticle,
+            components,
+            slaveParticle,
+            field,
+            model,
+        )
+        constraints.append(constraint)
+
+    return constraints
