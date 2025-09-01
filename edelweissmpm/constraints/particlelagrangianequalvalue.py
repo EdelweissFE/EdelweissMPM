@@ -188,15 +188,15 @@ def ParticleLagrangianEqualValueConstraintOnParticleSetFactory(
 
     Returns
     -------
-    list[ParticleLagrangianEqualValueConstraint]
-        A list of ParticleLagrangianEqualValueConstraint instances.
+    dict
+        A dictionary of ParticleLagrangianEqualValueConstraint instances, keyed by their names.
     """
     if len(constrainedParticleSet) < 2:
         raise ValueError("At least two particles are required to create equal value constraints.")
 
     constrainedParticleList = list(constrainedParticleSet)
     masterParticle = constrainedParticleList[0]
-    constraints = []
+    constraints = dict()
     for i, slaveParticle in enumerate(constrainedParticleList[1:]):
         constraintName = f"{name}_eq_{i}"
         constraint = ParticleLagrangianEqualValueConstraint(
@@ -207,6 +207,6 @@ def ParticleLagrangianEqualValueConstraintOnParticleSetFactory(
             field,
             model,
         )
-        constraints.append(constraint)
+        constraints[constraintName] = constraint
 
     return constraints
