@@ -4,6 +4,7 @@ from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.variables.scalarvariable import ScalarVariable
 
 from edelweissmpm.constraints.base.mpmconstraintbase import MPMConstraintBase
+from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.particles.base.baseparticle import BaseParticle
 
 
@@ -16,15 +17,15 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
     ----------
     name
         The name of this constraint.
-    constrainedParticles
-        The dictionary of particles and their constraints.
-        Currently, the only supported constraints are:
-        - "center": Constrain the center of the particle.
-        - list of vertex indices: Constrain the particle at the specified vertex indices.
+    constrainedParticle
+        The particle whose field value is to be constrained.
+    constrainedLocation
+        The location on the particle to apply the constraint. Can be "center" or a vertex
+        index (0 to number of vertices - 1).
     field
         The field this constraint is acting on.
     prescribedStepDelta
-        The dictionary containing the prescribed bc components for the field in the present load step.
+        A dictionary mapping field component indices to their prescribed step increments.
     model
         The full MPMModel instance.
     """
@@ -32,34 +33,27 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
     def __init__(
         self,
         name: str,
-        constrainedParticles: dict[BaseParticle, str | list],
+        constrainedParticle: BaseParticle,
+        constrainedLocation: int | str,
         field: str,
         prescribedStepDelta: dict,
         model,
     ):
         self._name = name
-        self._constrainedParticles = constrainedParticles
+        self._constrainedParticle = constrainedParticle
         self._field = field
         self._prescribedStepDelta = prescribedStepDelta
         self._fieldSize = getFieldSize(self._field, model.domainSize)
         self._nodes = dict()
+        self._constrainedLocation = constrainedLocation
 
-        self._constrainedLocations = []
+        if isinstance(constrainedLocation, str):
+            if constrainedLocation != "center":
+                raise ValueError("Constrain must be 'center' or a vertex index.")
+        # elif isinstance(constrainedLocation, int):
+        #     raise ValueError(f"Constrain must be 'center' or a vertex index, got {type(constrainedLocation)}.")
 
-        for p, constrain in self._constrainedParticles.items():
-            if isinstance(constrain, str):
-                if constrain != "center":
-                    raise ValueError("Constrain must be 'center' or a list of vertex indices.")
-                self._constrainedLocations.append((p, "center"))
-            elif isinstance(constrain, list):
-                if len(constrain) > 0 and not all(isinstance(i, int) for i in constrain):
-                    raise ValueError("Constrain must be 'center' or a list of vertex indices.")
-                for i in constrain:
-                    self._constrainedLocations.append((p, i))
-            else:
-                raise ValueError("Constrain must be 'center' or a list of vertex indices.")
-
-        self._nLagrangianMultipliers = len(self._constrainedLocations) * len(self._prescribedStepDelta)
+        self._nLagrangianMultipliers = len(self._prescribedStepDelta)
         self.reactionForce = np.zeros(self._fieldSize)
 
     @property
@@ -97,9 +91,8 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
         self._lagrangianMultipliers = scalarVariables
 
     def updateConnectivity(self, model):
-        nodes = {
-            n: i for i, n in enumerate(set(kf.node for p in self._constrainedParticles for kf in p.kernelFunctions))
-        }
+
+        nodes = {n: i for i, n in enumerate(set(kf.node for kf in self._constrainedParticle.kernelFunctions))}
 
         hasChanged = False
         if nodes != self._nodes:
@@ -123,8 +116,14 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
         K_LU = K[-self._nLagrangianMultipliers :, : -self._nLagrangianMultipliers]
         # K_LL = K[-self._nLagrangianMultipliers:, -self._nLagrangianMultipliers:]
 
-        currentConstraint = 0
         self.reactionForce.fill(0.0)
+        p = self._constrainedParticle
+
+        if self._constrainedLocation == "center":
+            constrainedCoordinates = p.getCenterCoordinates()
+        elif isinstance(self._constrainedLocation, int):
+            constrainedCoordinates = p.getVertexCoordinates()[self._constrainedLocation]
+
         for i, prescribedComponent in self._prescribedStepDelta.items():
 
             P_U_i = PExt_U[i :: self._fieldSize]
@@ -133,32 +132,38 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
             K_UL_j = K_UL[i :: self._fieldSize, :]
             K_LU_j = K_LU[:, i :: self._fieldSize]
 
-            for p, constraintLocation in self._constrainedLocations:
+            dL_i = dU_L[i]
 
-                if constraintLocation == "center":
-                    constrainedCoordinates = p.getCenterCoordinates()
-                elif isinstance(constraintLocation, int):
-                    constrainedCoordinates = p.getVertexCoordinates()[constraintLocation]
+            N = p.getInterpolationVector(constrainedCoordinates)
 
-                c = currentConstraint
+            nodeIdcs = [self._nodes[kf.node] for kf in p.kernelFunctions]
 
-                dL_c = dU_L[c]
+            mpValue = N @ dU_U_j[nodeIdcs]
 
-                N = p.getInterpolationVector(constrainedCoordinates)
+            g_i = mpValue - prescribedComponent * timeStep.stepProgressIncrement
+            dg_i_dU_j = N
 
-                nodeIdcs = [self._nodes[kf.node] for kf in p.kernelFunctions]
+            P_U_i[nodeIdcs] += dL_i * dg_i_dU_j
+            PExt_L[i] += g_i
 
-                mpValue = N @ dU_U_j[nodeIdcs]
+            K_UL_j[nodeIdcs, i] += dg_i_dU_j
+            K_LU_j[i, nodeIdcs] += dg_i_dU_j
 
-                g_j = mpValue - prescribedComponent * timeStep.stepProgressIncrement
-                dg_i_dU_j = N
+            self.reactionForce[i] += dL_i
 
-                P_U_i[nodeIdcs] += dL_c * dg_i_dU_j
-                PExt_L[c] += g_j
 
-                K_UL_j[nodeIdcs, c] += dg_i_dU_j
-                K_LU_j[c, nodeIdcs] += dg_i_dU_j
+def ParticleLagrangianWeakDirichletOnParticleSetFactory(
+    baseName: str,
+    particleSet: list[BaseParticle],
+    constrainedLocation: int | str,
+    field: str,
+    prescribedStepDelta: dict,
+    model: MPMModel,
+):
+    constraints = dict()
+    for i, p in enumerate(particleSet):
+        name = f"{baseName}_{i}"
+        constraint = ParticleLagrangianWeakDirichlet(name, p, constrainedLocation, field, prescribedStepDelta, model)
+        constraints[name] = constraint
 
-                self.reactionForce[i] += dL_c
-
-                currentConstraint += 1
+    return constraints

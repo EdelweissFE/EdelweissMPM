@@ -36,7 +36,7 @@ from edelweissfe.timesteppers.adaptivetimestepper import AdaptiveTimeStepper
 from edelweissfe.utils.exceptions import StepFailed
 
 from edelweissmpm.constraints.particlelagrangianweakdirichlet import (
-    ParticleLagrangianWeakDirichlet,
+    ParticleLagrangianWeakDirichletOnParticleSetFactory,
 )
 from edelweissmpm.fieldoutput.fieldoutput import MPMFieldOutputController
 from edelweissmpm.generators.rectangularkernelfunctiongridgenerator import (
@@ -132,30 +132,16 @@ def run_sim():
     # We need this model to create the dof manager
     theModel.particleKernelDomains["my_all_with_all"] = theParticleKernelDomain
 
-    vertexSetLeft = {p: [0] for p in theModel.particleSets["rectangular_grid_left"]}
-    vertexSetLeft[theModel.particleSets["rectangular_grid_left"][-1]] = [0, 3]
-
-    vertexSetRight = {p: [1] for p in theModel.particleSets["rectangular_grid_right"]}
-    vertexSetRight[theModel.particleSets["rectangular_grid_right"][-1]] = [1, 2]
-
-    dirichletLeft = ParticleLagrangianWeakDirichlet(
-        "left",
-        vertexSetLeft,
-        "displacement",
-        {0: 0, 1: 2},
-        theModel,
+    dirichletLeft = ParticleLagrangianWeakDirichletOnParticleSetFactory(
+        "left", theModel.particleSets["rectangular_grid_left"], "center", "displacement", {0: 0, 1: 2}, theModel
     )
 
-    dirichletRight = ParticleLagrangianWeakDirichlet(
-        "right",
-        vertexSetRight,
-        "displacement",
-        {0: -3, 1: -2},
-        theModel,
+    dirichletRight = ParticleLagrangianWeakDirichletOnParticleSetFactory(
+        "right", theModel.particleSets["rectangular_grid_right"], "center", "displacement", {0: -3, 1: -2}, theModel
     )
 
-    theModel.constraints["dirichletLeft"] = dirichletLeft
-    theModel.constraints["dirichletRight"] = dirichletRight
+    theModel.constraints.update(dirichletLeft)
+    theModel.constraints.update(dirichletRight)
 
     theModel.prepareYourself(theJournal)
     theJournal.printPrettyTable(theModel.makePrettyTableSummary(), "summary")
@@ -180,7 +166,7 @@ def run_sim():
     )
 
     fieldOutputController.addExpressionFieldOutput(
-        None, lambda: dirichletLeft.reactionForce, "reaction force", export="RF"
+        None, lambda: np.sum([d.reactionForce for d in dirichletLeft.values()], axis=0), "reaction force", export="RF"
     )
 
     fieldOutputController.initializeJob()
@@ -195,11 +181,6 @@ def run_sim():
         fieldOutput=fieldOutputController.fieldOutputs["deformation gradient"], create="perElement"
     )
     ensightOutput.initializeJob()
-
-    dirichlets = [
-        dirichletLeft,
-        dirichletRight,
-    ]
 
     incSize = 1e-1
     adaptiveTimeStepper = AdaptiveTimeStepper(0.0, 1.0, incSize, incSize, incSize / 1, 50, theJournal)
@@ -238,7 +219,7 @@ def run_sim():
             fieldOutputController,
             outputManagers=[ensightOutput],
             particleManagers=[theParticleManager],
-            constraints=dirichlets,
+            constraints=theModel.constraints.values(),
             userIterationOptions=iterationOptions,
             vciManagers=[vciManager],
         )
