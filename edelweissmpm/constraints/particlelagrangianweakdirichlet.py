@@ -124,7 +124,10 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
         elif isinstance(self._constrainedLocation, int):
             constrainedCoordinates = p.getVertexCoordinates()[self._constrainedLocation]
 
-        for i, prescribedComponent in self._prescribedStepDelta.items():
+        for lag, (i, prescribedComponent) in enumerate(self._prescribedStepDelta.items()):
+            # lag is the lagrange multiplier index
+            # i is the field component index
+            # prescribedComponent is the prescribed increment for this step
 
             P_U_i = PExt_U[i :: self._fieldSize]
             dU_U_j = dU_U[i :: self._fieldSize]
@@ -132,7 +135,7 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
             K_UL_j = K_UL[i :: self._fieldSize, :]
             K_LU_j = K_LU[:, i :: self._fieldSize]
 
-            dL_i = dU_L[i]
+            dL_l = dU_L[lag]
 
             N = p.getInterpolationVector(constrainedCoordinates)
 
@@ -140,16 +143,16 @@ class ParticleLagrangianWeakDirichlet(MPMConstraintBase):
 
             mpValue = N @ dU_U_j[nodeIdcs]
 
-            g_i = mpValue - prescribedComponent * timeStep.stepProgressIncrement
-            dg_i_dU_j = N
+            g_l = mpValue - prescribedComponent * timeStep.stepProgressIncrement
+            dg_l_dU_j = N
 
-            P_U_i[nodeIdcs] += dL_i * dg_i_dU_j
-            PExt_L[i] += g_i
+            P_U_i[nodeIdcs] += dL_l * dg_l_dU_j
+            PExt_L[lag] += g_l
 
-            K_UL_j[nodeIdcs, i] += dg_i_dU_j
-            K_LU_j[i, nodeIdcs] += dg_i_dU_j
+            K_UL_j[nodeIdcs, lag] += dg_l_dU_j
+            K_LU_j[lag, nodeIdcs] += dg_l_dU_j
 
-            self.reactionForce[i] += dL_i
+            self.reactionForce[i] += dL_l
 
 
 def ParticleLagrangianWeakDirichletOnParticleSetFactory(

@@ -126,7 +126,9 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
         K_LU = K[-self._nLagrangianMultipliers :, : -self._nLagrangianMultipliers]
 
         self.reactionForce.fill(0.0)
-        for i, component in enumerate(self._components):
+        for lag, i in enumerate(self._components):
+            # lag is the index of the lagrangian multiplier
+            # i is the component of the field being constrained
 
             P_U_i = PExt_U[i :: self._fieldSize]
             dU_U_j = dU_U[i :: self._fieldSize]
@@ -134,7 +136,7 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
             K_UL_j = K_UL[i :: self._fieldSize, :]
             K_LU_j = K_LU[:, i :: self._fieldSize]
 
-            dL_i = dU_L[i]
+            dL_l = dU_L[lag]
 
             N_master = self._masterParticle.getInterpolationVector(self._masterParticle.getCenterCoordinates())
             N_slave = self._slaveParticle.getInterpolationVector(self._slaveParticle.getCenterCoordinates())
@@ -145,21 +147,21 @@ class ParticleLagrangianEqualValueConstraint(MPMConstraintBase):
             masterValue = N_master @ dU_U_j[masterNodeIdcs]
             slaveValue = N_slave @ dU_U_j[slaveNodeIdcs]
 
-            g_i = masterValue - slaveValue
-            dg_i_dU_j_master = N_master
-            dg_i_dU_j_slave = -N_slave
+            g_l = masterValue - slaveValue
+            dg_l_dU_j_master = N_master
+            dg_l_dU_j_slave = -N_slave
 
-            P_U_i[masterNodeIdcs] += dL_i * dg_i_dU_j_master
-            P_U_i[slaveNodeIdcs] += dL_i * dg_i_dU_j_slave
-            PExt_L[i] += g_i
+            P_U_i[masterNodeIdcs] += dL_l * dg_l_dU_j_master
+            P_U_i[slaveNodeIdcs] += dL_l * dg_l_dU_j_slave
+            PExt_L[lag] += g_l
 
-            K_UL_j[masterNodeIdcs, i] += dg_i_dU_j_master
-            K_LU_j[i, masterNodeIdcs] += dg_i_dU_j_master
+            K_UL_j[masterNodeIdcs, lag] += dg_l_dU_j_master
+            K_LU_j[lag, masterNodeIdcs] += dg_l_dU_j_master
 
-            K_UL_j[slaveNodeIdcs, i] += dg_i_dU_j_slave
-            K_LU_j[i, slaveNodeIdcs] += dg_i_dU_j_slave
+            K_UL_j[slaveNodeIdcs, lag] += dg_l_dU_j_slave
+            K_LU_j[lag, slaveNodeIdcs] += dg_l_dU_j_slave
 
-            self.reactionForce[i] += dL_i
+            self.reactionForce[i] += dL_l
 
 
 def ParticleLagrangianEqualValueConstraintOnParticleSetFactory(
