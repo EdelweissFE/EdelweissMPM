@@ -57,7 +57,7 @@ jobs:
       - name: Install Marmot
         shell: bash -l {0}
         run: |
-          git clone https://github.com/MAteRialMOdelingToolbox/Marmot.git
+          git clone "https://github.com/MAteRialMOdelingToolbox/Marmot.git"
           cd Marmot
           cd modules/core
           git clone ${{secrets.MARMOT_MPMCORE_TOKEN}}
