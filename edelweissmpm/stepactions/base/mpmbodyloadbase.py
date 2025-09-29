@@ -24,8 +24,7 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""Body loads are loads that act on the entire body of the model.
-"""
+"""Body loads are loads that act on the entire body of the model."""
 
 
 from abc import abstractmethod
