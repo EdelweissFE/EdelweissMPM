@@ -107,7 +107,7 @@ cdef class MarmotParticleWrapper:
                                                                                        nMaterialProperties,
                                                                                        self._marmotMeshfreeApproximation[0],
                                                                                        )
-        except IndexError:
+        except ValueError:
             raise NotImplementedError("Failed to create instance of MarmotParticle {:}.".format(particleType))
 
         self._nStateVars =           self._marmotParticle.getNumberOfRequiredStateVars()

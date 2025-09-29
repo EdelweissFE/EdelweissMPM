@@ -71,7 +71,7 @@ cdef class MarmotMaterialPointWrapper:
                                                                                        self._vertexCoordinates.size,
                                                                                        volume
                                                                                        )
-        except IndexError:
+        except ValueError:
             raise NotImplementedError("Failed to create instance of MarmotMaterialPoint {:}.".format(materialPointType))
 
         self._number                = materialPointNumber
