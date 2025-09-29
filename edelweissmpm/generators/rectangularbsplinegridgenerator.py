@@ -24,40 +24,6 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
-
-A mesh generator, for rectangular geometries and structured quad meshes:
-
-
-.. code-block:: console
-
-        <-----l----->
-         nX elements
-         __ __ __ __
-        |__|__|__|__|  A
-        |__|__|__|__|  |
-        |__|__|__|__|  | h
-        |__|__|__|__|  | nY elements
-      | |__|__|__|__|  |
-      | |__|__|__|__|  V
-    x0|_____
-      y0
-  
-nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
-are automatically generated
-
-Datalines:
-"""
-
-documentation = {
-    "x0": "(optional) origin at x axis",
-    "y0": "(optional) origin at y axis",
-    "h": "(optional) height of the body",
-    "l": "(optional) length of the body",
-    "nX": "(optional) number of elements along x",
-    "nY": "(optional) number of elements along y",
-    "elType": "type of element",
-}
 
 import numpy as np
 from edelweissfe.points.node import Node
@@ -67,12 +33,36 @@ from edelweissmpm.config.celllibrary import getCellClass
 
 
 def generateModelData(model, journal, **kwargs):
+    """
+
+    A mesh generator, for rectangular geometries and structured quad meshes:
+
+
+    .. code-block:: console
+
+            <-----l----->
+             nX elements
+             __ __ __ __
+            |__|__|__|__|  A
+            |__|__|__|__|  |
+            |__|__|__|__|  | h
+            |__|__|__|__|  | nY elements
+          | |__|__|__|__|  |
+          | |__|__|__|__|  V
+        x0|_____
+          y0
+
+    nSets, elSets, surface : 'name'_top, _bottom, _left, _right, ...
+    are automatically generated
+
+    Datalines:
+    """
     name = kwargs.get("name", "rectangular_grid")
 
     x0 = float(kwargs.get("x0", 0.0))
     y0 = float(kwargs.get("y0", 0.0))
-    h = float(kwargs.get("h", 1.0))
-    l = float(kwargs.get("l", 1.0))
+    hght = float(kwargs.get("h", 1.0))
+    lgth = float(kwargs.get("l", 1.0))
     nX = int(kwargs.get("nX", 10))
     nY = int(kwargs.get("nY", 10))
     order = int(kwargs["order"])
@@ -94,13 +84,13 @@ def generateModelData(model, journal, **kwargs):
     nKnotsY = nKnotsPerCellDirection + (nY - 1)
 
     nodeGrid = np.mgrid[
-        x0 : x0 + l : nNodesX * 1j,
-        y0 : y0 + h : nNodesY * 1j,
+        x0 : x0 + lgth : nNodesX * 1j,
+        y0 : y0 + hght : nNodesY * 1j,
     ]
 
-    knotsX = np.hstack((np.full(order, x0), np.linspace(x0, x0 + l, nKnotsX - 2 * order), np.full(order, x0 + l)))
+    knotsX = np.hstack((np.full(order, x0), np.linspace(x0, x0 + lgth, nKnotsX - 2 * order), np.full(order, x0 + lgth)))
 
-    knotsY = np.hstack((np.full(order, y0), np.linspace(y0, y0 + h, nKnotsY - 2 * order), np.full(order, y0 + h)))
+    knotsY = np.hstack((np.full(order, y0), np.linspace(y0, y0 + hght, nKnotsY - 2 * order), np.full(order, y0 + hght)))
 
     nodes = []
     currentNodeNumber = firstNodeNumber
@@ -116,7 +106,6 @@ def generateModelData(model, journal, **kwargs):
 
     currentCellNumber = firstCellNumber
 
-    cells = []
     for x in range(nX):
         for y in range(nY):
             cellNodes = []

@@ -16,7 +16,7 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           activate-environment: anaconda-client-env
-              
+
       - name: Install conda packages
         shell: bash -l {0}
         run: |
@@ -27,9 +27,9 @@ jobs:
         shell: bash -l {0}
         run: |
           git clone --branch 3.4.0 https://gitlab.com/libeigen/eigen.git
-          cd eigen 
+          cd eigen
           mkdir build
-          cd build 
+          cd build
           cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DINCLUDE_INSTALL_DIR=$CONDA_PREFIX/include ..
           make install
           cd ../..

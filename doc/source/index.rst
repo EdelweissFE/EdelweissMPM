@@ -9,7 +9,7 @@ EdelweissMPM aims to be...
 
  - ... a development and learning environment for constitutive models and the material point method,
  - ... an easy to use tool for coupled problems,
- - ... a very flexible tool for implementing and employing special techniques (e.g., the indirect displacement control technique), 
+ - ... a very flexible tool for implementing and employing special techniques (e.g., the indirect displacement control technique),
    which are often more difficult and time consuming to implement in mature, MPI-parallelized codes,
  - ... an efficient tool for nonlinear simulations up to medium sized problems (~ :math:`10^5` degrees of freedom).
 

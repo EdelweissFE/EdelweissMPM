@@ -34,6 +34,7 @@ from edelweissmpm.models.mpmmodel import MPMModel
 from edelweissmpm.particles.base.baseparticle import BaseParticle
 from edelweissmpm.sets.particleset import ParticleSet
 
+
 def generateCooksMembraneParticleGrid(
     model: MPMModel,
     journal: Journal,
@@ -62,8 +63,8 @@ def generateCooksMembraneParticleGrid(
     dx = l / nX
 
     for i, x in enumerate(x_coords):
-        y_top = y0 + h0 + h1/l * (x - x0)
-        y_bottom = y0 + h0/l * (x - x0)
+        y_top = y0 + h0 + h1 / l * (x - x0)
+        y_bottom = y0 + h0 / l * (x - x0)
 
         y_coords = np.linspace(y_bottom, y_top, nY + 1)
 
@@ -76,12 +77,14 @@ def generateCooksMembraneParticleGrid(
 
     for i in range(nX):
         for j in range(nY):
-            quad = np.array([
-                vertices[i, j],
-                vertices[i + 1, j],
-                vertices[i + 1, j + 1],
-                vertices[i, j + 1],
-            ])
+            quad = np.array(
+                [
+                    vertices[i, j],
+                    vertices[i + 1, j],
+                    vertices[i + 1, j + 1],
+                    vertices[i, j + 1],
+                ]
+            )
             quad_h1 = vertices[i, j + 1][1] - vertices[i, j][1]
             quad_h2 = vertices[i + 1, j + 1][1] - vertices[i + 1, j][1]
             pVolume = 0.5 * (quad_h1 + quad_h2) * dx * thickness
@@ -118,4 +121,3 @@ def generateCooksMembraneParticleGrid(
     model.surfaces[f"{name}_left"] = {4: np.ravel(particleGrid[0, :])}
 
     return model
-

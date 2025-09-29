@@ -61,11 +61,10 @@ def generateCooksMembraneKernelFunctionGrid(
     """
     x_coords = np.linspace(x0, x0 + l, nX + 1)
     vertices = np.zeros((nX + 1, nY + 1, 2))  # (x, y) coordinates
-    dx = l / nX
 
     for i, x in enumerate(x_coords):
-        y_top = y0 + h0 + h1/l * (x - x0)
-        y_bottom = y0 + h0/l * (x - x0)
+        y_top = y0 + h0 + h1 / l * (x - x0)
+        y_bottom = y0 + h0 / l * (x - x0)
 
         y_coords = np.linspace(y_bottom, y_top, nY + 1)
 
@@ -77,22 +76,24 @@ def generateCooksMembraneKernelFunctionGrid(
 
     for i in range(nX):
         for j in range(nY):
-            quad = np.array([
-                vertices[i, j],
-                vertices[i + 1, j],
-                vertices[i + 1, j + 1],
-                vertices[i, j + 1],
-            ])
+            quad = np.array(
+                [
+                    vertices[i, j],
+                    vertices[i + 1, j],
+                    vertices[i + 1, j + 1],
+                    vertices[i, j + 1],
+                ]
+            )
             pCoordinates = np.mean(quad, axis=0)  # centroid of the quad
-    
+
             kf = kernelFunctionFactoryCallback(Node(currentKernelFunctionNumber, pCoordinates))
             model.meshfreeKernelFunctions[currentKernelFunctionNumber] = kf
             currentKernelFunctionNumber += 1
             nodes.append(kf.node)
-    
+
     nG = np.asarray(nodes).reshape(nX, nY)
 
-    #for x in range(nX):
+    # for x in range(nX):
     #    for y in range(nY):
     #        pCoordinates = grid[:, x, y].flatten()
 
@@ -102,7 +103,7 @@ def generateCooksMembraneKernelFunctionGrid(
     #        currentKernelFunctionNumber += 1
     #        nodes.append(kf.node)
 
-    #nG = np.asarray(nodes).reshape(nX, nY)
+    # nG = np.asarray(nodes).reshape(nX, nY)
 
     model.nodes.update({n.label: n for n in nodes})
     model.nodeSets["{:}_left".format(name)] = NodeSet("{:}_left".format(name), [n for n in nG[0, :]])

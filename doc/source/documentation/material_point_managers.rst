@@ -18,5 +18,5 @@ Smart Material Point Manager
 .. automodule:: edelweissmpm.mpmmanagers.smartmpmmanager
    :private-members:
    :members:
-   
-   
+
+
