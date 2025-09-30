@@ -66,7 +66,7 @@ class ParticleDistributedLoad:
         particles: ParticleSet,
         distributedLoadType: str,
         loadVector: np.ndarray,
-        **kwargs
+        **kwargs,
     ):
         self.name = name
 

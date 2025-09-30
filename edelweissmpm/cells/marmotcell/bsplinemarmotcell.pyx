@@ -90,7 +90,7 @@ cdef class BSplineMarmotCellWrapper(MarmotCellWrapper):
                                                                     &knotVectorsView[0,0],
                                                                     knotVectorsView.size)
 
-        except IndexError:
+        except ValueError:
             raise NotImplementedError("Marmot cell {:} not found in library.".format(cellType))
 
     def __dealloc__(self):

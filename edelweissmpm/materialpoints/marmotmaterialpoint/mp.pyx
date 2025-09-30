@@ -45,9 +45,9 @@ cdef class MarmotMaterialPointWrapper:
     # cdef classes cannot subclass. Hence we do not subclass from the BaseMaterialPoint,
     # but still we follow the interface for compatiblity.
 
-    def __cinit__(self, materialPointType, 
-                  int materialPointNumber, 
-                  np.ndarray vertexCoordinates, 
+    def __cinit__(self, materialPointType,
+                  int materialPointNumber,
+                  np.ndarray vertexCoordinates,
                   double volume,
                   material
                   ):
@@ -55,7 +55,7 @@ cdef class MarmotMaterialPointWrapper:
 
         Parameters
         ----------
-        materialPointType 
+        materialPointType
             The MarmotMaterialPoint which should be represented.
         materialPointNumber
             The unique number of the MaterialPoint."""
@@ -65,13 +65,13 @@ cdef class MarmotMaterialPointWrapper:
         self._vertexCoordinatesView = self._vertexCoordinates
 
         try:
-            self._marmotMaterialPoint = MarmotMaterialPointFactory.createMaterialPoint(materialPointType.encode('utf-8'), 
+            self._marmotMaterialPoint = MarmotMaterialPointFactory.createMaterialPoint(materialPointType.encode('utf-8'),
                                                                                        materialPointNumber,
                                                                                        &self._vertexCoordinatesView[0,0],
                                                                                        self._vertexCoordinates.size,
                                                                                        volume
                                                                                        )
-        except IndexError:
+        except ValueError:
             raise NotImplementedError("Failed to create instance of MarmotMaterialPoint {:}.".format(materialPointType))
 
         self._number                = materialPointNumber
@@ -102,7 +102,7 @@ cdef class MarmotMaterialPointWrapper:
     def assignCells(self, list cells):
         """The list of currently attached cells."""
         self._assignedCells = cells
-    
+
     @property
     def materialPointType(self):
         return self._materialPointType
@@ -119,7 +119,7 @@ cdef class MarmotMaterialPointWrapper:
         self._stateVarsTemp[:] = self._stateVars
         self._marmotMaterialPoint.initializeYourself()
         self.acceptStateAndPosition()
-        
+
     def prepareYourself(self, timeTotal: float, dTime: float):
         self._stateVarsTemp[:] = self._stateVars
         self._marmotMaterialPoint.prepareYourself(timeTotal, dTime)
@@ -127,13 +127,13 @@ cdef class MarmotMaterialPointWrapper:
     cpdef void _initializeStateVarsTemp(self, ) nogil:
         self._stateVarsTemp[:] = self._stateVars
 
-    def getResultArray(self, result:str, getPersistentView:bool=True):    
+    def getResultArray(self, result:str, getPersistentView:bool=True):
         """Get the array of a result, possibly as a persistent view which is continiously
         updated by the underlying MarmotMaterialPoint."""
 
         cdef string result_ =  result.encode('UTF-8')
         return np.array(  self.getStateView(result_ ), copy= not getPersistentView)
-            
+
     cdef double[::1] getStateView(self, string result ):
         """Directly access the state vars of the underlying MarmotElement"""
 
@@ -144,19 +144,19 @@ cdef class MarmotMaterialPointWrapper:
     def getVertexCoordinates(self):
         """Get the underlying MarmotMaterialPoint vertex coordinates."""
 
-        self._marmotMaterialPoint.getVertexCoordinates(&self._vertexCoordinatesView[0,0]) 
-    
+        self._marmotMaterialPoint.getVertexCoordinates(&self._vertexCoordinatesView[0,0])
+
         return self._vertexCoordinates
 
 
     def getCenterCoordinates(self):
         """Compute the underlying MarmotMaterialPoint center of mass coordinates."""
-        self._marmotMaterialPoint.getVertexCoordinates(&self._centerCoordinatesView[0]) 
+        self._marmotMaterialPoint.getVertexCoordinates(&self._centerCoordinatesView[0])
 
         return self._centerCoordinates
 
-    cpdef void computeYourself(self, 
-                         double timeNew, 
+    cpdef void computeYourself(self,
+                         double timeNew,
                          double dTime, ) except * nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
@@ -179,18 +179,18 @@ cdef class MarmotMaterialPointWrapper:
             self._marmotMaterialPoint.assignMaterial(
                     MarmotMaterialSection(
                             MarmotMaterialFactory.getMaterialCodeFromName(
-                                    materialName.upper().encode('UTF-8')), 
+                                    materialName.upper().encode('UTF-8')),
                             &self._materialProperties[0],
                             self._materialProperties.shape[0] ) )
         except IndexError:
             raise NotImplementedError("Marmot material {:} not found in library.".format(materialName))
-        
+
         self._nStateVars =           self._marmotMaterialPoint.getNumberOfRequiredStateVars()
-        
+
         self._stateVars =            np.zeros(self._nStateVars)
         self._stateVarsTemp =        np.zeros(self._nStateVars)
-        
+
         self._marmotMaterialPoint.assignStateVars(&self._stateVarsTemp[0], self._nStateVars)
-    
+
     def __dealloc__(self):
         del self._marmotMaterialPoint

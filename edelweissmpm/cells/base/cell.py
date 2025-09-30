@@ -30,7 +30,7 @@ compute the material point kernels and to interpolate the field solutions back
 to the material points. Cells are used to compute the residual and stiffness
 matrices for the global system of equations.
 
-Implementing your own cells can be done easily by subclassing from 
+Implementing your own cells can be done easily by subclassing from
 the abstract base class :class:`~CellBase`.
 """
 

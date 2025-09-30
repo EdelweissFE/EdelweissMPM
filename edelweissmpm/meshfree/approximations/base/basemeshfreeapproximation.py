@@ -24,9 +24,7 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
-"""
-
-"""
+""" """
 
 from abc import ABC, abstractmethod
 

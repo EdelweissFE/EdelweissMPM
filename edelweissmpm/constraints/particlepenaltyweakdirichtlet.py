@@ -41,7 +41,7 @@ class ParticlePenaltyWeakDirichlet(MPMConstraintBase):
         prescribedStepDelta: dict,
         penaltyParameter: float,
         constrain: str | list[int] = "center",
-        **kwargs
+        **kwargs,
     ):
         self._name = name
         self._model = model

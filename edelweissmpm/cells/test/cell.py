@@ -25,7 +25,7 @@
 #  the top level directory of EdelweissMPM.
 #  ---------------------------------------------------------------------
 """
-Implementing your own cells can be done easily by subclassing from 
+Implementing your own cells can be done easily by subclassing from
 the abstract base class :class:`~CellBase`.
 """
 
