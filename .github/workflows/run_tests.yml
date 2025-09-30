@@ -58,15 +58,12 @@ jobs:
         shell: bash -l {0}
         run: |
           git clone "https://github.com/MAteRialMOdelingToolbox/Marmot.git"
-          cd Marmot
-          cd modules/core
-          git clone ${{secrets.MARMOT_MPMCORE_TOKEN}}
-          cd ../../
-          mkdir build
-          cd build
+          git clone "https://github.com/BOKU-CMP-MEC-MAT/MarmotMeshfreeCore.git" ./Marmot/modules/core/MarmotMeshfreeCore
+          mkdir ./Marmot/build
+          cd ./Marmot/build
           cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX  ..
           make install
-          cd ../../
+          cd ../..
 
       - name: Install EdelweissFE
         shell: bash -l {0}
